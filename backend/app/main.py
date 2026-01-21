@@ -44,7 +44,8 @@ async def health_check():
 
 
 # Import and include routers
-from app.routers import auth, exercises
+from app.routers import auth, exercises, mesocycles
 
 app.include_router(auth.router, prefix="/v1/auth", tags=["Authentication"])
 app.include_router(exercises.router, prefix="/v1/exercises", tags=["Exercises"])
+app.include_router(mesocycles.router, prefix="/v1/mesocycles", tags=["Mesocycles"])

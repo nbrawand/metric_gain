@@ -3,6 +3,8 @@ import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Home } from './pages/Home';
 import { Exercises } from './pages/Exercises';
+import Mesocycles from './pages/Mesocycles';
+import MesocycleDetail from './pages/MesocycleDetail';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
@@ -24,6 +26,22 @@ function App() {
           element={
             <ProtectedRoute>
               <Exercises />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mesocycles"
+          element={
+            <ProtectedRoute>
+              <Mesocycles />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mesocycles/:id"
+          element={
+            <ProtectedRoute>
+              <MesocycleDetail />
             </ProtectedRoute>
           }
         />

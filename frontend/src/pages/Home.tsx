@@ -31,6 +31,12 @@ export function Home() {
                 Exercises
               </button>
               <button
+                onClick={() => navigate('/mesocycles')}
+                className="text-gray-300 hover:text-white transition-colors"
+              >
+                Mesocycles
+              </button>
+              <button
                 onClick={handleLogout}
                 className="text-gray-300 hover:text-white transition-colors"
               >
