@@ -23,12 +23,20 @@ export function Home() {
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-white">Metric Gain</h1>
-            <button
-              onClick={handleLogout}
-              className="text-gray-300 hover:text-white transition-colors"
-            >
-              Logout
-            </button>
+            <div className="flex items-center gap-6">
+              <button
+                onClick={() => navigate('/exercises')}
+                className="text-gray-300 hover:text-white transition-colors"
+              >
+                Exercises
+              </button>
+              <button
+                onClick={handleLogout}
+                className="text-gray-300 hover:text-white transition-colors"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </header>

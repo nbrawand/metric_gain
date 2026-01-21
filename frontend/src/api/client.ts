@@ -42,6 +42,11 @@ async function fetchApi<T>(
     throw error;
   }
 
+  // Handle 204 No Content responses (e.g., from DELETE)
+  if (response.status === 204) {
+    return null as T;
+  }
+
   return response.json();
 }
 
