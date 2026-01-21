@@ -2,6 +2,7 @@
 
 from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 
 from app.database import Base
 
@@ -27,6 +28,9 @@ class User(Base):
     # Future features
     timezone = Column(String(50), default="UTC", nullable=False)
     preferences = Column(String, default="{}", nullable=False)  # JSON stored as string for SQLite compatibility
+
+    # Relationships
+    custom_exercises = relationship("Exercise", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}')>"

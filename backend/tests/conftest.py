@@ -31,8 +31,18 @@ def override_get_db():
 
 @pytest.fixture
 def test_db():
-    """Create test database."""
+    """Create test database and seed with default exercises."""
+    from app.utils.seed_exercises import seed_exercises
+
     Base.metadata.create_all(bind=engine)
+
+    # Seed default exercises
+    db = TestingSessionLocal()
+    try:
+        seed_exercises(db)
+    finally:
+        db.close()
+
     yield
     Base.metadata.drop_all(bind=engine)
 
