@@ -12,7 +12,7 @@ from app.config import settings
 from app.database import Base
 
 # Import all models here so Alembic can detect them
-# from app.models import user, exercise, mesocycle, workout, etc.
+from app.models import User  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -16,6 +16,7 @@ pydantic[email]==2.6.0
 # Authentication
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+bcrypt==4.0.1  # Pin to compatible version with passlib
 
 # Testing
 pytest==8.0.0

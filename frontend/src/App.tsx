@@ -1,43 +1,27 @@
-import { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Login } from './pages/Login';
+import { Register } from './pages/Register';
+import { Home } from './pages/Home';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
-  const [apiStatus, setApiStatus] = useState<string>('checking...')
-
-  useEffect(() => {
-    // Test API connection
-    fetch(import.meta.env.VITE_API_URL + '/health')
-      .then(res => res.json())
-      .then(data => {
-        setApiStatus(data.status)
-      })
-      .catch(() => {
-        setApiStatus('disconnected')
-      })
-  }, [])
-
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4 text-primary">
-          Metric Gain
-        </h1>
-        <p className="text-gray-400 mb-8">
-          Progressive Web App for Workout Tracking
-        </p>
-        <div className="bg-dark-card p-6 rounded-lg border border-dark-border">
-          <p className="text-sm text-gray-500 mb-2">API Status</p>
-          <p className={`text-lg font-semibold ${
-            apiStatus === 'healthy' ? 'text-primary' : 'text-yellow-500'
-          }`}>
-            {apiStatus}
-          </p>
-        </div>
-        <p className="text-sm text-gray-600 mt-8">
-          Phase 0: Setup Complete ✓
-        </p>
-      </div>
-    </div>
-  )
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;
