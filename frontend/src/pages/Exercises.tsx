@@ -3,6 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { getExercises, getMuscleGroups, createExercise, deleteExercise } from '../api/exercises';
 import type { Exercise, ExerciseCreate } from '../types/exercise';
@@ -10,6 +11,7 @@ import { FormInput } from '../components/FormInput';
 import { Button } from '../components/Button';
 
 export function Exercises() {
+  const navigate = useNavigate();
   const { accessToken } = useAuthStore();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [muscleGroups, setMuscleGroups] = useState<string[]>([]);
@@ -100,6 +102,12 @@ export function Exercises() {
       {/* Header */}
       <header className="bg-gray-800 border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+          <button
+            onClick={() => navigate('/')}
+            className="text-blue-400 hover:text-blue-300 mb-3 inline-block"
+          >
+            &larr; Back to Home
+          </button>
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-white">Exercise Library</h1>
             <button

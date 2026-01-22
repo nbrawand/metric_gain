@@ -132,7 +132,7 @@ export default function MesocycleDetail() {
                     type="text"
                     value={editData.name}
                     onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
                   />
                 </div>
 
@@ -143,7 +143,7 @@ export default function MesocycleDetail() {
                   <textarea
                     value={editData.description}
                     onChange={(e) => setEditData({ ...editData, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
                     rows={3}
                   />
                 </div>
@@ -158,7 +158,7 @@ export default function MesocycleDetail() {
                         status: e.target.value as typeof editData.status,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
                   >
                     <option value="planning">Planning</option>
                     <option value="active">Active</option>

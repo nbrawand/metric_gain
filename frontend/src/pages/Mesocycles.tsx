@@ -203,17 +203,25 @@ export default function Mesocycles() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Training Mesocycles</h1>
-            <p className="text-gray-600 mt-1">Plan and manage your training blocks</p>
-          </div>
+        <div className="mb-8">
           <button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+            onClick={() => navigate('/')}
+            className="text-blue-600 hover:text-blue-800 mb-4"
           >
-            Create Mesocycle
+            &larr; Back to Home
           </button>
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Training Mesocycles</h1>
+              <p className="text-gray-600 mt-1">Plan and manage your training blocks</p>
+            </div>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+            >
+              Create Mesocycle
+            </button>
+          </div>
         </div>
 
         {/* Error message */}
