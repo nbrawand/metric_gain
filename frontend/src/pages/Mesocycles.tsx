@@ -318,7 +318,7 @@ export default function Mesocycles() {
                       onChange={(e) =>
                         setMesocycleData({ ...mesocycleData, name: e.target.value })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                       required
                     />
                   </div>
@@ -332,7 +332,7 @@ export default function Mesocycles() {
                       onChange={(e) =>
                         setMesocycleData({ ...mesocycleData, description: e.target.value })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                       rows={2}
                     />
                   </div>
@@ -350,7 +350,7 @@ export default function Mesocycles() {
                         onChange={(e) =>
                           setMesocycleData({ ...mesocycleData, weeks: parseInt(e.target.value) })
                         }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                         required
                       />
                     </div>
@@ -365,7 +365,7 @@ export default function Mesocycles() {
                         onChange={(e) =>
                           setMesocycleData({ ...mesocycleData, start_date: e.target.value })
                         }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                       />
                     </div>
 
@@ -379,7 +379,7 @@ export default function Mesocycles() {
                         onChange={(e) =>
                           setMesocycleData({ ...mesocycleData, end_date: e.target.value })
                         }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                       />
                     </div>
                   </div>
@@ -425,7 +425,7 @@ export default function Mesocycles() {
                           onChange={(e) =>
                             updateWorkoutTemplate(workoutIndex, 'name', e.target.value)
                           }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
                           required
                         />
 
@@ -435,7 +435,7 @@ export default function Mesocycles() {
                           onChange={(e) =>
                             updateWorkoutTemplate(workoutIndex, 'description', e.target.value)
                           }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
                           rows={2}
                         />
                       </div>
@@ -483,7 +483,7 @@ export default function Mesocycles() {
                                       parseInt(e.target.value)
                                     )
                                   }
-                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900"
                                 >
                                   {exercises.map((ex) => (
                                     <option key={ex.id} value={ex.id}>
@@ -508,7 +508,7 @@ export default function Mesocycles() {
                                       parseInt(e.target.value)
                                     )
                                   }
-                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900"
                                 />
                               </div>
 
@@ -526,7 +526,7 @@ export default function Mesocycles() {
                                       parseInt(e.target.value)
                                     )
                                   }
-                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900"
                                 />
                               </div>
 
@@ -544,7 +544,7 @@ export default function Mesocycles() {
                                       parseInt(e.target.value)
                                     )
                                   }
-                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900"
                                 />
                               </div>
 
@@ -563,7 +563,7 @@ export default function Mesocycles() {
                                       parseInt(e.target.value)
                                     )
                                   }
-                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900"
                                 />
                               </div>
 
@@ -582,7 +582,7 @@ export default function Mesocycles() {
                                       parseInt(e.target.value)
                                     )
                                   }
-                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900"
                                 />
                               </div>
 
@@ -600,7 +600,7 @@ export default function Mesocycles() {
                                     )
                                   }
                                   placeholder="Optional notes"
-                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900"
                                 />
                               </div>
                             </div>
