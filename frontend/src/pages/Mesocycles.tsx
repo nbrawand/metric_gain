@@ -34,8 +34,6 @@ export default function Mesocycles() {
     name: '',
     description: '',
     weeks: 6,
-    start_date: '',
-    end_date: '',
   });
 
   // Workout templates state
@@ -99,8 +97,6 @@ export default function Mesocycles() {
         name: mesocycleData.name,
         description: mesocycleData.description || undefined,
         weeks: mesocycleData.weeks,
-        start_date: mesocycleData.start_date || undefined,
-        end_date: mesocycleData.end_date || undefined,
         workout_templates: workoutTemplates,
       };
 
@@ -121,8 +117,6 @@ export default function Mesocycles() {
       name: '',
       description: '',
       weeks: 6,
-      start_date: '',
-      end_date: '',
     });
     setWorkoutTemplates([]);
   };
@@ -337,51 +331,21 @@ export default function Mesocycles() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Weeks (3-12) *
-                      </label>
-                      <input
-                        type="number"
-                        min="3"
-                        max="12"
-                        value={mesocycleData.weeks}
-                        onChange={(e) =>
-                          setMesocycleData({ ...mesocycleData, weeks: parseInt(e.target.value) })
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Start Date
-                      </label>
-                      <input
-                        type="date"
-                        value={mesocycleData.start_date}
-                        onChange={(e) =>
-                          setMesocycleData({ ...mesocycleData, start_date: e.target.value })
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        End Date
-                      </label>
-                      <input
-                        type="date"
-                        value={mesocycleData.end_date}
-                        onChange={(e) =>
-                          setMesocycleData({ ...mesocycleData, end_date: e.target.value })
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Weeks (3-12) *
+                    </label>
+                    <input
+                      type="number"
+                      min="3"
+                      max="12"
+                      value={mesocycleData.weeks}
+                      onChange={(e) =>
+                        setMesocycleData({ ...mesocycleData, weeks: parseInt(e.target.value) })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                      required
+                    />
                   </div>
                 </div>
 
