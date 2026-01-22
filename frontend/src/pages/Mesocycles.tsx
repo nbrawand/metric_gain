@@ -9,7 +9,8 @@ import {
   createMesocycle,
   deleteMesocycle,
 } from '../api/mesocycles';
-import { listExercises } from '../api/exercises';
+import { getExercises } from '../api/exercises';
+import { useAuthStore } from '../stores/authStore';
 import {
   MesocycleListItem,
   MesocycleCreate,
@@ -20,6 +21,7 @@ import { Exercise } from '../types/exercise';
 
 export default function Mesocycles() {
   const navigate = useNavigate();
+  const accessToken = useAuthStore((state) => state.accessToken);
   const [mesocycles, setMesocycles] = useState<MesocycleListItem[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,11 +47,13 @@ export default function Mesocycles() {
   }, []);
 
   const loadData = async () => {
+    if (!accessToken) return;
+
     try {
       setLoading(true);
       const [mesocyclesData, exercisesData] = await Promise.all([
-        listMesocycles(),
-        listExercises({}),
+        listMesocycles(accessToken),
+        getExercises({}, accessToken),
       ]);
       setMesocycles(mesocyclesData);
       setExercises(exercisesData);
@@ -63,12 +67,12 @@ export default function Mesocycles() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this mesocycle?')) {
+    if (!accessToken || !confirm('Are you sure you want to delete this mesocycle?')) {
       return;
     }
 
     try {
-      await deleteMesocycle(id);
+      await deleteMesocycle(id, accessToken);
       setMesocycles(mesocycles.filter((m) => m.id !== id));
     } catch (err) {
       alert('Failed to delete mesocycle');
@@ -78,6 +82,11 @@ export default function Mesocycles() {
 
   const handleCreateMesocycle = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!accessToken) {
+      alert('Not authenticated');
+      return;
+    }
 
     if (workoutTemplates.length === 0) {
       alert('Please add at least one workout template');
@@ -95,7 +104,7 @@ export default function Mesocycles() {
         workout_templates: workoutTemplates,
       };
 
-      await createMesocycle(createData);
+      await createMesocycle(createData, accessToken);
       setShowCreateModal(false);
       resetForm();
       loadData();
@@ -175,11 +184,6 @@ export default function Mesocycles() {
       (_, i) => i !== exerciseIndex
     );
     setWorkoutTemplates(updated);
-  };
-
-  const getExerciseName = (exerciseId: number): string => {
-    const exercise = exercises.find((e) => e.id === exerciseId);
-    return exercise?.name || 'Unknown Exercise';
   };
 
   const getStatusColor = (status: string): string => {

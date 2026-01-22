@@ -2,10 +2,8 @@
  * Home/Dashboard page - displayed after login
  */
 
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { Button } from '../components/Button';
 
 export function Home() {
   const navigate = useNavigate();

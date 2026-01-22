@@ -2,7 +2,7 @@
  * API client for mesocycle endpoints.
  */
 
-import apiClient from './client';
+import { get, post, put, del } from './client';
 import {
   Mesocycle,
   MesocycleListItem,
@@ -17,36 +17,36 @@ const MESOCYCLES_ENDPOINT = '/v1/mesocycles';
 /**
  * Get list of user's mesocycles (simplified, without nested templates)
  */
-export async function listMesocycles(): Promise<MesocycleListItem[]> {
-  return apiClient.get<MesocycleListItem[]>(MESOCYCLES_ENDPOINT);
+export async function listMesocycles(accessToken: string): Promise<MesocycleListItem[]> {
+  return get<MesocycleListItem[]>(MESOCYCLES_ENDPOINT, accessToken);
 }
 
 /**
  * Get specific mesocycle with full details (including workouts and exercises)
  */
-export async function getMesocycle(id: number): Promise<Mesocycle> {
-  return apiClient.get<Mesocycle>(`${MESOCYCLES_ENDPOINT}/${id}`);
+export async function getMesocycle(id: number, accessToken: string): Promise<Mesocycle> {
+  return get<Mesocycle>(`${MESOCYCLES_ENDPOINT}/${id}`, accessToken);
 }
 
 /**
  * Create a new mesocycle with workout templates and exercises
  */
-export async function createMesocycle(data: MesocycleCreate): Promise<Mesocycle> {
-  return apiClient.post<Mesocycle>(MESOCYCLES_ENDPOINT, data);
+export async function createMesocycle(data: MesocycleCreate, accessToken: string): Promise<Mesocycle> {
+  return post<Mesocycle>(MESOCYCLES_ENDPOINT, data, accessToken);
 }
 
 /**
  * Update mesocycle details (not including workouts/exercises)
  */
-export async function updateMesocycle(id: number, data: MesocycleUpdate): Promise<Mesocycle> {
-  return apiClient.put<Mesocycle>(`${MESOCYCLES_ENDPOINT}/${id}`, data);
+export async function updateMesocycle(id: number, data: MesocycleUpdate, accessToken: string): Promise<Mesocycle> {
+  return put<Mesocycle>(`${MESOCYCLES_ENDPOINT}/${id}`, data, accessToken);
 }
 
 /**
  * Delete a mesocycle and all associated workouts and exercises
  */
-export async function deleteMesocycle(id: number): Promise<void> {
-  return apiClient.delete<void>(`${MESOCYCLES_ENDPOINT}/${id}`);
+export async function deleteMesocycle(id: number, accessToken: string): Promise<void> {
+  return del<void>(`${MESOCYCLES_ENDPOINT}/${id}`, accessToken);
 }
 
 /**
@@ -54,10 +54,12 @@ export async function deleteMesocycle(id: number): Promise<void> {
  */
 export async function addWorkoutTemplate(
   mesocycleId: number,
-  data: WorkoutTemplateCreate
+  data: WorkoutTemplateCreate,
+  accessToken: string
 ): Promise<WorkoutTemplate> {
-  return apiClient.post<WorkoutTemplate>(
+  return post<WorkoutTemplate>(
     `${MESOCYCLES_ENDPOINT}/${mesocycleId}/workout-templates`,
-    data
+    data,
+    accessToken
   );
 }

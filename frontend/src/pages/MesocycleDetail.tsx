@@ -5,11 +5,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getMesocycle, updateMesocycle, deleteMesocycle } from '../api/mesocycles';
+import { useAuthStore } from '../stores/authStore';
 import { Mesocycle } from '../types/mesocycle';
 
 export default function MesocycleDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const accessToken = useAuthStore((state) => state.accessToken);
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,11 +29,11 @@ export default function MesocycleDetail() {
   }, [id]);
 
   const loadMesocycle = async () => {
-    if (!id) return;
+    if (!id || !accessToken) return;
 
     try {
       setLoading(true);
-      const data = await getMesocycle(parseInt(id));
+      const data = await getMesocycle(parseInt(id), accessToken);
       setMesocycle(data);
       setEditData({
         name: data.name,
@@ -48,10 +50,10 @@ export default function MesocycleDetail() {
   };
 
   const handleUpdate = async () => {
-    if (!id || !mesocycle) return;
+    if (!id || !mesocycle || !accessToken) return;
 
     try {
-      await updateMesocycle(parseInt(id), editData);
+      await updateMesocycle(parseInt(id), editData, accessToken);
       setEditing(false);
       loadMesocycle();
     } catch (err) {
@@ -61,12 +63,12 @@ export default function MesocycleDetail() {
   };
 
   const handleDelete = async () => {
-    if (!id || !confirm('Are you sure you want to delete this mesocycle?')) {
+    if (!id || !accessToken || !confirm('Are you sure you want to delete this mesocycle?')) {
       return;
     }
 
     try {
-      await deleteMesocycle(parseInt(id));
+      await deleteMesocycle(parseInt(id), accessToken);
       navigate('/mesocycles');
     } catch (err) {
       alert('Failed to delete mesocycle');
