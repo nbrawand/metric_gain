@@ -34,6 +34,7 @@ export default function Mesocycles() {
     name: '',
     description: '',
     weeks: 6,
+    days_per_week: 4,
   });
 
   // Workout templates state
@@ -43,6 +44,20 @@ export default function Mesocycles() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Initialize workout templates when days_per_week changes
+  useEffect(() => {
+    const newTemplates: WorkoutTemplateCreate[] = [];
+    for (let i = 0; i < mesocycleData.days_per_week; i++) {
+      newTemplates.push({
+        name: `Day ${i + 1} Workout`,
+        description: '',
+        order_index: i,
+        exercises: [],
+      });
+    }
+    setWorkoutTemplates(newTemplates);
+  }, [mesocycleData.days_per_week]);
 
   const loadData = async () => {
     if (!accessToken) return;
@@ -86,8 +101,10 @@ export default function Mesocycles() {
       return;
     }
 
-    if (workoutTemplates.length === 0) {
-      alert('Please add at least one workout template');
+    // Check if all days have at least one exercise
+    const hasEmptyWorkouts = workoutTemplates.some(w => w.exercises.length === 0);
+    if (hasEmptyWorkouts) {
+      alert('Please add at least one exercise to each training day');
       return;
     }
 
@@ -97,6 +114,7 @@ export default function Mesocycles() {
         name: mesocycleData.name,
         description: mesocycleData.description || undefined,
         weeks: mesocycleData.weeks,
+        days_per_week: mesocycleData.days_per_week,
         workout_templates: workoutTemplates,
       };
 
@@ -117,30 +135,15 @@ export default function Mesocycles() {
       name: '',
       description: '',
       weeks: 6,
+      days_per_week: 4,
     });
     setWorkoutTemplates([]);
-  };
-
-  const addWorkoutTemplate = () => {
-    setWorkoutTemplates([
-      ...workoutTemplates,
-      {
-        name: `Workout ${workoutTemplates.length + 1}`,
-        description: '',
-        order_index: workoutTemplates.length,
-        exercises: [],
-      },
-    ]);
   };
 
   const updateWorkoutTemplate = (index: number, field: string, value: string) => {
     const updated = [...workoutTemplates];
     updated[index] = { ...updated[index], [field]: value };
     setWorkoutTemplates(updated);
-  };
-
-  const removeWorkoutTemplate = (index: number) => {
-    setWorkoutTemplates(workoutTemplates.filter((_, i) => i !== index));
   };
 
   const addExerciseToWorkout = (workoutIndex: number) => {
@@ -355,232 +358,151 @@ export default function Mesocycles() {
                       required
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Training Days Per Week *
+                    </label>
+                    <select
+                      value={mesocycleData.days_per_week}
+                      onChange={(e) =>
+                        setMesocycleData({ ...mesocycleData, days_per_week: parseInt(e.target.value) })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                      required
+                    >
+                      <option value="1">1 day per week</option>
+                      <option value="2">2 days per week</option>
+                      <option value="3">3 days per week</option>
+                      <option value="4">4 days per week</option>
+                      <option value="5">5 days per week</option>
+                      <option value="6">6 days per week</option>
+                      <option value="7">7 days per week</option>
+                    </select>
+                  </div>
                 </div>
 
-                {/* Workout Templates */}
+                {/* Workout Templates - Day Based */}
                 <div className="mb-6">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Workout Templates</h3>
-                    <button
-                      type="button"
-                      onClick={addWorkoutTemplate}
-                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm"
-                    >
-                      Add Workout
-                    </button>
-                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Weekly Workout Schedule
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Assign a workout to each training day. You're training {mesocycleData.days_per_week} {mesocycleData.days_per_week === 1 ? 'day' : 'days'} per week.
+                  </p>
 
-                  {workoutTemplates.length === 0 && (
-                    <p className="text-gray-500 text-center py-4">
-                      No workouts yet. Click "Add Workout" to create one.
-                    </p>
-                  )}
-
-                  {workoutTemplates.map((workout, workoutIndex) => (
-                    <div key={workoutIndex} className="border rounded-lg p-4 mb-4 bg-gray-50">
-                      <div className="flex justify-between items-start mb-3">
-                        <h4 className="font-medium text-gray-900">Workout {workoutIndex + 1}</h4>
-                        <button
-                          type="button"
-                          onClick={() => removeWorkoutTemplate(workoutIndex)}
-                          className="text-red-600 hover:text-red-800 text-sm"
-                        >
-                          Remove
-                        </button>
-                      </div>
-
-                      <div className="space-y-3 mb-4">
-                        <input
-                          type="text"
-                          placeholder="Workout name"
-                          value={workout.name}
-                          onChange={(e) =>
-                            updateWorkoutTemplate(workoutIndex, 'name', e.target.value)
-                          }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
-                          required
-                        />
-
-                        <textarea
-                          placeholder="Description (optional)"
-                          value={workout.description}
-                          onChange={(e) =>
-                            updateWorkoutTemplate(workoutIndex, 'description', e.target.value)
-                          }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
-                          rows={2}
-                        />
-                      </div>
-
-                      {/* Exercises */}
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-700">Exercises</span>
-                          <button
-                            type="button"
-                            onClick={() => addExerciseToWorkout(workoutIndex)}
-                            className="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600"
-                          >
-                            Add Exercise
-                          </button>
+                  {workoutTemplates.map((workout, dayIndex) => (
+                      <div key={dayIndex} className="border rounded-lg p-4 mb-4 bg-gray-50">
+                        <div className="mb-3">
+                          <h4 className="font-medium text-gray-900 mb-1">Day {dayIndex + 1}</h4>
+                          <p className="text-xs text-gray-600">Workout for training day {dayIndex + 1}</p>
                         </div>
 
-                        {workout.exercises.map((exercise, exerciseIndex) => (
-                          <div
-                            key={exerciseIndex}
-                            className="border border-gray-200 rounded p-3 bg-white"
-                          >
-                            <div className="flex justify-between items-start mb-2">
-                              <span className="text-sm font-medium text-gray-700">
-                                Exercise {exerciseIndex + 1}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => removeExercise(workoutIndex, exerciseIndex)}
-                                className="text-red-600 hover:text-red-800 text-xs"
-                              >
-                                Remove
-                              </button>
-                            </div>
+                        <div className="space-y-3 mb-4">
+                          <input
+                            type="text"
+                            placeholder="Workout name"
+                            value={workout.name}
+                            onChange={(e) =>
+                              updateWorkoutTemplate(dayIndex, 'name', e.target.value)
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                            required
+                          />
 
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                              <div className="col-span-2">
-                                <select
-                                  value={exercise.exercise_id}
-                                  onChange={(e) =>
-                                    updateExercise(
-                                      workoutIndex,
-                                      exerciseIndex,
-                                      'exercise_id',
-                                      parseInt(e.target.value)
-                                    )
-                                  }
-                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900"
-                                >
-                                  {exercises.map((ex) => (
-                                    <option key={ex.id} value={ex.id}>
-                                      {ex.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
+                          <textarea
+                            placeholder="Description (optional)"
+                            value={workout.description}
+                            onChange={(e) =>
+                              updateWorkoutTemplate(dayIndex, 'description', e.target.value)
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                            rows={2}
+                          />
+                        </div>
 
-                              <div>
-                                <label className="text-xs text-gray-600">Sets</label>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  max="10"
-                                  value={exercise.target_sets}
-                                  onChange={(e) =>
-                                    updateExercise(
-                                      workoutIndex,
-                                      exerciseIndex,
-                                      'target_sets',
-                                      parseInt(e.target.value)
-                                    )
-                                  }
-                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="text-xs text-gray-600">Reps Min</label>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  value={exercise.target_reps_min}
-                                  onChange={(e) =>
-                                    updateExercise(
-                                      workoutIndex,
-                                      exerciseIndex,
-                                      'target_reps_min',
-                                      parseInt(e.target.value)
-                                    )
-                                  }
-                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="text-xs text-gray-600">Reps Max</label>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  value={exercise.target_reps_max}
-                                  onChange={(e) =>
-                                    updateExercise(
-                                      workoutIndex,
-                                      exerciseIndex,
-                                      'target_reps_max',
-                                      parseInt(e.target.value)
-                                    )
-                                  }
-                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="text-xs text-gray-600">Starting RIR</label>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="5"
-                                  value={exercise.starting_rir}
-                                  onChange={(e) =>
-                                    updateExercise(
-                                      workoutIndex,
-                                      exerciseIndex,
-                                      'starting_rir',
-                                      parseInt(e.target.value)
-                                    )
-                                  }
-                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="text-xs text-gray-600">Ending RIR</label>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="5"
-                                  value={exercise.ending_rir}
-                                  onChange={(e) =>
-                                    updateExercise(
-                                      workoutIndex,
-                                      exerciseIndex,
-                                      'ending_rir',
-                                      parseInt(e.target.value)
-                                    )
-                                  }
-                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900"
-                                />
-                              </div>
-
-                              <div className="col-span-2">
-                                <label className="text-xs text-gray-600">Notes</label>
-                                <input
-                                  type="text"
-                                  value={exercise.notes || ''}
-                                  onChange={(e) =>
-                                    updateExercise(
-                                      workoutIndex,
-                                      exerciseIndex,
-                                      'notes',
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder="Optional notes"
-                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900"
-                                />
-                              </div>
-                            </div>
+                        {/* Exercises */}
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium text-gray-700">Exercises</span>
+                            <button
+                              type="button"
+                              onClick={() => addExerciseToWorkout(dayIndex)}
+                              className="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600"
+                            >
+                              Add Exercise
+                            </button>
                           </div>
-                        ))}
+
+                          {workout.exercises.map((exercise, exerciseIndex) => (
+                            <div
+                              key={exerciseIndex}
+                              className="border border-gray-200 rounded p-3 bg-white"
+                            >
+                              <div className="flex justify-between items-start mb-2">
+                                <span className="text-sm font-medium text-gray-700">
+                                  Exercise {exerciseIndex + 1}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeExercise(dayIndex, exerciseIndex)}
+                                  className="text-red-600 hover:text-red-800 text-xs"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+
+                              <div className="space-y-2 text-sm">
+                                <div>
+                                  <label className="text-xs text-gray-600 block mb-1">Exercise</label>
+                                  <select
+                                    value={exercise.exercise_id}
+                                    onChange={(e) =>
+                                      updateExercise(
+                                        dayIndex,
+                                        exerciseIndex,
+                                        'exercise_id',
+                                        parseInt(e.target.value)
+                                      )
+                                    }
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900"
+                                  >
+                                    {exercises.map((ex) => (
+                                      <option key={ex.id} value={ex.id}>
+                                        {ex.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+
+                                <div>
+                                  <label className="text-xs text-gray-600 block mb-1">Notes (optional)</label>
+                                  <input
+                                    type="text"
+                                    placeholder="Add any notes for this exercise..."
+                                    value={exercise.notes || ''}
+                                    onChange={(e) =>
+                                      updateExercise(
+                                        dayIndex,
+                                        exerciseIndex,
+                                        'notes',
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-gray-900"
+                                  />
+                                </div>
+
+                                <p className="text-xs text-gray-500 italic">
+                                  Sets, reps, and RIR will be automatically determined by the algorithm.
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
 
                 {/* Form Actions */}

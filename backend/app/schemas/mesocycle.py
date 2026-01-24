@@ -13,18 +13,25 @@ class WorkoutExerciseBase(BaseModel):
 
     exercise_id: int
     order_index: int = Field(0, ge=0)
-    target_sets: int = Field(..., ge=1, le=10)
-    target_reps_min: int = Field(..., ge=1, le=100)
-    target_reps_max: int = Field(..., ge=1, le=100)
-    starting_rir: int = Field(3, ge=0, le=5)
-    ending_rir: int = Field(0, ge=0, le=5)
+    target_sets: int = Field(3, ge=1, le=10)  # Default 3 sets
+    target_reps_min: int = Field(8, ge=1, le=100)  # Default 8 reps
+    target_reps_max: int = Field(12, ge=1, le=100)  # Default 12 reps
+    starting_rir: int = Field(3, ge=0, le=5)  # Default 3 RIR
+    ending_rir: int = Field(0, ge=0, le=5)  # Default 0 RIR
     notes: Optional[str] = None
 
 
-class WorkoutExerciseCreate(WorkoutExerciseBase):
-    """Schema for creating a workout exercise."""
+class WorkoutExerciseCreate(BaseModel):
+    """Schema for creating a workout exercise - only requires exercise selection."""
 
-    pass
+    exercise_id: int
+    order_index: int = Field(0, ge=0)
+    target_sets: int = Field(3, ge=1, le=10)  # Auto-generated, default 3 sets
+    target_reps_min: int = Field(8, ge=1, le=100)  # Auto-generated, default 8 reps
+    target_reps_max: int = Field(12, ge=1, le=100)  # Auto-generated, default 12 reps
+    starting_rir: int = Field(3, ge=0, le=5)  # Auto-generated, default 3 RIR
+    ending_rir: int = Field(0, ge=0, le=5)  # Auto-generated, default 0 RIR
+    notes: Optional[str] = None
 
 
 class WorkoutExerciseUpdate(BaseModel):
@@ -98,6 +105,7 @@ class MesocycleBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
     weeks: int = Field(..., ge=3, le=12)
+    days_per_week: int = Field(..., ge=1, le=7)
     start_date: Optional[date] = None
     end_date: Optional[date] = None
 
@@ -114,6 +122,7 @@ class MesocycleUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
     weeks: Optional[int] = Field(None, ge=3, le=12)
+    days_per_week: Optional[int] = Field(None, ge=1, le=7)
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     status: Optional[str] = Field(None, pattern="^(planning|active|completed|archived)$")
@@ -141,6 +150,7 @@ class MesocycleListResponse(BaseModel):
     name: str
     description: Optional[str]
     weeks: int
+    days_per_week: int
     start_date: Optional[date]
     end_date: Optional[date]
     status: str

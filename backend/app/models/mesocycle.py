@@ -23,6 +23,7 @@ class Mesocycle(Base):
 
     # Duration
     weeks = Column(Integer, nullable=False)  # Total weeks in mesocycle (e.g., 4)
+    days_per_week = Column(Integer, nullable=False, default=4)  # Number of training days per week (e.g., 4, 5, 6)
     start_date = Column(Date, nullable=True)  # Optional planned start date
     end_date = Column(Date, nullable=True)  # Optional planned end date
 

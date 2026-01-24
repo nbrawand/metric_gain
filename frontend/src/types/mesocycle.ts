@@ -70,6 +70,7 @@ export interface Mesocycle {
   name: string;
   description?: string;
   weeks: number;
+  days_per_week: number;
   start_date?: string;
   end_date?: string;
   status: 'planning' | 'active' | 'completed' | 'archived';
@@ -87,6 +88,7 @@ export interface MesocycleListItem {
   name: string;
   description?: string;
   weeks: number;
+  days_per_week: number;
   start_date?: string;
   end_date?: string;
   status: 'planning' | 'active' | 'completed' | 'archived';
@@ -102,6 +104,7 @@ export interface MesocycleCreate {
   name: string;
   description?: string;
   weeks: number;
+  days_per_week: number;
   start_date?: string;
   end_date?: string;
   workout_templates: WorkoutTemplateCreate[];
@@ -114,6 +117,7 @@ export interface MesocycleUpdate {
   name?: string;
   description?: string;
   weeks?: number;
+  days_per_week?: number;
   start_date?: string;
   end_date?: string;
   status?: 'planning' | 'active' | 'completed' | 'archived';
