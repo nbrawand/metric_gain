@@ -19,7 +19,7 @@
 - Workout template management
 - Simplified exercise selection (sets/reps/RIR auto-generated)
 
-## Phase 4: Workout Execution 🔄 IN PROGRESS
+## Phase 4: Workout Execution ✅ COMPLETED
 
 ### ✅ Completed:
 - Backend models and API for WorkoutSession and WorkoutSet
@@ -27,13 +27,12 @@
 - Database migrations
 - Workout execution page UI with set tracking
 - Calendar progress tracking popup with week/day grid
-
-### 🚧 In Progress:
-- Weight/rep recommendation algorithm
+- Weight/rep recommendation system with target guidance
 
 ### ⏭️ SKIPPED (for later):
 - Workout history views
 - Detailed progression analytics
+- Advanced progressive overload algorithm (fetch previous week performance)
 
 ## Phase 5: Progressive Overload & Analytics ⏸️ NOT STARTED
 - Auto-regulation algorithm refinement
