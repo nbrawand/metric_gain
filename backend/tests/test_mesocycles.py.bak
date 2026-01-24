@@ -61,7 +61,6 @@ def test_create_mesocycle_minimal(client, auth_headers, sample_exercise_id):
         "description": "A test training block",
         "weeks": 6,
         "days_per_week": 3,
-        "days_per_week": 3,
         "workout_templates": [
             {
                 "name": "Push Day",
@@ -102,7 +101,6 @@ def test_create_mesocycle_full(client, auth_headers, sample_exercise_id):
         "name": "Full PPL Mesocycle",
         "description": "Push Pull Legs split",
         "weeks": 8,
-        "days_per_week": 3,
         "start_date": "2026-02-01",
         "end_date": "2026-03-29",
         "workout_templates": [
@@ -176,7 +174,6 @@ def test_create_mesocycle_invalid_exercise(client, auth_headers):
     mesocycle_data = {
         "name": "Invalid Mesocycle",
         "weeks": 6,
-        "days_per_week": 3,
         "workout_templates": [
             {
                 "name": "Test Workout",
@@ -208,7 +205,6 @@ def test_list_mesocycles_with_data(client, auth_headers, sample_exercise_id):
     mesocycle1 = {
         "name": "Mesocycle 1",
         "weeks": 6,
-        "days_per_week": 3,
         "workout_templates": [
             {
                 "name": "Workout 1",
@@ -231,7 +227,6 @@ def test_list_mesocycles_with_data(client, auth_headers, sample_exercise_id):
     mesocycle2 = {
         "name": "Mesocycle 2",
         "weeks": 8,
-        "days_per_week": 3,
         "workout_templates": [
             {
                 "name": "Workout 1",
@@ -290,7 +285,6 @@ def test_get_mesocycle_by_id(client, auth_headers, sample_exercise_id):
     mesocycle_data = {
         "name": "Detailed Mesocycle",
         "weeks": 6,
-        "days_per_week": 3,
         "workout_templates": [
             {
                 "name": "Upper Body",
@@ -343,7 +337,6 @@ def test_get_other_users_mesocycle(client, auth_headers, second_user_headers, sa
     mesocycle_data = {
         "name": "Private Mesocycle",
         "weeks": 6,
-        "days_per_week": 3,
         "workout_templates": [
             {
                 "name": "Workout",
@@ -379,7 +372,6 @@ def test_update_mesocycle(client, auth_headers, sample_exercise_id):
         "name": "Original Name",
         "description": "Original description",
         "weeks": 6,
-        "days_per_week": 3,
         "workout_templates": [
             {
                 "name": "Workout",
@@ -426,7 +418,6 @@ def test_update_other_users_mesocycle(client, auth_headers, second_user_headers,
     mesocycle_data = {
         "name": "Private Mesocycle",
         "weeks": 6,
-        "days_per_week": 3,
         "workout_templates": [
             {
                 "name": "Workout",
@@ -465,7 +456,6 @@ def test_delete_mesocycle(client, auth_headers, sample_exercise_id):
     mesocycle_data = {
         "name": "Mesocycle to Delete",
         "weeks": 6,
-        "days_per_week": 3,
         "workout_templates": [
             {
                 "name": "Workout",
@@ -504,7 +494,6 @@ def test_delete_other_users_mesocycle(client, auth_headers, second_user_headers,
     mesocycle_data = {
         "name": "Private Mesocycle",
         "weeks": 6,
-        "days_per_week": 3,
         "workout_templates": [
             {
                 "name": "Workout",
@@ -539,7 +528,6 @@ def test_add_workout_template(client, auth_headers, sample_exercise_id):
     mesocycle_data = {
         "name": "Expandable Mesocycle",
         "weeks": 6,
-        "days_per_week": 3,
         "workout_templates": [
             {
                 "name": "Workout 1",
@@ -610,7 +598,6 @@ def test_create_mesocycle_invalid_weeks(client, auth_headers, sample_exercise_id
     mesocycle_data = {
         "name": "Invalid Weeks",
         "weeks": 2,  # Too few weeks
-        "days_per_week": 3,
         "workout_templates": [
             {
                 "name": "Workout",
