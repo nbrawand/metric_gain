@@ -24,6 +24,7 @@ export default function MesocycleDetail() {
     description: '',
     status: 'planning' as 'planning' | 'active' | 'completed' | 'archived',
   });
+  const [showWorkoutPicker, setShowWorkoutPicker] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -56,37 +57,26 @@ export default function MesocycleDetail() {
     }
   };
 
-  const handleStartNextWorkout = async () => {
+  const handleStartWorkout = async (templateId: number, dayNumber: number) => {
     if (!mesocycle || !accessToken) return;
 
     try {
-      // Find the next workout to start
+      // Calculate current week based on completed sessions
       const completedSessions = workoutSessions.filter(s => s.status === 'completed');
-      const nextWeek = completedSessions.length > 0
+      const currentWeek = completedSessions.length > 0
         ? Math.floor(completedSessions.length / mesocycle.days_per_week) + 1
         : 1;
-      const nextDay = completedSessions.length > 0
-        ? (completedSessions.length % mesocycle.days_per_week) + 1
-        : 1;
 
-      // Find the template for this day
-      const templateIndex = nextDay - 1;
-      const template = mesocycle.workout_templates?.[templateIndex];
-
-      if (!template) {
-        alert('No workout template found for this day');
-        return;
-      }
-
-      // Create new workout session
+      // Create new workout session with selected template
       const session = await createWorkoutSession({
         mesocycle_id: mesocycle.id,
-        workout_template_id: template.id,
+        workout_template_id: templateId,
         workout_date: new Date().toISOString().split('T')[0],
-        week_number: nextWeek,
-        day_number: nextDay,
+        week_number: currentWeek,
+        day_number: dayNumber,
       }, accessToken);
 
+      setShowWorkoutPicker(false);
       // Navigate to workout
       navigate(`/workout/${session.id}`);
     } catch (err) {
@@ -308,6 +298,43 @@ export default function MesocycleDetail() {
           </div>
         </div>
 
+        {/* Workout Picker Modal */}
+        {showWorkoutPicker && mesocycle && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-gray-900">Choose Workout</h3>
+                <button
+                  onClick={() => setShowWorkoutPicker(false)}
+                  className="text-gray-400 hover:text-gray-600 text-xl"
+                >
+                  &times;
+                </button>
+              </div>
+              <div className="space-y-2">
+                {mesocycle.workout_templates.map((template, index) => (
+                  <button
+                    key={template.id}
+                    onClick={() => handleStartWorkout(template.id, index + 1)}
+                    className="w-full text-left border border-gray-200 rounded-lg p-4 hover:border-teal-500 hover:bg-teal-50 transition"
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Day {index + 1}</h4>
+                        <p className="text-sm text-gray-600">{template.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {template.exercises.length} exercise{template.exercises.length !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      <span className="text-teal-600">&rarr;</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Workout Sessions */}
         {mesocycle.status === 'active' && (
           <div className="mb-6">
@@ -315,16 +342,16 @@ export default function MesocycleDetail() {
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold text-gray-900">Your Workouts</h2>
                 <button
-                  onClick={handleStartNextWorkout}
+                  onClick={() => setShowWorkoutPicker(true)}
                   className="bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 font-medium"
                 >
-                  Start Next Workout
+                  Start Workout
                 </button>
               </div>
 
               {workoutSessions.length === 0 ? (
                 <p className="text-gray-600 text-center py-4">
-                  No workouts yet. Click "Start Next Workout" to begin!
+                  No workouts yet. Click "Start Workout" to begin!
                 </p>
               ) : (
                 <div className="space-y-2">

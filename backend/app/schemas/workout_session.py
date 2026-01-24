@@ -63,7 +63,7 @@ class WorkoutSessionBase(BaseModel):
     workout_template_id: int
     workout_date: date
     week_number: int = Field(..., ge=1)
-    day_number: int = Field(..., ge=1, le=7)
+    day_number: int = Field(..., ge=1)  # Flexible day number (1, 2, 3... based on workout template)
     duration_minutes: Optional[int] = Field(None, ge=1)
     notes: Optional[str] = None
 
@@ -79,7 +79,7 @@ class WorkoutSessionUpdate(BaseModel):
 
     workout_date: Optional[date] = None
     week_number: Optional[int] = Field(None, ge=1)
-    day_number: Optional[int] = Field(None, ge=1, le=7)
+    day_number: Optional[int] = Field(None, ge=1)  # Flexible day number
     status: Optional[str] = Field(None, pattern="^(in_progress|completed|skipped)$")
     duration_minutes: Optional[int] = Field(None, ge=1)
     notes: Optional[str] = None

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { getWorkoutSession, updateWorkoutSet, updateWorkoutSession, listWorkoutSessions } from '../api/workoutSessions';
+import { getWorkoutSession, updateWorkoutSet, updateWorkoutSession, listWorkoutSessions, createWorkoutSession } from '../api/workoutSessions';
 import { getMesocycle } from '../api/mesocycles';
 import { WorkoutSession, WorkoutSet, WorkoutSessionListItem } from '../types/workout_session';
 import { Mesocycle } from '../types/mesocycle';
@@ -84,15 +84,8 @@ export default function WorkoutExecution() {
     }
   };
 
-  const getDayName = (): string => {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const date = new Date(session?.workout_date || '');
-    return days[date.getDay()];
-  };
-
   const getDayLabel = (dayNumber: number): string => {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return days[dayNumber - 1] || 'Day';
+    return `Day ${dayNumber}`;
   };
 
   const getSessionStatus = (weekNum: number, dayNum: number): 'completed' | 'in_progress' | 'skipped' | null => {
@@ -110,11 +103,36 @@ export default function WorkoutExecution() {
     return foundSession?.id || null;
   };
 
-  const handleCalendarCellClick = (weekNum: number, dayNum: number) => {
+  const handleCalendarCellClick = async (weekNum: number, dayNum: number) => {
     const sessId = getSessionId(weekNum, dayNum);
     if (sessId) {
+      // Session exists, navigate to it
       navigate(`/workout/${sessId}`);
       setShowCalendar(false);
+    } else if (mesocycle && accessToken) {
+      // No session exists, create one for this week/day
+      const templateIndex = dayNum - 1;
+      const template = mesocycle.workout_templates?.[templateIndex];
+
+      if (!template) {
+        console.error('No workout template found for day', dayNum);
+        return;
+      }
+
+      try {
+        const newSession = await createWorkoutSession({
+          mesocycle_id: mesocycle.id,
+          workout_template_id: template.id,
+          workout_date: new Date().toISOString().split('T')[0],
+          week_number: weekNum,
+          day_number: dayNum,
+        }, accessToken);
+
+        navigate(`/workout/${newSession.id}`);
+        setShowCalendar(false);
+      } catch (err) {
+        console.error('Error creating workout session:', err);
+      }
     }
   };
 
@@ -176,7 +194,7 @@ export default function WorkoutExecution() {
         </div>
         <h1 className="text-sm text-gray-400 uppercase">{mesocycle.name}</h1>
         <h2 className="text-lg font-semibold">
-          WEEK {session.week_number} DAY {session.day_number} {getDayName()}
+          WEEK {session.week_number} &bull; DAY {session.day_number}
         </h2>
       </div>
 
@@ -209,8 +227,8 @@ export default function WorkoutExecution() {
                   ))}
                 </div>
 
-                {/* Day Rows */}
-                {Array.from({ length: mesocycle.days_per_week }, (_, i) => i + 1).map(dayNum => (
+                {/* Day Rows - use actual number of workout templates */}
+                {Array.from({ length: mesocycle.workout_templates?.length || mesocycle.days_per_week }, (_, i) => i + 1).map(dayNum => (
                   <div key={dayNum} className="flex gap-2 mb-2">
                     {/* Day Label */}
                     <div className="w-12 flex items-center">
@@ -227,7 +245,6 @@ export default function WorkoutExecution() {
                         <div key={weekNum} className="flex-1 min-w-[60px]">
                           <button
                             onClick={() => handleCalendarCellClick(weekNum, dayNum)}
-                            disabled={!status}
                             className={`w-full py-2 px-3 rounded text-xs font-medium transition-colors ${
                               status === 'completed'
                                 ? 'bg-teal-600 text-white hover:bg-teal-700'
@@ -235,7 +252,7 @@ export default function WorkoutExecution() {
                                 ? 'bg-teal-800 text-white hover:bg-teal-700'
                                 : status === 'skipped'
                                 ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                                : 'bg-gray-900 text-gray-600 cursor-not-allowed'
+                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600 cursor-pointer'
                             } ${
                               isCurrentSession ? 'ring-2 ring-white' : ''
                             }`}
