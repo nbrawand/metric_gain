@@ -78,7 +78,7 @@ export default function WorkoutExecution() {
         { status: 'completed' },
         accessToken
       );
-      navigate('/mesocycles');
+      navigate('/');
     } catch (err) {
       console.error('Error completing workout:', err);
     }
@@ -180,7 +180,7 @@ export default function WorkoutExecution() {
       <div className="bg-gray-800 p-4 sticky top-0 z-10 shadow-lg">
         <div className="flex items-center justify-between mb-2">
           <button
-            onClick={() => navigate('/mesocycles')}
+            onClick={() => navigate('/')}
             className="text-gray-400 hover:text-white"
           >
             ← Back
