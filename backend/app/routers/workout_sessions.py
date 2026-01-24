@@ -10,6 +10,7 @@ from sqlalchemy import func
 from app.database import get_db
 from app.models.workout_session import WorkoutSession, WorkoutSet
 from app.models.user import User
+from app.models.mesocycle import WorkoutTemplate
 from app.schemas.workout_session import (
     WorkoutSessionCreate,
     WorkoutSessionUpdate,
@@ -31,12 +32,38 @@ def create_workout_session(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Create a new workout session."""
+    """Create a new workout session and auto-generate sets from template."""
+    # Create the workout session
     workout_session = WorkoutSession(
         user_id=current_user.id,
         **session_data.model_dump()
     )
     db.add(workout_session)
+    db.flush()  # Get the session ID without committing
+
+    # Fetch the workout template to get exercises
+    template = db.query(WorkoutTemplate).filter(
+        WorkoutTemplate.id == session_data.workout_template_id
+    ).first()
+
+    if template and template.exercises:
+        # Auto-generate workout sets from template exercises
+        for template_exercise in template.exercises:
+            # Create sets based on the template (default: 3 sets per exercise)
+            num_sets = template_exercise.target_sets or 3
+            for set_num in range(1, num_sets + 1):
+                workout_set = WorkoutSet(
+                    workout_session_id=workout_session.id,
+                    exercise_id=template_exercise.exercise_id,
+                    set_number=set_num,
+                    order_index=template_exercise.order_index * 100 + set_num,
+                    weight=0,  # User will fill this in
+                    reps=0,  # User will fill this in
+                    target_reps=template_exercise.target_reps_max,  # Use max of rep range
+                    target_rir=template_exercise.starting_rir,  # Use starting RIR for week 1
+                )
+                db.add(workout_set)
+
     db.commit()
     db.refresh(workout_session)
     return workout_session

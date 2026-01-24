@@ -14,10 +14,10 @@ class WorkoutSetBase(BaseModel):
     set_number: int = Field(..., ge=1)
     order_index: int = Field(0, ge=0)
     weight: float = Field(..., ge=0)
-    reps: int = Field(..., ge=1)
+    reps: int = Field(..., ge=0)  # Allow 0 for sets not yet performed
     rir: Optional[int] = Field(None, ge=0, le=10)
     target_weight: Optional[float] = Field(None, ge=0)
-    target_reps: Optional[int] = Field(None, ge=1)
+    target_reps: Optional[int] = Field(None, ge=0)  # Allow 0 for optional targets
     target_rir: Optional[int] = Field(None, ge=0, le=10)
     notes: Optional[str] = None
 
@@ -35,10 +35,10 @@ class WorkoutSetUpdate(BaseModel):
     set_number: Optional[int] = Field(None, ge=1)
     order_index: Optional[int] = Field(None, ge=0)
     weight: Optional[float] = Field(None, ge=0)
-    reps: Optional[int] = Field(None, ge=1)
+    reps: Optional[int] = Field(None, ge=0)  # Allow 0 for sets not yet performed
     rir: Optional[int] = Field(None, ge=0, le=10)
     target_weight: Optional[float] = Field(None, ge=0)
-    target_reps: Optional[int] = Field(None, ge=1)
+    target_reps: Optional[int] = Field(None, ge=0)  # Allow 0 for optional targets
     target_rir: Optional[int] = Field(None, ge=0, le=10)
     notes: Optional[str] = None
 

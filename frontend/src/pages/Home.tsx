@@ -2,12 +2,62 @@
  * Home/Dashboard page - displayed after login
  */
 
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
+import { listMesocycles } from '../api/mesocycles';
+import { listWorkoutSessions } from '../api/workoutSessions';
+import { MesocycleListItem } from '../types/mesocycle';
+import { WorkoutSessionListItem } from '../types/workout_session';
 
 export function Home() {
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { user, logout, accessToken } = useAuthStore();
+  const [activeMesocycle, setActiveMesocycle] = useState<MesocycleListItem | null>(null);
+  const [workoutSessions, setWorkoutSessions] = useState<WorkoutSessionListItem[]>([]);
+
+  useEffect(() => {
+    loadActiveMesocycle();
+  }, []);
+
+  const loadActiveMesocycle = async () => {
+    if (!accessToken) return;
+
+    try {
+      const mesocycles = await listMesocycles(accessToken);
+      const active = mesocycles.find(m => m.status === 'active');
+
+      if (active) {
+        setActiveMesocycle(active);
+        // Load workout sessions for the active mesocycle
+        const sessions = await listWorkoutSessions(
+          { mesocycle_id: active.id },
+          accessToken
+        );
+        setWorkoutSessions(sessions);
+      }
+    } catch (err) {
+      console.error('Error loading active mesocycle:', err);
+    }
+  };
+
+  const handleContinueMesocycle = async () => {
+    if (!accessToken || !activeMesocycle) return;
+
+    try {
+      // Find the first in-progress workout
+      const inProgress = workoutSessions.find(s => s.status === 'in_progress');
+      if (inProgress) {
+        navigate(`/workout/${inProgress.id}`);
+        return;
+      }
+
+      // Otherwise, navigate to mesocycle detail to start next workout
+      navigate(`/mesocycles/${activeMesocycle.id}`);
+    } catch (err) {
+      console.error('Error continuing mesocycle:', err);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -20,7 +70,18 @@ export function Home() {
       <header className="bg-gray-800 border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-white">Metric Gain</h1>
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-bold text-white">Metric Gain</h1>
+              {activeMesocycle && (
+                <button
+                  onClick={() => navigate(`/mesocycles/${activeMesocycle.id}`)}
+                  className="text-2xl hover:opacity-80 transition-opacity"
+                  title="View workout calendar"
+                >
+                  📅
+                </button>
+              )}
+            </div>
             <div className="flex items-center gap-6">
               <button
                 onClick={() => navigate('/exercises')}
@@ -47,6 +108,30 @@ export function Home() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        {/* Active Mesocycle Card */}
+        {activeMesocycle && (
+          <div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-lg shadow-xl p-8 mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  {activeMesocycle.name}
+                </h2>
+                <p className="text-teal-100">
+                  Week {Math.floor(workoutSessions.filter(s => s.status === 'completed').length / activeMesocycle.days_per_week) + 1} of {activeMesocycle.weeks}
+                  {' • '}
+                  {workoutSessions.filter(s => s.status === 'completed').length} workouts completed
+                </p>
+              </div>
+              <button
+                onClick={handleContinueMesocycle}
+                className="bg-white text-teal-700 px-8 py-4 rounded-lg font-bold text-lg hover:bg-teal-50 transition-colors shadow-lg"
+              >
+                Continue Mesocycle →
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="bg-gray-800 rounded-lg shadow-xl p-8">
           <h2 className="text-3xl font-bold text-white mb-4">
             Welcome, {user?.full_name || user?.email}!

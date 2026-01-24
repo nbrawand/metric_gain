@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../store/authStore';
-import { getWorkoutSession, updateWorkoutSet, addWorkoutSet, updateWorkoutSession, listWorkoutSessions } from '../api/workoutSessions';
+import { useAuthStore } from '../stores/authStore';
+import { getWorkoutSession, updateWorkoutSet, updateWorkoutSession, listWorkoutSessions } from '../api/workoutSessions';
 import { getMesocycle } from '../api/mesocycles';
 import { WorkoutSession, WorkoutSet, WorkoutSessionListItem } from '../types/workout_session';
 import { Mesocycle } from '../types/mesocycle';
@@ -9,7 +9,7 @@ import { Mesocycle } from '../types/mesocycle';
 export default function WorkoutExecution() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
-  const { accessToken } = useAuth();
+  const { accessToken } = useAuthStore();
 
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<WorkoutSession | null>(null);
@@ -84,7 +84,7 @@ export default function WorkoutExecution() {
     }
   };
 
-  const getDayName = (dayNumber: number): string => {
+  const getDayName = (): string => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const date = new Date(session?.workout_date || '');
     return days[date.getDay()];
@@ -95,14 +95,12 @@ export default function WorkoutExecution() {
     return days[dayNumber - 1] || 'Day';
   };
 
-  const getSessionStatus = (weekNum: number, dayNum: number): 'completed' | 'in_progress' | 'scheduled' | null => {
+  const getSessionStatus = (weekNum: number, dayNum: number): 'completed' | 'in_progress' | 'skipped' | null => {
     const foundSession = allSessions.find(
       s => s.week_number === weekNum && s.day_number === dayNum
     );
     if (!foundSession) return null;
-    if (foundSession.status === 'completed') return 'completed';
-    if (foundSession.status === 'in_progress') return 'in_progress';
-    return 'scheduled';
+    return foundSession.status;
   };
 
   const getSessionId = (weekNum: number, dayNum: number): number | null => {
@@ -118,25 +116,6 @@ export default function WorkoutExecution() {
       navigate(`/workout/${sessId}`);
       setShowCalendar(false);
     }
-  };
-
-  const getRecommendedWeight = (exerciseId: number, setNumber: number): number | null => {
-    if (!session || !allSessions.length) return null;
-
-    // Find previous week's session for the same day
-    const previousWeekSession = allSessions.find(
-      s => s.day_number === session.day_number &&
-           s.week_number === session.week_number - 1 &&
-           s.status === 'completed'
-    );
-
-    if (!previousWeekSession) return null;
-
-    // We need to fetch the full session with sets to get previous performance
-    // For now, we'll use the target_weight from the current set as a starting point
-    // In a full implementation, we'd fetch the previous session's actual performance
-
-    return null; // Placeholder - would need full previous session data
   };
 
   const getWeightRecommendation = (set: WorkoutSet): string => {
@@ -197,7 +176,7 @@ export default function WorkoutExecution() {
         </div>
         <h1 className="text-sm text-gray-400 uppercase">{mesocycle.name}</h1>
         <h2 className="text-lg font-semibold">
-          WEEK {session.week_number} DAY {session.day_number} {getDayName(session.day_number)}
+          WEEK {session.week_number} DAY {session.day_number} {getDayName()}
         </h2>
       </div>
 
@@ -254,7 +233,7 @@ export default function WorkoutExecution() {
                                 ? 'bg-teal-600 text-white hover:bg-teal-700'
                                 : status === 'in_progress'
                                 ? 'bg-teal-800 text-white hover:bg-teal-700'
-                                : status === 'scheduled'
+                                : status === 'skipped'
                                 ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                 : 'bg-gray-900 text-gray-600 cursor-not-allowed'
                             } ${

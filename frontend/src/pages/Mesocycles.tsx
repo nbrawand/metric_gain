@@ -8,8 +8,11 @@ import {
   listMesocycles,
   createMesocycle,
   deleteMesocycle,
+  updateMesocycle,
+  getMesocycle,
 } from '../api/mesocycles';
 import { getExercises } from '../api/exercises';
+import { createWorkoutSession } from '../api/workoutSessions';
 import { useAuthStore } from '../stores/authStore';
 import {
   MesocycleListItem,
@@ -90,6 +93,44 @@ export default function Mesocycles() {
     } catch (err) {
       alert('Failed to delete mesocycle');
       console.error('Error deleting mesocycle:', err);
+    }
+  };
+
+  const handleStartMesocycle = async (mesocycle: MesocycleListItem) => {
+    if (!accessToken) return;
+
+    try {
+      // Update mesocycle to active status with today's start date
+      const today = new Date().toISOString().split('T')[0];
+      await updateMesocycle(mesocycle.id, {
+        status: 'active',
+        start_date: today,
+      }, accessToken);
+
+      // Fetch full mesocycle details to get the first workout template
+      const fullMesocycle = await getMesocycle(mesocycle.id, accessToken);
+
+      if (!fullMesocycle.workout_templates || fullMesocycle.workout_templates.length === 0) {
+        alert('This mesocycle has no workout templates. Please add workouts first.');
+        return;
+      }
+
+      // Create the first workout session (Week 1, Day 1)
+      const firstTemplate = fullMesocycle.workout_templates.find(wt => wt.order_index === 0) || fullMesocycle.workout_templates[0];
+
+      const session = await createWorkoutSession({
+        mesocycle_id: mesocycle.id,
+        workout_template_id: firstTemplate.id,
+        workout_date: today,
+        week_number: 1,
+        day_number: 1,
+      }, accessToken);
+
+      // Navigate to the workout execution page
+      navigate(`/workout/${session.id}`);
+    } catch (err) {
+      alert('Failed to start mesocycle');
+      console.error('Error starting mesocycle:', err);
     }
   };
 
@@ -202,6 +243,9 @@ export default function Mesocycles() {
     return <div className="p-8">Loading mesocycles...</div>;
   }
 
+  // Check if there's already an active mesocycle
+  const hasActiveMesocycle = mesocycles.some(m => m.status === 'active');
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -285,13 +329,35 @@ export default function Mesocycles() {
                     )}
                   </div>
 
-                  <div className="mt-4 pt-4 border-t flex justify-end gap-2">
+                  <div className="mt-4 pt-4 border-t flex justify-between items-center gap-2">
+                    {mesocycle.status === 'planning' && !hasActiveMesocycle && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartMesocycle(mesocycle);
+                        }}
+                        className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded text-sm font-medium transition"
+                      >
+                        Start Mesocycle
+                      </button>
+                    )}
+                    {mesocycle.status === 'active' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/mesocycles/${mesocycle.id}`);
+                        }}
+                        className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded text-sm font-medium transition"
+                      >
+                        View Workouts
+                      </button>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDelete(mesocycle.id);
                       }}
-                      className="text-red-600 hover:text-red-800 text-sm font-medium"
+                      className="text-red-600 hover:text-red-800 text-sm font-medium ml-auto"
                     >
                       Delete
                     </button>

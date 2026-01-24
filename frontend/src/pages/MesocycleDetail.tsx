@@ -5,14 +5,17 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getMesocycle, updateMesocycle, deleteMesocycle } from '../api/mesocycles';
+import { listWorkoutSessions, createWorkoutSession } from '../api/workoutSessions';
 import { useAuthStore } from '../stores/authStore';
 import { Mesocycle } from '../types/mesocycle';
+import { WorkoutSessionListItem } from '../types/workout_session';
 
 export default function MesocycleDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const accessToken = useAuthStore((state) => state.accessToken);
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null);
+  const [workoutSessions, setWorkoutSessions] = useState<WorkoutSessionListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -33,12 +36,16 @@ export default function MesocycleDetail() {
 
     try {
       setLoading(true);
-      const data = await getMesocycle(parseInt(id), accessToken);
-      setMesocycle(data);
+      const [mesocycleData, sessionsData] = await Promise.all([
+        getMesocycle(parseInt(id), accessToken),
+        listWorkoutSessions({ mesocycle_id: parseInt(id) }, accessToken),
+      ]);
+      setMesocycle(mesocycleData);
+      setWorkoutSessions(sessionsData);
       setEditData({
-        name: data.name,
-        description: data.description || '',
-        status: data.status,
+        name: mesocycleData.name,
+        description: mesocycleData.description || '',
+        status: mesocycleData.status,
       });
       setError(null);
     } catch (err) {
@@ -46,6 +53,45 @@ export default function MesocycleDetail() {
       console.error('Error loading mesocycle:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStartNextWorkout = async () => {
+    if (!mesocycle || !accessToken) return;
+
+    try {
+      // Find the next workout to start
+      const completedSessions = workoutSessions.filter(s => s.status === 'completed');
+      const nextWeek = completedSessions.length > 0
+        ? Math.floor(completedSessions.length / mesocycle.days_per_week) + 1
+        : 1;
+      const nextDay = completedSessions.length > 0
+        ? (completedSessions.length % mesocycle.days_per_week) + 1
+        : 1;
+
+      // Find the template for this day
+      const templateIndex = nextDay - 1;
+      const template = mesocycle.workout_templates?.[templateIndex];
+
+      if (!template) {
+        alert('No workout template found for this day');
+        return;
+      }
+
+      // Create new workout session
+      const session = await createWorkoutSession({
+        mesocycle_id: mesocycle.id,
+        workout_template_id: template.id,
+        workout_date: new Date().toISOString().split('T')[0],
+        week_number: nextWeek,
+        day_number: nextDay,
+      }, accessToken);
+
+      // Navigate to workout
+      navigate(`/workout/${session.id}`);
+    } catch (err) {
+      console.error('Error starting workout:', err);
+      alert('Failed to start workout');
     }
   };
 
@@ -261,6 +307,68 @@ export default function MesocycleDetail() {
             )}
           </div>
         </div>
+
+        {/* Workout Sessions */}
+        {mesocycle.status === 'active' && (
+          <div className="mb-6">
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-900">Your Workouts</h2>
+                <button
+                  onClick={handleStartNextWorkout}
+                  className="bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 font-medium"
+                >
+                  Start Next Workout
+                </button>
+              </div>
+
+              {workoutSessions.length === 0 ? (
+                <p className="text-gray-600 text-center py-4">
+                  No workouts yet. Click "Start Next Workout" to begin!
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {workoutSessions.map((session) => (
+                    <button
+                      key={session.id}
+                      onClick={() => navigate(`/workout/${session.id}`)}
+                      className="w-full text-left border border-gray-200 rounded-lg p-4 hover:border-teal-500 hover:bg-gray-50 transition"
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h3 className="font-semibold text-gray-900">
+                            Week {session.week_number}, Day {session.day_number}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            {new Date(session.workout_date).toLocaleDateString()} • {session.set_count} sets
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {session.status === 'completed' && (
+                            <span className="text-sm bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">
+                              Completed
+                            </span>
+                          )}
+                          {session.status === 'in_progress' && (
+                            <span className="text-sm bg-teal-100 text-teal-800 px-3 py-1 rounded-full font-medium">
+                              In Progress
+                            </span>
+                          )}
+                          {session.status === 'skipped' && (
+                            <span className="text-sm bg-gray-100 text-gray-800 px-3 py-1 rounded-full font-medium">
+                              Skipped
+                            </span>
+                          )}
+                          <span className="text-gray-400">→</span>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Workout Templates */}
         <div className="space-y-6">
