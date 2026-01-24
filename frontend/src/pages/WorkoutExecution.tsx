@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/authStore';
-import { getWorkoutSession, updateWorkoutSet, addWorkoutSet, updateWorkoutSession } from '../api/workoutSessions';
+import { getWorkoutSession, updateWorkoutSet, addWorkoutSet, updateWorkoutSession, listWorkoutSessions } from '../api/workoutSessions';
 import { getMesocycle } from '../api/mesocycles';
-import { WorkoutSession, WorkoutSet } from '../types/workout_session';
+import { WorkoutSession, WorkoutSet, WorkoutSessionListItem } from '../types/workout_session';
 import { Mesocycle } from '../types/mesocycle';
 
 export default function WorkoutExecution() {
@@ -14,6 +14,7 @@ export default function WorkoutExecution() {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null);
+  const [allSessions, setAllSessions] = useState<WorkoutSessionListItem[]>([]);
   const [showCalendar, setShowCalendar] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,6 +33,13 @@ export default function WorkoutExecution() {
       // Load mesocycle data
       const mesocycleData = await getMesocycle(sessionData.mesocycle_id, accessToken);
       setMesocycle(mesocycleData);
+
+      // Load all sessions for this mesocycle
+      const sessions = await listWorkoutSessions(
+        { mesocycle_id: sessionData.mesocycle_id },
+        accessToken
+      );
+      setAllSessions(sessions);
 
       setError(null);
     } catch (err) {
@@ -80,6 +88,36 @@ export default function WorkoutExecution() {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const date = new Date(session?.workout_date || '');
     return days[date.getDay()];
+  };
+
+  const getDayLabel = (dayNumber: number): string => {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return days[dayNumber - 1] || 'Day';
+  };
+
+  const getSessionStatus = (weekNum: number, dayNum: number): 'completed' | 'in_progress' | 'scheduled' | null => {
+    const foundSession = allSessions.find(
+      s => s.week_number === weekNum && s.day_number === dayNum
+    );
+    if (!foundSession) return null;
+    if (foundSession.status === 'completed') return 'completed';
+    if (foundSession.status === 'in_progress') return 'in_progress';
+    return 'scheduled';
+  };
+
+  const getSessionId = (weekNum: number, dayNum: number): number | null => {
+    const foundSession = allSessions.find(
+      s => s.week_number === weekNum && s.day_number === dayNum
+    );
+    return foundSession?.id || null;
+  };
+
+  const handleCalendarCellClick = (weekNum: number, dayNum: number) => {
+    const sessId = getSessionId(weekNum, dayNum);
+    if (sessId) {
+      navigate(`/workout/${sessId}`);
+      setShowCalendar(false);
+    }
   };
 
   // Group exercises by muscle group
@@ -133,20 +171,73 @@ export default function WorkoutExecution() {
       </div>
 
       {/* Calendar Popup */}
-      {showCalendar && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+      {showCalendar && mesocycle && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Mesocycle Progress</h3>
+              <h3 className="text-sm text-gray-400 uppercase">Weeks</h3>
               <button
                 onClick={() => setShowCalendar(false)}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-white text-xl"
               >
                 ✕
               </button>
             </div>
-            <div className="text-sm text-gray-400 text-center">
-              Calendar view coming soon...
+
+            {/* Calendar Grid */}
+            <div className="overflow-x-auto">
+              <div className="inline-block min-w-full">
+                {/* Week Headers */}
+                <div className="flex gap-2 mb-2">
+                  <div className="w-12"></div>
+                  {Array.from({ length: mesocycle.weeks }, (_, i) => i + 1).map(weekNum => (
+                    <div key={weekNum} className="flex-1 min-w-[60px] text-center">
+                      <div className="text-xs text-gray-400 font-semibold">
+                        {weekNum === mesocycle.weeks ? 'DL' : `${weekNum}`}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Day Rows */}
+                {Array.from({ length: mesocycle.days_per_week }, (_, i) => i + 1).map(dayNum => (
+                  <div key={dayNum} className="flex gap-2 mb-2">
+                    {/* Day Label */}
+                    <div className="w-12 flex items-center">
+                      <span className="text-xs text-gray-400">{getDayLabel(dayNum)}</span>
+                    </div>
+
+                    {/* Week Cells */}
+                    {Array.from({ length: mesocycle.weeks }, (_, i) => i + 1).map(weekNum => {
+                      const status = getSessionStatus(weekNum, dayNum);
+                      const sessId = getSessionId(weekNum, dayNum);
+                      const isCurrentSession = sessId === session?.id;
+
+                      return (
+                        <div key={weekNum} className="flex-1 min-w-[60px]">
+                          <button
+                            onClick={() => handleCalendarCellClick(weekNum, dayNum)}
+                            disabled={!status}
+                            className={`w-full py-2 px-3 rounded text-xs font-medium transition-colors ${
+                              status === 'completed'
+                                ? 'bg-teal-600 text-white hover:bg-teal-700'
+                                : status === 'in_progress'
+                                ? 'bg-teal-800 text-white hover:bg-teal-700'
+                                : status === 'scheduled'
+                                ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                : 'bg-gray-900 text-gray-600 cursor-not-allowed'
+                            } ${
+                              isCurrentSession ? 'ring-2 ring-white' : ''
+                            }`}
+                          >
+                            {getDayLabel(dayNum)}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
