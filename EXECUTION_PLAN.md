@@ -25,10 +25,10 @@
 - Backend models and API for WorkoutSession and WorkoutSet
 - TypeScript types and API client
 - Database migrations
+- Workout execution page UI with set tracking
+- Calendar progress tracking popup with week/day grid
 
 ### 🚧 In Progress:
-- Workout execution page UI
-- Calendar progress tracking popup
 - Weight/rep recommendation algorithm
 
 ### ⏭️ SKIPPED (for later):
