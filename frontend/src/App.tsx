@@ -5,6 +5,7 @@ import { Home } from './pages/Home';
 import { Exercises } from './pages/Exercises';
 import Mesocycles from './pages/Mesocycles';
 import MesocycleDetail from './pages/MesocycleDetail';
+import WorkoutExecution from './pages/WorkoutExecution';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
@@ -42,6 +43,14 @@ function App() {
           element={
             <ProtectedRoute>
               <MesocycleDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/workout/:sessionId"
+          element={
+            <ProtectedRoute>
+              <WorkoutExecution />
             </ProtectedRoute>
           }
         />
