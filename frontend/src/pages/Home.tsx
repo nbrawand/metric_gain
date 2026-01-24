@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { listMesocycles, getMesocycle } from '../api/mesocycles';
+import { listMesocycles, getMesocycle, updateMesocycle } from '../api/mesocycles';
 import { listWorkoutSessions, createWorkoutSession } from '../api/workoutSessions';
 import { MesocycleListItem, Mesocycle } from '../types/mesocycle';
 import { WorkoutSessionListItem } from '../types/workout_session';
@@ -102,6 +102,27 @@ export function Home() {
     }
   };
 
+  const handleEndMesocycle = async () => {
+    if (!fullMesocycle || !accessToken) return;
+
+    if (!confirm('Are you sure you want to end this mesocycle? This will mark it as completed.')) {
+      return;
+    }
+
+    try {
+      await updateMesocycle(fullMesocycle.id, { status: 'completed' }, accessToken);
+      setShowCalendar(false);
+      setActiveMesocycle(null);
+      setFullMesocycle(null);
+      setWorkoutSessions([]);
+      // Reload to check for any other active mesocycles
+      loadActiveMesocycle();
+    } catch (err) {
+      console.error('Error ending mesocycle:', err);
+      alert('Failed to end mesocycle');
+    }
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -172,6 +193,16 @@ export function Home() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* End Mesocycle Button */}
+            <div className="mt-6 pt-4 border-t border-gray-700">
+              <button
+                onClick={handleEndMesocycle}
+                className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                End Mesocycle
+              </button>
             </div>
           </div>
         </div>

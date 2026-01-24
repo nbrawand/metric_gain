@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { getWorkoutSession, updateWorkoutSet, updateWorkoutSession, listWorkoutSessions, createWorkoutSession } from '../api/workoutSessions';
-import { getMesocycle } from '../api/mesocycles';
+import { getMesocycle, updateMesocycle } from '../api/mesocycles';
 import { WorkoutSession, WorkoutSet, WorkoutSessionListItem } from '../types/workout_session';
 import { Mesocycle } from '../types/mesocycle';
 
@@ -70,7 +70,7 @@ export default function WorkoutExecution() {
   };
 
   const handleCompleteWorkout = async () => {
-    if (!accessToken || !session) return;
+    if (!accessToken || !session || !mesocycle) return;
 
     try {
       await updateWorkoutSession(
@@ -78,6 +78,16 @@ export default function WorkoutExecution() {
         { status: 'completed' },
         accessToken
       );
+
+      // Check if all workouts in the mesocycle are now completed
+      const totalWorkouts = mesocycle.weeks * (mesocycle.workout_templates?.length || mesocycle.days_per_week);
+      const completedCount = allSessions.filter(s => s.status === 'completed').length + 1; // +1 for this workout
+
+      if (completedCount >= totalWorkouts) {
+        // All workouts completed, end the mesocycle
+        await updateMesocycle(mesocycle.id, { status: 'completed' }, accessToken);
+      }
+
       navigate('/');
     } catch (err) {
       console.error('Error completing workout:', err);
