@@ -5,16 +5,18 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { listMesocycles } from '../api/mesocycles';
-import { listWorkoutSessions } from '../api/workoutSessions';
-import { MesocycleListItem } from '../types/mesocycle';
+import { listMesocycles, getMesocycle } from '../api/mesocycles';
+import { listWorkoutSessions, createWorkoutSession } from '../api/workoutSessions';
+import { MesocycleListItem, Mesocycle } from '../types/mesocycle';
 import { WorkoutSessionListItem } from '../types/workout_session';
 
 export function Home() {
   const navigate = useNavigate();
   const { user, logout, accessToken } = useAuthStore();
   const [activeMesocycle, setActiveMesocycle] = useState<MesocycleListItem | null>(null);
+  const [fullMesocycle, setFullMesocycle] = useState<Mesocycle | null>(null);
   const [workoutSessions, setWorkoutSessions] = useState<WorkoutSessionListItem[]>([]);
+  const [showCalendar, setShowCalendar] = useState(false);
 
   useEffect(() => {
     loadActiveMesocycle();
@@ -29,6 +31,9 @@ export function Home() {
 
       if (active) {
         setActiveMesocycle(active);
+        // Load full mesocycle with workout templates
+        const fullMeso = await getMesocycle(active.id, accessToken);
+        setFullMesocycle(fullMeso);
         // Load workout sessions for the active mesocycle
         const sessions = await listWorkoutSessions(
           { mesocycle_id: active.id },
@@ -41,21 +46,59 @@ export function Home() {
     }
   };
 
-  const handleContinueMesocycle = async () => {
-    if (!accessToken || !activeMesocycle) return;
+  const handleContinueMesocycle = () => {
+    setShowCalendar(true);
+  };
 
-    try {
-      // Find the first in-progress workout
-      const inProgress = workoutSessions.find(s => s.status === 'in_progress');
-      if (inProgress) {
-        navigate(`/workout/${inProgress.id}`);
+  const getDayLabel = (dayNumber: number): string => {
+    return `Day ${dayNumber}`;
+  };
+
+  const getSessionStatus = (weekNum: number, dayNum: number): 'completed' | 'in_progress' | 'skipped' | null => {
+    const foundSession = workoutSessions.find(
+      s => s.week_number === weekNum && s.day_number === dayNum
+    );
+    if (!foundSession) return null;
+    return foundSession.status as 'completed' | 'in_progress' | 'skipped';
+  };
+
+  const getSessionId = (weekNum: number, dayNum: number): number | null => {
+    const foundSession = workoutSessions.find(
+      s => s.week_number === weekNum && s.day_number === dayNum
+    );
+    return foundSession?.id || null;
+  };
+
+  const handleCalendarCellClick = async (weekNum: number, dayNum: number) => {
+    const sessId = getSessionId(weekNum, dayNum);
+    if (sessId) {
+      // Session exists, navigate to it
+      navigate(`/workout/${sessId}`);
+      setShowCalendar(false);
+    } else if (fullMesocycle && accessToken) {
+      // No session exists, create one for this week/day
+      const templateIndex = dayNum - 1;
+      const template = fullMesocycle.workout_templates?.[templateIndex];
+
+      if (!template) {
+        console.error('No workout template found for day', dayNum);
         return;
       }
 
-      // Otherwise, navigate to mesocycle detail to start next workout
-      navigate(`/mesocycles/${activeMesocycle.id}`);
-    } catch (err) {
-      console.error('Error continuing mesocycle:', err);
+      try {
+        const newSession = await createWorkoutSession({
+          mesocycle_id: fullMesocycle.id,
+          workout_template_id: template.id,
+          workout_date: new Date().toISOString().split('T')[0],
+          week_number: weekNum,
+          day_number: dayNum,
+        }, accessToken);
+
+        navigate(`/workout/${newSession.id}`);
+        setShowCalendar(false);
+      } catch (err) {
+        console.error('Error creating workout session:', err);
+      }
     }
   };
 
@@ -66,21 +109,80 @@ export function Home() {
 
   return (
     <div className="min-h-screen bg-gray-900">
+      {/* Calendar Popup */}
+      {showCalendar && fullMesocycle && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-white">{fullMesocycle.name}</h3>
+              <button
+                onClick={() => setShowCalendar(false)}
+                className="text-gray-400 hover:text-white text-xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Calendar Grid */}
+            <div className="overflow-x-auto">
+              <div className="inline-block min-w-full">
+                {/* Week Headers */}
+                <div className="flex gap-2 mb-2">
+                  <div className="w-12"></div>
+                  {Array.from({ length: fullMesocycle.weeks }, (_, i) => i + 1).map(weekNum => (
+                    <div key={weekNum} className="flex-1 min-w-[60px] text-center">
+                      <div className="text-xs text-gray-400 font-semibold">
+                        {weekNum === fullMesocycle.weeks ? 'DL' : `${weekNum}`}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Day Rows */}
+                {Array.from({ length: fullMesocycle.workout_templates?.length || fullMesocycle.days_per_week }, (_, i) => i + 1).map(dayNum => (
+                  <div key={dayNum} className="flex gap-2 mb-2">
+                    {/* Day Label */}
+                    <div className="w-12 flex items-center">
+                      <span className="text-xs text-gray-400">{getDayLabel(dayNum)}</span>
+                    </div>
+
+                    {/* Week Cells */}
+                    {Array.from({ length: fullMesocycle.weeks }, (_, i) => i + 1).map(weekNum => {
+                      const status = getSessionStatus(weekNum, dayNum);
+
+                      return (
+                        <div key={weekNum} className="flex-1 min-w-[60px]">
+                          <button
+                            onClick={() => handleCalendarCellClick(weekNum, dayNum)}
+                            className={`w-full py-2 px-3 rounded text-xs font-medium transition-colors ${
+                              status === 'completed'
+                                ? 'bg-teal-600 text-white hover:bg-teal-700'
+                                : status === 'in_progress'
+                                ? 'bg-teal-800 text-white hover:bg-teal-700'
+                                : status === 'skipped'
+                                ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600 cursor-pointer'
+                            }`}
+                          >
+                            {getDayLabel(dayNum)}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-gray-800 border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <h1 className="text-2xl font-bold text-white">Metric Gain</h1>
-              {activeMesocycle && (
-                <button
-                  onClick={() => navigate(`/mesocycles/${activeMesocycle.id}`)}
-                  className="text-2xl hover:opacity-80 transition-opacity"
-                  title="View workout calendar"
-                >
-                  📅
-                </button>
-              )}
             </div>
             <div className="flex items-center gap-6">
               <button
