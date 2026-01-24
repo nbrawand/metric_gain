@@ -120,6 +120,37 @@ export default function WorkoutExecution() {
     }
   };
 
+  const getRecommendedWeight = (exerciseId: number, setNumber: number): number | null => {
+    if (!session || !allSessions.length) return null;
+
+    // Find previous week's session for the same day
+    const previousWeekSession = allSessions.find(
+      s => s.day_number === session.day_number &&
+           s.week_number === session.week_number - 1 &&
+           s.status === 'completed'
+    );
+
+    if (!previousWeekSession) return null;
+
+    // We need to fetch the full session with sets to get previous performance
+    // For now, we'll use the target_weight from the current set as a starting point
+    // In a full implementation, we'd fetch the previous session's actual performance
+
+    return null; // Placeholder - would need full previous session data
+  };
+
+  const getWeightRecommendation = (set: WorkoutSet): string => {
+    // If the set already has weight, don't override
+    if (set.weight > 0) return '';
+
+    // Use target weight if available
+    if (set.target_weight && set.target_weight > 0) {
+      return `Suggested: ${set.target_weight} lbs`;
+    }
+
+    return '';
+  };
+
   // Group exercises by muscle group
   const groupedExercises = session?.workout_sets.reduce((acc, set) => {
     const muscleGroup = set.exercise?.muscle_group || 'Other';
@@ -285,35 +316,54 @@ export default function WorkoutExecution() {
                   </div>
 
                   {/* Sets */}
-                  {exerciseSets.sort((a, b) => a.set_number - b.set_number).map((set) => (
-                    <div key={set.id} className="grid grid-cols-12 gap-2 items-center mb-2">
-                      <div className="col-span-1 text-gray-500">⋮</div>
+                  {exerciseSets.sort((a, b) => a.set_number - b.set_number).map((set) => {
+                    const recommendation = getWeightRecommendation(set);
+                    return (
+                      <div key={set.id} className="mb-3">
+                        <div className="grid grid-cols-12 gap-2 items-center">
+                          <div className="col-span-1 text-gray-500">⋮</div>
 
-                      <input
-                        type="number"
-                        value={set.weight}
-                        onChange={(e) => handleSetUpdate(set.id, 'weight', e.target.value)}
-                        className="col-span-4 bg-gray-700 text-white text-center rounded py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                        placeholder="0"
-                      />
+                          <div className="col-span-4">
+                            <input
+                              type="number"
+                              value={set.weight}
+                              onChange={(e) => handleSetUpdate(set.id, 'weight', e.target.value)}
+                              className="w-full bg-gray-700 text-white text-center rounded py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                              placeholder={set.target_weight ? set.target_weight.toString() : "0"}
+                            />
+                            {recommendation && (
+                              <div className="text-xs text-teal-400 text-center mt-1">
+                                {recommendation}
+                              </div>
+                            )}
+                          </div>
 
-                      <input
-                        type="number"
-                        value={set.reps}
-                        onChange={(e) => handleSetUpdate(set.id, 'reps', e.target.value)}
-                        className="col-span-4 bg-gray-700 text-white text-center rounded py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                        placeholder="0"
-                      />
+                          <div className="col-span-4">
+                            <input
+                              type="number"
+                              value={set.reps}
+                              onChange={(e) => handleSetUpdate(set.id, 'reps', e.target.value)}
+                              className="w-full bg-gray-700 text-white text-center rounded py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                              placeholder={set.target_reps ? set.target_reps.toString() : "0"}
+                            />
+                            {set.target_reps && set.reps === 0 && (
+                              <div className="text-xs text-gray-400 text-center mt-1">
+                                Target: {set.target_reps} reps
+                              </div>
+                            )}
+                          </div>
 
-                      <div className="col-span-3 flex justify-center">
-                        <div className={`w-8 h-8 rounded border-2 ${
-                          set.weight > 0 && set.reps > 0
-                            ? 'bg-teal-500 border-teal-500'
-                            : 'border-gray-600'
-                        }`}></div>
+                          <div className="col-span-3 flex justify-center">
+                            <div className={`w-8 h-8 rounded border-2 ${
+                              set.weight > 0 && set.reps > 0
+                                ? 'bg-teal-500 border-teal-500'
+                                : 'border-gray-600'
+                            }`}></div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ))}
             </div>
