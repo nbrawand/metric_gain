@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { getWorkoutSession, updateWorkoutSet, updateWorkoutSession, listWorkoutSessions, createWorkoutSession } from '../api/workoutSessions';
-import { getMesocycle, updateMesocycle } from '../api/mesocycles';
+import { getMesocycleInstance, updateMesocycleInstance } from '../api/mesocycles';
 import { WorkoutSession, WorkoutSet, WorkoutSessionListItem } from '../types/workout_session';
-import { Mesocycle } from '../types/mesocycle';
+import { MesocycleInstance } from '../types/mesocycle';
 
 export default function WorkoutExecution() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -13,7 +13,7 @@ export default function WorkoutExecution() {
 
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<WorkoutSession | null>(null);
-  const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null);
+  const [instance, setInstance] = useState<MesocycleInstance | null>(null);
   const [allSessions, setAllSessions] = useState<WorkoutSessionListItem[]>([]);
   const [showCalendar, setShowCalendar] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,13 +30,13 @@ export default function WorkoutExecution() {
       const sessionData = await getWorkoutSession(parseInt(sessionId), accessToken);
       setSession(sessionData);
 
-      // Load mesocycle data
-      const mesocycleData = await getMesocycle(sessionData.mesocycle_id, accessToken);
-      setMesocycle(mesocycleData);
+      // Load mesocycle instance data
+      const instanceData = await getMesocycleInstance(sessionData.mesocycle_instance_id, accessToken);
+      setInstance(instanceData);
 
-      // Load all sessions for this mesocycle
+      // Load all sessions for this instance
       const sessions = await listWorkoutSessions(
-        { mesocycle_id: sessionData.mesocycle_id },
+        { mesocycle_instance_id: sessionData.mesocycle_instance_id },
         accessToken
       );
       setAllSessions(sessions);
@@ -70,7 +70,9 @@ export default function WorkoutExecution() {
   };
 
   const handleCompleteWorkout = async () => {
-    if (!accessToken || !session || !mesocycle) return;
+    if (!accessToken || !session || !instance) return;
+
+    const mesocycle = instance.mesocycle_template;
 
     try {
       await updateWorkoutSession(
@@ -84,8 +86,8 @@ export default function WorkoutExecution() {
       const completedCount = allSessions.filter(s => s.status === 'completed').length + 1; // +1 for this workout
 
       if (completedCount >= totalWorkouts) {
-        // All workouts completed, end the mesocycle
-        await updateMesocycle(mesocycle.id, { status: 'completed' }, accessToken);
+        // All workouts completed, end the mesocycle instance
+        await updateMesocycleInstance(instance.id, { status: 'completed' }, accessToken);
       }
 
       navigate('/');
@@ -119,8 +121,9 @@ export default function WorkoutExecution() {
       // Session exists, navigate to it
       navigate(`/workout/${sessId}`);
       setShowCalendar(false);
-    } else if (mesocycle && accessToken) {
+    } else if (instance && accessToken) {
       // No session exists, create one for this week/day
+      const mesocycle = instance.mesocycle_template;
       const templateIndex = dayNum - 1;
       const template = mesocycle.workout_templates?.[templateIndex];
 
@@ -131,7 +134,7 @@ export default function WorkoutExecution() {
 
       try {
         const newSession = await createWorkoutSession({
-          mesocycle_id: mesocycle.id,
+          mesocycle_instance_id: instance.id,
           workout_template_id: template.id,
           workout_date: new Date().toISOString().split('T')[0],
           week_number: weekNum,
@@ -176,7 +179,9 @@ export default function WorkoutExecution() {
     );
   }
 
-  if (error || !session || !mesocycle) {
+  const mesocycle = instance?.mesocycle_template;
+
+  if (error || !session || !instance || !mesocycle) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-red-600">{error || 'Workout not found'}</div>

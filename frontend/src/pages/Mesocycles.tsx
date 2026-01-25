@@ -8,8 +8,9 @@ import {
   listMesocycles,
   createMesocycle,
   deleteMesocycle,
-  updateMesocycle,
   getMesocycle,
+  listMesocycleInstances,
+  startMesocycleInstance,
 } from '../api/mesocycles';
 import { getExercises } from '../api/exercises';
 import { createWorkoutSession } from '../api/workoutSessions';
@@ -19,6 +20,7 @@ import {
   MesocycleCreate,
   WorkoutTemplateCreate,
   WorkoutExerciseCreate,
+  MesocycleInstanceListItem,
 } from '../types/mesocycle';
 import { Exercise } from '../types/exercise';
 
@@ -26,6 +28,7 @@ export default function Mesocycles() {
   const navigate = useNavigate();
   const accessToken = useAuthStore((state) => state.accessToken);
   const [mesocycles, setMesocycles] = useState<MesocycleListItem[]>([]);
+  const [instances, setInstances] = useState<MesocycleInstanceListItem[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,11 +70,13 @@ export default function Mesocycles() {
 
     try {
       setLoading(true);
-      const [mesocyclesData, exercisesData] = await Promise.all([
+      const [mesocyclesData, instancesData, exercisesData] = await Promise.all([
         listMesocycles(accessToken),
+        listMesocycleInstances(undefined, accessToken),
         getExercises({}, accessToken),
       ]);
       setMesocycles(mesocyclesData);
+      setInstances(instancesData);
       setExercises(exercisesData);
       setError(null);
     } catch (err) {
@@ -99,11 +104,18 @@ export default function Mesocycles() {
   const handleStartMesocycle = async (mesocycle: MesocycleListItem) => {
     if (!accessToken) return;
 
+    // Check if there's already an active instance
+    const hasActiveInstance = instances.some(i => i.status === 'active');
+    if (hasActiveInstance) {
+      alert('You already have an active mesocycle. Please complete or end it before starting a new one.');
+      return;
+    }
+
     try {
-      // Update mesocycle to active status with today's start date
+      // Create a new mesocycle instance
       const today = new Date().toISOString().split('T')[0];
-      await updateMesocycle(mesocycle.id, {
-        status: 'active',
+      const instance = await startMesocycleInstance({
+        mesocycle_template_id: mesocycle.id,
         start_date: today,
       }, accessToken);
 
@@ -119,7 +131,7 @@ export default function Mesocycles() {
       const firstTemplate = fullMesocycle.workout_templates.find(wt => wt.order_index === 0) || fullMesocycle.workout_templates[0];
 
       const session = await createWorkoutSession({
-        mesocycle_id: mesocycle.id,
+        mesocycle_instance_id: instance.id,
         workout_template_id: firstTemplate.id,
         workout_date: today,
         week_number: 1,
@@ -128,8 +140,12 @@ export default function Mesocycles() {
 
       // Navigate to the workout execution page
       navigate(`/workout/${session.id}`);
-    } catch (err) {
-      alert('Failed to start mesocycle');
+    } catch (err: any) {
+      if (err?.detail) {
+        alert(err.detail);
+      } else {
+        alert('Failed to start mesocycle');
+      }
       console.error('Error starting mesocycle:', err);
     }
   };
@@ -163,8 +179,9 @@ export default function Mesocycles() {
       setShowCreateModal(false);
       resetForm();
       loadData();
-    } catch (err) {
-      alert('Failed to create mesocycle');
+    } catch (err: any) {
+      const errorMessage = err?.detail || 'Failed to create mesocycle';
+      alert(errorMessage);
       console.error('Error creating mesocycle:', err);
     } finally {
       setCreating(false);
@@ -224,27 +241,12 @@ export default function Mesocycles() {
     setWorkoutTemplates(updated);
   };
 
-  const getStatusColor = (status: string): string => {
-    switch (status) {
-      case 'planning':
-        return 'bg-blue-100 text-blue-800';
-      case 'active':
-        return 'bg-green-100 text-green-800';
-      case 'completed':
-        return 'bg-gray-100 text-gray-800';
-      case 'archived':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // Check if there's already an active instance
+  const hasActiveInstance = instances.some(i => i.status === 'active');
 
   if (loading) {
     return <div className="p-8">Loading mesocycles...</div>;
   }
-
-  // Check if there's already an active mesocycle
-  const hasActiveMesocycle = mesocycles.some(m => m.status === 'active');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -295,12 +297,8 @@ export default function Mesocycles() {
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-3">
                     <h3 className="text-xl font-semibold text-gray-900">{mesocycle.name}</h3>
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
-                        mesocycle.status
-                      )}`}
-                    >
-                      {mesocycle.status}
+                    <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                      Template
                     </span>
                   </div>
 
@@ -319,39 +317,27 @@ export default function Mesocycles() {
                       <span>Workouts:</span>
                       <span className="font-medium text-gray-900">{mesocycle.workout_count}</span>
                     </div>
-                    {mesocycle.start_date && (
-                      <div className="flex justify-between">
-                        <span>Start Date:</span>
-                        <span className="font-medium text-gray-900">
-                          {new Date(mesocycle.start_date).toLocaleDateString()}
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex justify-between">
+                      <span>Days/Week:</span>
+                      <span className="font-medium text-gray-900">{mesocycle.days_per_week}</span>
+                    </div>
                   </div>
 
                   <div className="mt-4 pt-4 border-t flex justify-between items-center gap-2">
-                    {mesocycle.status === 'planning' && !hasActiveMesocycle && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStartMesocycle(mesocycle);
-                        }}
-                        className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded text-sm font-medium transition"
-                      >
-                        Start Mesocycle
-                      </button>
-                    )}
-                    {mesocycle.status === 'active' && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/mesocycles/${mesocycle.id}`);
-                        }}
-                        className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded text-sm font-medium transition"
-                      >
-                        View Workouts
-                      </button>
-                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartMesocycle(mesocycle);
+                      }}
+                      disabled={hasActiveInstance}
+                      className={`px-4 py-2 rounded text-sm font-medium transition ${
+                        hasActiveInstance
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-teal-600 hover:bg-teal-700 text-white'
+                      }`}
+                    >
+                      {hasActiveInstance ? 'Active Meso Running' : 'Start Instance'}
+                    </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

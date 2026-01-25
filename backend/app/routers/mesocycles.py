@@ -1,4 +1,4 @@
-"""Mesocycle endpoints for creating and managing training blocks."""
+"""Mesocycle template endpoints for creating and managing training block templates."""
 
 from typing import List
 
@@ -108,15 +108,13 @@ async def create_mesocycle(
 
     Allows creating the entire mesocycle structure in one request.
     """
-    # Create mesocycle
+    # Create mesocycle template
     new_mesocycle = Mesocycle(
         user_id=current_user.id,
         name=mesocycle_data.name,
         description=mesocycle_data.description,
         weeks=mesocycle_data.weeks,
-        start_date=mesocycle_data.start_date,
-        end_date=mesocycle_data.end_date,
-        status="planning",
+        days_per_week=mesocycle_data.days_per_week,
     )
 
     db.add(new_mesocycle)

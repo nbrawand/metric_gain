@@ -1,18 +1,23 @@
 /**
- * API client for mesocycle endpoints.
+ * API client for mesocycle template and instance endpoints.
  */
 
-import { get, post, put, del } from './client';
+import { get, post, put, patch, del } from './client';
 import {
   Mesocycle,
   MesocycleListItem,
   MesocycleCreate,
   MesocycleUpdate,
+  MesocycleInstance,
+  MesocycleInstanceListItem,
+  MesocycleInstanceCreate,
+  MesocycleInstanceUpdate,
   WorkoutTemplate,
   WorkoutTemplateCreate,
 } from '../types/mesocycle';
 
 const MESOCYCLES_ENDPOINT = '/v1/mesocycles';
+const INSTANCES_ENDPOINT = '/v1/mesocycle-instances';
 
 /**
  * Get list of user's mesocycles (simplified, without nested templates)
@@ -62,4 +67,63 @@ export async function addWorkoutTemplate(
     data,
     accessToken
   );
+}
+
+// ============================================
+// Mesocycle Instance Functions
+// ============================================
+
+/**
+ * Get list of user's mesocycle instances
+ */
+export async function listMesocycleInstances(
+  statusFilter?: string,
+  accessToken?: string
+): Promise<MesocycleInstanceListItem[]> {
+  const url = statusFilter
+    ? `${INSTANCES_ENDPOINT}?status_filter=${statusFilter}`
+    : INSTANCES_ENDPOINT;
+  return get<MesocycleInstanceListItem[]>(url, accessToken!);
+}
+
+/**
+ * Get active mesocycle instance
+ */
+export async function getActiveMesocycleInstance(accessToken: string): Promise<MesocycleInstance> {
+  return get<MesocycleInstance>(`${INSTANCES_ENDPOINT}/active`, accessToken);
+}
+
+/**
+ * Get specific mesocycle instance
+ */
+export async function getMesocycleInstance(id: number, accessToken: string): Promise<MesocycleInstance> {
+  return get<MesocycleInstance>(`${INSTANCES_ENDPOINT}/${id}`, accessToken);
+}
+
+/**
+ * Start a new mesocycle instance from a template
+ */
+export async function startMesocycleInstance(
+  data: MesocycleInstanceCreate,
+  accessToken: string
+): Promise<MesocycleInstance> {
+  return post<MesocycleInstance>(INSTANCES_ENDPOINT, data, accessToken);
+}
+
+/**
+ * Update mesocycle instance (e.g., mark as completed)
+ */
+export async function updateMesocycleInstance(
+  id: number,
+  data: MesocycleInstanceUpdate,
+  accessToken: string
+): Promise<MesocycleInstance> {
+  return patch<MesocycleInstance>(`${INSTANCES_ENDPOINT}/${id}`, data, accessToken);
+}
+
+/**
+ * Delete a mesocycle instance
+ */
+export async function deleteMesocycleInstance(id: number, accessToken: string): Promise<void> {
+  return del<void>(`${INSTANCES_ENDPOINT}/${id}`, accessToken);
 }

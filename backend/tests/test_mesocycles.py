@@ -1,4 +1,4 @@
-"""Tests for mesocycle endpoints."""
+"""Tests for mesocycle template endpoints."""
 
 import pytest
 from fastapi import status
@@ -55,12 +55,11 @@ def test_list_mesocycles_empty(client, auth_headers):
 
 
 def test_create_mesocycle_minimal(client, auth_headers, sample_exercise_id):
-    """Test creating a mesocycle with minimal data."""
+    """Test creating a mesocycle template with minimal data."""
     mesocycle_data = {
         "name": "Test Mesocycle",
         "description": "A test training block",
         "weeks": 6,
-        "days_per_week": 3,
         "days_per_week": 3,
         "workout_templates": [
             {
@@ -89,7 +88,7 @@ def test_create_mesocycle_minimal(client, auth_headers, sample_exercise_id):
 
     assert data["name"] == "Test Mesocycle"
     assert data["weeks"] == 6
-    assert data["status"] == "planning"
+    assert data["days_per_week"] == 3
     assert len(data["workout_templates"]) == 1
     assert data["workout_templates"][0]["name"] == "Push Day"
     assert len(data["workout_templates"][0]["exercises"]) == 1
@@ -97,14 +96,12 @@ def test_create_mesocycle_minimal(client, auth_headers, sample_exercise_id):
 
 
 def test_create_mesocycle_full(client, auth_headers, sample_exercise_id):
-    """Test creating a mesocycle with complete nested structure."""
+    """Test creating a mesocycle template with complete nested structure."""
     mesocycle_data = {
         "name": "Full PPL Mesocycle",
         "description": "Push Pull Legs split",
         "weeks": 8,
         "days_per_week": 3,
-        "start_date": "2026-02-01",
-        "end_date": "2026-03-29",
         "workout_templates": [
             {
                 "name": "Push Day",
@@ -373,7 +370,7 @@ def test_get_other_users_mesocycle(client, auth_headers, second_user_headers, sa
 
 
 def test_update_mesocycle(client, auth_headers, sample_exercise_id):
-    """Test updating mesocycle details."""
+    """Test updating mesocycle template details."""
     # Create mesocycle
     mesocycle_data = {
         "name": "Original Name",
@@ -405,8 +402,7 @@ def test_update_mesocycle(client, auth_headers, sample_exercise_id):
     # Update mesocycle
     update_data = {
         "name": "Updated Name",
-        "description": "Updated description",
-        "status": "active"
+        "description": "Updated description"
     }
 
     response = client.put(f"/v1/mesocycles/{mesocycle_id}", json=update_data, headers=auth_headers)
@@ -416,7 +412,6 @@ def test_update_mesocycle(client, auth_headers, sample_exercise_id):
 
     assert data["name"] == "Updated Name"
     assert data["description"] == "Updated description"
-    assert data["status"] == "active"
     assert data["weeks"] == 6  # Unchanged
 
 

@@ -63,7 +63,7 @@ export interface WorkoutSetUpdate {
 export interface WorkoutSession {
   id: number;
   user_id: number;
-  mesocycle_id: number;
+  mesocycle_instance_id: number;
   workout_template_id: number;
   workout_date: string;
   week_number: number;
@@ -83,7 +83,7 @@ export interface WorkoutSession {
 export interface WorkoutSessionListItem {
   id: number;
   user_id: number;
-  mesocycle_id: number;
+  mesocycle_instance_id: number;
   workout_template_id: number;
   workout_date: string;
   week_number: number;
@@ -100,7 +100,7 @@ export interface WorkoutSessionListItem {
  * Data for creating a new workout session
  */
 export interface WorkoutSessionCreate {
-  mesocycle_id: number;
+  mesocycle_instance_id: number;
   workout_template_id: number;
   workout_date: string;
   week_number: number;

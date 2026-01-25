@@ -1,30 +1,25 @@
 /**
- * Mesocycle detail page - View full mesocycle with workouts and exercises
+ * Mesocycle template detail page - View full mesocycle template with workouts and exercises
  */
 
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getMesocycle, updateMesocycle, deleteMesocycle } from '../api/mesocycles';
-import { listWorkoutSessions, createWorkoutSession } from '../api/workoutSessions';
+import { getMesocycle, deleteMesocycle, updateMesocycle } from '../api/mesocycles';
 import { useAuthStore } from '../stores/authStore';
 import { Mesocycle } from '../types/mesocycle';
-import { WorkoutSessionListItem } from '../types/workout_session';
 
 export default function MesocycleDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const accessToken = useAuthStore((state) => state.accessToken);
   const [mesocycle, setMesocycle] = useState<Mesocycle | null>(null);
-  const [workoutSessions, setWorkoutSessions] = useState<WorkoutSessionListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState({
     name: '',
     description: '',
-    status: 'planning' as 'planning' | 'active' | 'completed' | 'archived',
   });
-  const [showWorkoutPicker, setShowWorkoutPicker] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -37,51 +32,18 @@ export default function MesocycleDetail() {
 
     try {
       setLoading(true);
-      const [mesocycleData, sessionsData] = await Promise.all([
-        getMesocycle(parseInt(id), accessToken),
-        listWorkoutSessions({ mesocycle_id: parseInt(id) }, accessToken),
-      ]);
+      const mesocycleData = await getMesocycle(parseInt(id), accessToken);
       setMesocycle(mesocycleData);
-      setWorkoutSessions(sessionsData);
       setEditData({
         name: mesocycleData.name,
         description: mesocycleData.description || '',
-        status: mesocycleData.status,
       });
       setError(null);
     } catch (err) {
-      setError('Failed to load mesocycle');
+      setError('Failed to load mesocycle template');
       console.error('Error loading mesocycle:', err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleStartWorkout = async (templateId: number, dayNumber: number) => {
-    if (!mesocycle || !accessToken) return;
-
-    try {
-      // Calculate current week based on completed sessions
-      const completedSessions = workoutSessions.filter(s => s.status === 'completed');
-      const currentWeek = completedSessions.length > 0
-        ? Math.floor(completedSessions.length / mesocycle.days_per_week) + 1
-        : 1;
-
-      // Create new workout session with selected template
-      const session = await createWorkoutSession({
-        mesocycle_id: mesocycle.id,
-        workout_template_id: templateId,
-        workout_date: new Date().toISOString().split('T')[0],
-        week_number: currentWeek,
-        day_number: dayNumber,
-      }, accessToken);
-
-      setShowWorkoutPicker(false);
-      // Navigate to workout
-      navigate(`/workout/${session.id}`);
-    } catch (err) {
-      console.error('Error starting workout:', err);
-      alert('Failed to start workout');
     }
   };
 
@@ -99,7 +61,7 @@ export default function MesocycleDetail() {
   };
 
   const handleDelete = async () => {
-    if (!id || !accessToken || !confirm('Are you sure you want to delete this mesocycle?')) {
+    if (!id || !accessToken || !confirm('Are you sure you want to delete this mesocycle template?')) {
       return;
     }
 
@@ -112,30 +74,15 @@ export default function MesocycleDetail() {
     }
   };
 
-  const getStatusColor = (status: string): string => {
-    switch (status) {
-      case 'planning':
-        return 'bg-blue-100 text-blue-800';
-      case 'active':
-        return 'bg-green-100 text-green-800';
-      case 'completed':
-        return 'bg-gray-100 text-gray-800';
-      case 'archived':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   if (loading) {
-    return <div className="p-8">Loading mesocycle...</div>;
+    return <div className="p-8">Loading mesocycle template...</div>;
   }
 
   if (error || !mesocycle) {
     return (
       <div className="p-8">
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-          {error || 'Mesocycle not found'}
+          {error || 'Mesocycle template not found'}
         </div>
         <button
           onClick={() => navigate('/mesocycles')}
@@ -184,25 +131,6 @@ export default function MesocycleDetail() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <select
-                    value={editData.status}
-                    onChange={(e) =>
-                      setEditData({
-                        ...editData,
-                        status: e.target.value as typeof editData.status,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
-                  >
-                    <option value="planning">Planning</option>
-                    <option value="active">Active</option>
-                    <option value="completed">Completed</option>
-                    <option value="archived">Archived</option>
-                  </select>
-                </div>
-
                 <div className="flex gap-3">
                   <button
                     onClick={handleUpdate}
@@ -223,12 +151,8 @@ export default function MesocycleDetail() {
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">{mesocycle.name}</h1>
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
-                        mesocycle.status
-                      )}`}
-                    >
-                      {mesocycle.status}
+                    <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                      Template
                     </span>
                   </div>
                   <div className="flex gap-2">
@@ -257,145 +181,20 @@ export default function MesocycleDetail() {
                     <p className="text-lg font-semibold text-gray-900">{mesocycle.weeks} weeks</p>
                   </div>
                   <div>
+                    <span className="text-sm text-gray-600">Days/Week</span>
+                    <p className="text-lg font-semibold text-gray-900">{mesocycle.days_per_week}</p>
+                  </div>
+                  <div>
                     <span className="text-sm text-gray-600">Workouts</span>
                     <p className="text-lg font-semibold text-gray-900">
                       {mesocycle.workout_templates.length}
                     </p>
                   </div>
-                  <div>
-                    <span className="text-sm text-gray-600">Total Exercises</span>
-                    <p className="text-lg font-semibold text-gray-900">
-                      {mesocycle.workout_templates.reduce(
-                        (sum, w) => sum + w.exercises.length,
-                        0
-                      )}
-                    </p>
-                  </div>
                 </div>
-
-                {(mesocycle.start_date || mesocycle.end_date) && (
-                  <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t">
-                    {mesocycle.start_date && (
-                      <div>
-                        <span className="text-sm text-gray-600">Start Date</span>
-                        <p className="text-gray-900">
-                          {new Date(mesocycle.start_date).toLocaleDateString()}
-                        </p>
-                      </div>
-                    )}
-                    {mesocycle.end_date && (
-                      <div>
-                        <span className="text-sm text-gray-600">End Date</span>
-                        <p className="text-gray-900">
-                          {new Date(mesocycle.end_date).toLocaleDateString()}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
               </>
             )}
           </div>
         </div>
-
-        {/* Workout Picker Modal */}
-        {showWorkoutPicker && mesocycle && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-gray-900">Choose Workout</h3>
-                <button
-                  onClick={() => setShowWorkoutPicker(false)}
-                  className="text-gray-400 hover:text-gray-600 text-xl"
-                >
-                  &times;
-                </button>
-              </div>
-              <div className="space-y-2">
-                {mesocycle.workout_templates.map((template, index) => (
-                  <button
-                    key={template.id}
-                    onClick={() => handleStartWorkout(template.id, index + 1)}
-                    className="w-full text-left border border-gray-200 rounded-lg p-4 hover:border-teal-500 hover:bg-teal-50 transition"
-                  >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h4 className="font-semibold text-gray-900">Day {index + 1}</h4>
-                        <p className="text-sm text-gray-600">{template.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {template.exercises.length} exercise{template.exercises.length !== 1 ? 's' : ''}
-                        </p>
-                      </div>
-                      <span className="text-teal-600">&rarr;</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Workout Sessions */}
-        {mesocycle.status === 'active' && (
-          <div className="mb-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-gray-900">Your Workouts</h2>
-                <button
-                  onClick={() => setShowWorkoutPicker(true)}
-                  className="bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 font-medium"
-                >
-                  Start Workout
-                </button>
-              </div>
-
-              {workoutSessions.length === 0 ? (
-                <p className="text-gray-600 text-center py-4">
-                  No workouts yet. Click "Start Workout" to begin!
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {workoutSessions.map((session) => (
-                    <button
-                      key={session.id}
-                      onClick={() => navigate(`/workout/${session.id}`)}
-                      className="w-full text-left border border-gray-200 rounded-lg p-4 hover:border-teal-500 hover:bg-gray-50 transition"
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <h3 className="font-semibold text-gray-900">
-                            Week {session.week_number}, Day {session.day_number}
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            {new Date(session.workout_date).toLocaleDateString()} • {session.set_count} sets
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {session.status === 'completed' && (
-                            <span className="text-sm bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">
-                              Completed
-                            </span>
-                          )}
-                          {session.status === 'in_progress' && (
-                            <span className="text-sm bg-teal-100 text-teal-800 px-3 py-1 rounded-full font-medium">
-                              In Progress
-                            </span>
-                          )}
-                          {session.status === 'skipped' && (
-                            <span className="text-sm bg-gray-100 text-gray-800 px-3 py-1 rounded-full font-medium">
-                              Skipped
-                            </span>
-                          )}
-                          <span className="text-gray-400">→</span>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* Workout Templates */}
         <div className="space-y-6">
@@ -412,7 +211,7 @@ export default function MesocycleDetail() {
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="text-xl font-semibold text-gray-900 mb-1">
-                        {index + 1}. {workout.name}
+                        Day {index + 1}: {workout.name}
                       </h3>
                       {workout.description && (
                         <p className="text-gray-600">{workout.description}</p>

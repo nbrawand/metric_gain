@@ -109,6 +109,27 @@ export async function put<T>(
 }
 
 /**
+ * PATCH request
+ */
+export async function patch<T>(
+  endpoint: string,
+  data?: unknown,
+  token?: string
+): Promise<T> {
+  const headers: HeadersInit = {};
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  return fetchApi<T>(endpoint, {
+    method: 'PATCH',
+    headers,
+    body: data ? JSON.stringify(data) : undefined,
+  });
+}
+
+/**
  * DELETE request
  */
 export async function del<T>(endpoint: string, token?: string): Promise<T> {

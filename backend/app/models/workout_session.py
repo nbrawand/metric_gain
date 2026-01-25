@@ -11,15 +11,15 @@ class WorkoutSession(Base):
     """
     WorkoutSession model representing an actual workout performed by a user.
 
-    Tracks a single workout session, linked to a specific workout template
-    from a mesocycle. Records which week of the mesocycle this workout
-    belongs to and the actual date it was performed.
+    Tracks a single workout session, linked to a mesocycle instance and
+    a specific workout template. Records which week and day this workout
+    belongs to.
     """
     __tablename__ = "workout_sessions"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    mesocycle_id = Column(Integer, ForeignKey("mesocycles.id", ondelete="CASCADE"), nullable=False, index=True)
+    mesocycle_instance_id = Column(Integer, ForeignKey("mesocycle_instances.id", ondelete="CASCADE"), nullable=False, index=True)
     workout_template_id = Column(Integer, ForeignKey("workout_templates.id", ondelete="CASCADE"), nullable=False, index=True)
 
     # Workout details
@@ -41,7 +41,7 @@ class WorkoutSession(Base):
 
     # Relationships
     user = relationship("User", back_populates="workout_sessions")
-    mesocycle = relationship("Mesocycle")
+    mesocycle_instance = relationship("MesocycleInstance", back_populates="workout_sessions")
     workout_template = relationship("WorkoutTemplate")
     workout_sets = relationship("WorkoutSet", back_populates="workout_session", cascade="all, delete-orphan")
 

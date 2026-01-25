@@ -59,7 +59,7 @@ class WorkoutSetResponse(WorkoutSetBase):
 class WorkoutSessionBase(BaseModel):
     """Base workout session schema."""
 
-    mesocycle_id: int
+    mesocycle_instance_id: int
     workout_template_id: int
     workout_date: date
     week_number: int = Field(..., ge=1)
@@ -105,7 +105,7 @@ class WorkoutSessionListResponse(BaseModel):
 
     id: int
     user_id: int
-    mesocycle_id: int
+    mesocycle_instance_id: int
     workout_template_id: int
     workout_date: date
     week_number: int

@@ -1,4 +1,4 @@
-"""Mesocycle, WorkoutTemplate, and WorkoutExercise models for training planning."""
+"""Mesocycle, MesocycleInstance, WorkoutTemplate, and WorkoutExercise models for training planning."""
 
 from sqlalchemy import Column, Integer, String, Text, Date, DateTime, ForeignKey, Float
 from sqlalchemy.sql import func
@@ -9,10 +9,10 @@ from app.database import Base
 
 class Mesocycle(Base):
     """
-    Mesocycle model representing a training block (typically 3-7 weeks).
+    Mesocycle TEMPLATE model representing a reusable training block blueprint.
 
-    A mesocycle contains multiple workout templates and tracks progression
-    through the training block with progressive overload and auto-regulation.
+    A mesocycle template contains workout templates with exercises. Users can
+    start instances of this template to actually train.
     """
     __tablename__ = "mesocycles"
 
@@ -21,14 +21,9 @@ class Mesocycle(Base):
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
 
-    # Duration
+    # Duration configuration
     weeks = Column(Integer, nullable=False)  # Total weeks in mesocycle (e.g., 4)
-    days_per_week = Column(Integer, nullable=False, default=4)  # Number of training days per week (e.g., 4, 5, 6)
-    start_date = Column(Date, nullable=True)  # Optional planned start date
-    end_date = Column(Date, nullable=True)  # Optional planned end date
-
-    # Status: planning, active, completed, archived
-    status = Column(String(50), default="planning", nullable=False, index=True)
+    days_per_week = Column(Integer, nullable=False, default=4)  # Number of training days per week
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -37,9 +32,43 @@ class Mesocycle(Base):
     # Relationships
     user = relationship("User", back_populates="mesocycles")
     workout_templates = relationship("WorkoutTemplate", back_populates="mesocycle", cascade="all, delete-orphan")
+    instances = relationship("MesocycleInstance", back_populates="mesocycle_template")
 
     def __repr__(self):
-        return f"<Mesocycle(id={self.id}, name='{self.name}', weeks={self.weeks}, status='{self.status}')>"
+        return f"<Mesocycle(id={self.id}, name='{self.name}', weeks={self.weeks})>"
+
+
+class MesocycleInstance(Base):
+    """
+    MesocycleInstance model representing an active training block instance.
+
+    Created from a mesocycle template when a user starts training. Tracks
+    progress through the mesocycle with status and dates.
+    """
+    __tablename__ = "mesocycle_instances"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    mesocycle_template_id = Column(Integer, ForeignKey("mesocycles.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # Status: active, completed, abandoned
+    status = Column(String(50), default="active", nullable=False, index=True)
+
+    # Dates
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=True)  # Set when completed
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    # Relationships
+    user = relationship("User", back_populates="mesocycle_instances")
+    mesocycle_template = relationship("Mesocycle", back_populates="instances")
+    workout_sessions = relationship("WorkoutSession", back_populates="mesocycle_instance", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<MesocycleInstance(id={self.id}, template_id={self.mesocycle_template_id}, status='{self.status}')>"
 
 
 class WorkoutTemplate(Base):

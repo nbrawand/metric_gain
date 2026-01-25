@@ -34,7 +34,7 @@ export const createWorkoutSession = async (
 
 export const listWorkoutSessions = async (
   filters: {
-    mesocycle_id?: number;
+    mesocycle_instance_id?: number;
     status_filter?: string;
     skip?: number;
     limit?: number;
@@ -42,7 +42,7 @@ export const listWorkoutSessions = async (
   accessToken: string
 ): Promise<WorkoutSessionListItem[]> => {
   const params = new URLSearchParams();
-  if (filters.mesocycle_id) params.append('mesocycle_id', filters.mesocycle_id.toString());
+  if (filters.mesocycle_instance_id) params.append('mesocycle_instance_id', filters.mesocycle_instance_id.toString());
   if (filters.status_filter) params.append('status_filter', filters.status_filter);
   if (filters.skip) params.append('skip', filters.skip.toString());
   if (filters.limit) params.append('limit', filters.limit.toString());

@@ -5,44 +5,40 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { listMesocycles, getMesocycle, updateMesocycle } from '../api/mesocycles';
+import { getActiveMesocycleInstance, updateMesocycleInstance } from '../api/mesocycles';
 import { listWorkoutSessions, createWorkoutSession } from '../api/workoutSessions';
-import { MesocycleListItem, Mesocycle } from '../types/mesocycle';
+import { MesocycleInstance } from '../types/mesocycle';
 import { WorkoutSessionListItem } from '../types/workout_session';
 
 export function Home() {
   const navigate = useNavigate();
   const { user, logout, accessToken } = useAuthStore();
-  const [activeMesocycle, setActiveMesocycle] = useState<MesocycleListItem | null>(null);
-  const [fullMesocycle, setFullMesocycle] = useState<Mesocycle | null>(null);
+  const [activeInstance, setActiveInstance] = useState<MesocycleInstance | null>(null);
   const [workoutSessions, setWorkoutSessions] = useState<WorkoutSessionListItem[]>([]);
   const [showCalendar, setShowCalendar] = useState(false);
 
   useEffect(() => {
-    loadActiveMesocycle();
+    loadActiveInstance();
   }, []);
 
-  const loadActiveMesocycle = async () => {
+  const loadActiveInstance = async () => {
     if (!accessToken) return;
 
     try {
-      const mesocycles = await listMesocycles(accessToken);
-      const active = mesocycles.find(m => m.status === 'active');
-
-      if (active) {
-        setActiveMesocycle(active);
-        // Load full mesocycle with workout templates
-        const fullMeso = await getMesocycle(active.id, accessToken);
-        setFullMesocycle(fullMeso);
-        // Load workout sessions for the active mesocycle
-        const sessions = await listWorkoutSessions(
-          { mesocycle_id: active.id },
-          accessToken
-        );
-        setWorkoutSessions(sessions);
+      const instance = await getActiveMesocycleInstance(accessToken);
+      setActiveInstance(instance);
+      // Load workout sessions for the active instance
+      const sessions = await listWorkoutSessions(
+        { mesocycle_instance_id: instance.id },
+        accessToken
+      );
+      setWorkoutSessions(sessions);
+    } catch (err: any) {
+      // 404 means no active instance, which is fine
+      if (err?.status !== 404) {
+        console.error('Error loading active mesocycle instance:', err);
       }
-    } catch (err) {
-      console.error('Error loading active mesocycle:', err);
+      setActiveInstance(null);
     }
   };
 
@@ -75,10 +71,11 @@ export function Home() {
       // Session exists, navigate to it
       navigate(`/workout/${sessId}`);
       setShowCalendar(false);
-    } else if (fullMesocycle && accessToken) {
+    } else if (activeInstance && accessToken) {
       // No session exists, create one for this week/day
+      const mesocycle = activeInstance.mesocycle_template;
       const templateIndex = dayNum - 1;
-      const template = fullMesocycle.workout_templates?.[templateIndex];
+      const template = mesocycle.workout_templates?.[templateIndex];
 
       if (!template) {
         console.error('No workout template found for day', dayNum);
@@ -87,7 +84,7 @@ export function Home() {
 
       try {
         const newSession = await createWorkoutSession({
-          mesocycle_id: fullMesocycle.id,
+          mesocycle_instance_id: activeInstance.id,
           workout_template_id: template.id,
           workout_date: new Date().toISOString().split('T')[0],
           week_number: weekNum,
@@ -103,20 +100,19 @@ export function Home() {
   };
 
   const handleEndMesocycle = async () => {
-    if (!fullMesocycle || !accessToken) return;
+    if (!activeInstance || !accessToken) return;
 
     if (!confirm('Are you sure you want to end this mesocycle? This will mark it as completed.')) {
       return;
     }
 
     try {
-      await updateMesocycle(fullMesocycle.id, { status: 'completed' }, accessToken);
+      await updateMesocycleInstance(activeInstance.id, { status: 'completed' }, accessToken);
       setShowCalendar(false);
-      setActiveMesocycle(null);
-      setFullMesocycle(null);
+      setActiveInstance(null);
       setWorkoutSessions([]);
-      // Reload to check for any other active mesocycles
-      loadActiveMesocycle();
+      // Reload to check for any other active instances
+      loadActiveInstance();
     } catch (err) {
       console.error('Error ending mesocycle:', err);
       alert('Failed to end mesocycle');
@@ -128,14 +124,16 @@ export function Home() {
     navigate('/login');
   };
 
+  const mesocycle = activeInstance?.mesocycle_template;
+
   return (
     <div className="min-h-screen bg-gray-900">
       {/* Calendar Popup */}
-      {showCalendar && fullMesocycle && (
+      {showCalendar && mesocycle && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-white">{fullMesocycle.name}</h3>
+              <h3 className="text-lg font-semibold text-white">{mesocycle.name}</h3>
               <button
                 onClick={() => setShowCalendar(false)}
                 className="text-gray-400 hover:text-white text-xl"
@@ -150,17 +148,17 @@ export function Home() {
                 {/* Week Headers */}
                 <div className="flex gap-2 mb-2">
                   <div className="w-12"></div>
-                  {Array.from({ length: fullMesocycle.weeks }, (_, i) => i + 1).map(weekNum => (
+                  {Array.from({ length: mesocycle.weeks }, (_, i) => i + 1).map(weekNum => (
                     <div key={weekNum} className="flex-1 min-w-[60px] text-center">
                       <div className="text-xs text-gray-400 font-semibold">
-                        {weekNum === fullMesocycle.weeks ? 'DL' : `${weekNum}`}
+                        {weekNum === mesocycle.weeks ? 'DL' : `${weekNum}`}
                       </div>
                     </div>
                   ))}
                 </div>
 
                 {/* Day Rows */}
-                {Array.from({ length: fullMesocycle.workout_templates?.length || fullMesocycle.days_per_week }, (_, i) => i + 1).map(dayNum => (
+                {Array.from({ length: mesocycle.workout_templates?.length || mesocycle.days_per_week }, (_, i) => i + 1).map(dayNum => (
                   <div key={dayNum} className="flex gap-2 mb-2">
                     {/* Day Label */}
                     <div className="w-12 flex items-center">
@@ -168,7 +166,7 @@ export function Home() {
                     </div>
 
                     {/* Week Cells */}
-                    {Array.from({ length: fullMesocycle.weeks }, (_, i) => i + 1).map(weekNum => {
+                    {Array.from({ length: mesocycle.weeks }, (_, i) => i + 1).map(weekNum => {
                       const status = getSessionStatus(weekNum, dayNum);
 
                       return (
@@ -242,15 +240,15 @@ export function Home() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {/* Active Mesocycle Card */}
-        {activeMesocycle && (
+        {activeInstance && mesocycle && (
           <div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-lg shadow-xl p-8 mb-6">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold text-white mb-2">
-                  {activeMesocycle.name}
+                  {mesocycle.name}
                 </h2>
                 <p className="text-teal-100">
-                  Week {Math.floor(workoutSessions.filter(s => s.status === 'completed').length / activeMesocycle.days_per_week) + 1} of {activeMesocycle.weeks}
+                  Week {Math.floor(workoutSessions.filter(s => s.status === 'completed').length / mesocycle.days_per_week) + 1} of {mesocycle.weeks}
                   {' • '}
                   {workoutSessions.filter(s => s.status === 'completed').length} workouts completed
                 </p>

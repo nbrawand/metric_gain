@@ -98,42 +98,36 @@ class WorkoutTemplateResponse(WorkoutTemplateBase):
         from_attributes = True
 
 
-# Mesocycle Schemas
+# Mesocycle Template Schemas
 class MesocycleBase(BaseModel):
-    """Base mesocycle schema."""
+    """Base mesocycle template schema."""
 
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
     weeks: int = Field(..., ge=3, le=12)
     days_per_week: int = Field(..., ge=1, le=7)
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
 
 
 class MesocycleCreate(MesocycleBase):
-    """Schema for creating a mesocycle."""
+    """Schema for creating a mesocycle template."""
 
     workout_templates: List[WorkoutTemplateCreate] = []
 
 
 class MesocycleUpdate(BaseModel):
-    """Schema for updating a mesocycle."""
+    """Schema for updating a mesocycle template."""
 
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
     weeks: Optional[int] = Field(None, ge=3, le=12)
     days_per_week: Optional[int] = Field(None, ge=1, le=7)
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
-    status: Optional[str] = Field(None, pattern="^(planning|active|completed|archived)$")
 
 
 class MesocycleResponse(MesocycleBase):
-    """Schema for mesocycle in responses."""
+    """Schema for mesocycle template in responses."""
 
     id: int
     user_id: int
-    status: str
     created_at: datetime
     updated_at: datetime
     workout_templates: List[WorkoutTemplateResponse] = []
@@ -143,7 +137,7 @@ class MesocycleResponse(MesocycleBase):
 
 
 class MesocycleListResponse(BaseModel):
-    """Schema for mesocycle list item (without nested templates)."""
+    """Schema for mesocycle template list item (without nested templates)."""
 
     id: int
     user_id: int
@@ -151,12 +145,63 @@ class MesocycleListResponse(BaseModel):
     description: Optional[str]
     weeks: int
     days_per_week: int
-    start_date: Optional[date]
-    end_date: Optional[date]
-    status: str
     created_at: datetime
     updated_at: datetime
     workout_count: int  # Number of workout templates
+
+    class Config:
+        from_attributes = True
+
+
+# Mesocycle Instance Schemas
+class MesocycleInstanceCreate(BaseModel):
+    """Schema for starting a mesocycle instance from a template."""
+
+    mesocycle_template_id: int
+    start_date: Optional[date] = None  # Defaults to today if not provided
+
+
+class MesocycleInstanceUpdate(BaseModel):
+    """Schema for updating a mesocycle instance."""
+
+    status: Optional[str] = Field(None, pattern="^(active|completed|abandoned)$")
+
+
+class MesocycleInstanceResponse(BaseModel):
+    """Schema for mesocycle instance in responses."""
+
+    id: int
+    user_id: int
+    mesocycle_template_id: int
+    status: str
+    start_date: date
+    end_date: Optional[date]
+    created_at: datetime
+    updated_at: datetime
+
+    # Include template details
+    mesocycle_template: MesocycleResponse
+
+    class Config:
+        from_attributes = True
+
+
+class MesocycleInstanceListResponse(BaseModel):
+    """Schema for mesocycle instance list item."""
+
+    id: int
+    user_id: int
+    mesocycle_template_id: int
+    status: str
+    start_date: date
+    end_date: Optional[date]
+    created_at: datetime
+    updated_at: datetime
+
+    # Basic template info
+    template_name: str
+    template_weeks: int
+    template_days_per_week: int
 
     class Config:
         from_attributes = True

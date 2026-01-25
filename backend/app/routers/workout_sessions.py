@@ -71,7 +71,7 @@ def create_workout_session(
 
 @router.get("/", response_model=List[WorkoutSessionListResponse])
 def list_workout_sessions(
-    mesocycle_id: int = None,
+    mesocycle_instance_id: int = None,
     status_filter: str = None,
     skip: int = 0,
     limit: int = 100,
@@ -86,8 +86,8 @@ def list_workout_sessions(
         WorkoutSession.user_id == current_user.id
     ).group_by(WorkoutSession.id)
 
-    if mesocycle_id:
-        query = query.filter(WorkoutSession.mesocycle_id == mesocycle_id)
+    if mesocycle_instance_id is not None:
+        query = query.filter(WorkoutSession.mesocycle_instance_id == mesocycle_instance_id)
 
     if status_filter:
         query = query.filter(WorkoutSession.status == status_filter)
@@ -102,7 +102,7 @@ def list_workout_sessions(
         session_dict = {
             "id": session.id,
             "user_id": session.user_id,
-            "mesocycle_id": session.mesocycle_id,
+            "mesocycle_instance_id": session.mesocycle_instance_id,
             "workout_template_id": session.workout_template_id,
             "workout_date": session.workout_date,
             "week_number": session.week_number,

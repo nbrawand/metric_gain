@@ -32,6 +32,7 @@ class User(Base):
     # Relationships
     custom_exercises = relationship("Exercise", back_populates="user", cascade="all, delete-orphan")
     mesocycles = relationship("Mesocycle", back_populates="user", cascade="all, delete-orphan")
+    mesocycle_instances = relationship("MesocycleInstance", back_populates="user", cascade="all, delete-orphan")
     workout_sessions = relationship("WorkoutSession", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
