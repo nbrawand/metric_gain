@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { getWorkoutSession, updateWorkoutSet, updateWorkoutSession, listWorkoutSessions, createWorkoutSession } from '../api/workoutSessions';
 import { getMesocycleInstance, updateMesocycleInstance } from '../api/mesocycles';
 import { WorkoutSession, WorkoutSet, WorkoutSessionListItem } from '../types/workout_session';
 import { MesocycleInstance } from '../types/mesocycle';
+
+// Local state for tracking input values before they're saved
+type SetInputValues = Record<number, { weight: string; reps: string }>;
 
 export default function WorkoutExecution() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -18,9 +21,26 @@ export default function WorkoutExecution() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Local input state to prevent re-renders while typing
+  const [inputValues, setInputValues] = useState<SetInputValues>({});
+
   useEffect(() => {
     loadWorkoutSession();
   }, [sessionId]);
+
+  // Initialize input values when session data loads
+  useEffect(() => {
+    if (session) {
+      const initialValues: SetInputValues = {};
+      session.workout_sets.forEach((set) => {
+        initialValues[set.id] = {
+          weight: set.weight.toString(),
+          reps: set.reps.toString(),
+        };
+      });
+      setInputValues(initialValues);
+    }
+  }, [session]);
 
   const loadWorkoutSession = async () => {
     if (!accessToken || !sessionId) return;
@@ -50,23 +70,60 @@ export default function WorkoutExecution() {
     }
   };
 
-  const handleSetUpdate = async (setId: number, field: string, value: string) => {
+  // Handle local input change (no API call, just update local state)
+  const handleInputChange = (setId: number, field: 'weight' | 'reps', value: string) => {
+    setInputValues((prev) => ({
+      ...prev,
+      [setId]: {
+        ...prev[setId],
+        [field]: value,
+      },
+    }));
+
+    // Also update local session state for immediate UI feedback (checkmark, etc.)
+    if (session) {
+      setSession((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          workout_sets: prev.workout_sets.map((set) =>
+            set.id === setId
+              ? { ...set, [field]: parseFloat(value) || 0 }
+              : set
+          ),
+        };
+      });
+    }
+  };
+
+  // Save to server on blur
+  const handleInputBlur = useCallback(async (setId: number, field: 'weight' | 'reps') => {
     if (!accessToken || !session) return;
 
+    const value = inputValues[setId]?.[field];
+    if (value === undefined) return;
+
+    const numValue = parseFloat(value) || 0;
+
     try {
-      const numValue = field === 'notes' ? value : parseFloat(value);
       await updateWorkoutSet(
         session.id,
         setId,
-        { [field]: field === 'notes' ? value : numValue },
+        { [field]: numValue },
         accessToken
       );
-
-      // Reload session to get updated data
-      await loadWorkoutSession();
     } catch (err) {
       console.error('Error updating set:', err);
     }
+  }, [accessToken, session, inputValues]);
+
+  // Get the display value for an input (prefer local state, fall back to session data)
+  const getInputValue = (setId: number, field: 'weight' | 'reps'): string => {
+    if (inputValues[setId]?.[field] !== undefined) {
+      return inputValues[setId][field];
+    }
+    const set = session?.workout_sets.find((s) => s.id === setId);
+    return set ? set[field].toString() : '0';
   };
 
   const handleCompleteWorkout = async () => {
@@ -337,8 +394,9 @@ export default function WorkoutExecution() {
                           <div className="col-span-4">
                             <input
                               type="number"
-                              value={set.weight}
-                              onChange={(e) => handleSetUpdate(set.id, 'weight', e.target.value)}
+                              value={getInputValue(set.id, 'weight')}
+                              onChange={(e) => handleInputChange(set.id, 'weight', e.target.value)}
+                              onBlur={() => handleInputBlur(set.id, 'weight')}
                               className="w-full bg-gray-700 text-white text-center rounded py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
                               placeholder={set.target_weight ? set.target_weight.toString() : "0"}
                             />
@@ -352,8 +410,9 @@ export default function WorkoutExecution() {
                           <div className="col-span-4">
                             <input
                               type="number"
-                              value={set.reps}
-                              onChange={(e) => handleSetUpdate(set.id, 'reps', e.target.value)}
+                              value={getInputValue(set.id, 'reps')}
+                              onChange={(e) => handleInputChange(set.id, 'reps', e.target.value)}
+                              onBlur={() => handleInputBlur(set.id, 'reps')}
                               className="w-full bg-gray-700 text-white text-center rounded py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
                               placeholder={set.target_reps ? set.target_reps.toString() : "0"}
                             />
