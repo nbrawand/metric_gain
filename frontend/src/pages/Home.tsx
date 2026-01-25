@@ -274,32 +274,13 @@ export function Home() {
           </p>
 
           <div className="bg-gray-700 border border-gray-600 rounded-lg p-6">
-            <h3 className="text-xl font-semibold text-white mb-3">Phase 1: Complete!</h3>
-            <p className="text-gray-300 mb-4">
-              Authentication is now fully implemented. Coming soon in future phases:
-            </p>
-            <ul className="space-y-2 text-gray-300">
-              <li className="flex items-start">
-                <span className="text-blue-400 mr-2">•</span>
-                <span>Exercise library and custom exercise creation</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-blue-400 mr-2">•</span>
-                <span>Mesocycle planning and workout scheduling</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-blue-400 mr-2">•</span>
-                <span>Workout logging with progressive overload tracking</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-blue-400 mr-2">•</span>
-                <span>Auto-regulation based on pump, soreness, and challenge feedback</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-blue-400 mr-2">•</span>
-                <span>Progress visualization and analytics</span>
-              </li>
-            </ul>
+            <h3 className="text-xl font-semibold text-white mb-3">Getting Started</h3>
+            <ol className="space-y-2 text-gray-300 list-decimal list-inside">
+              <li>Click <span className="text-teal-400 font-medium">Mesocycles</span> in the menu above</li>
+              <li>Create a new mesocycle template with your workouts</li>
+              <li>Click <span className="text-teal-400 font-medium">Start Instance</span> to begin training</li>
+              <li>Return here and click <span className="text-teal-400 font-medium">Continue Mesocycle</span> to log workouts</li>
+            </ol>
           </div>
 
           <div className="mt-6">
