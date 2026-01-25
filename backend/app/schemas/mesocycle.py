@@ -127,7 +127,8 @@ class MesocycleResponse(MesocycleBase):
     """Schema for mesocycle template in responses."""
 
     id: int
-    user_id: int
+    user_id: Optional[int]  # Nullable for stock mesocycles
+    is_stock: bool = False
     created_at: datetime
     updated_at: datetime
     workout_templates: List[WorkoutTemplateResponse] = []
@@ -140,7 +141,8 @@ class MesocycleListResponse(BaseModel):
     """Schema for mesocycle template list item (without nested templates)."""
 
     id: int
-    user_id: int
+    user_id: Optional[int]  # Nullable for stock mesocycles
+    is_stock: bool = False
     name: str
     description: Optional[str]
     weeks: int

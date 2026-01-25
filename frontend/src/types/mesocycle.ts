@@ -66,7 +66,8 @@ export interface WorkoutTemplateCreate {
  */
 export interface Mesocycle {
   id: number;
-  user_id: number;
+  user_id: number | null; // Nullable for stock mesocycles
+  is_stock: boolean;
   name: string;
   description?: string;
   weeks: number;
@@ -81,7 +82,8 @@ export interface Mesocycle {
  */
 export interface MesocycleListItem {
   id: number;
-  user_id: number;
+  user_id: number | null; // Nullable for stock mesocycles
+  is_stock: boolean;
   name: string;
   description?: string;
   weeks: number;

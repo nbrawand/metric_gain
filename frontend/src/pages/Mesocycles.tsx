@@ -297,9 +297,16 @@ export default function Mesocycles() {
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-3">
                     <h3 className="text-xl font-semibold text-gray-900">{mesocycle.name}</h3>
-                    <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                      Template
-                    </span>
+                    <div className="flex gap-2">
+                      {mesocycle.is_stock && (
+                        <span className="px-2 py-1 rounded text-xs font-medium bg-teal-100 text-teal-800">
+                          Stock
+                        </span>
+                      )}
+                      <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                        Template
+                      </span>
+                    </div>
                   </div>
 
                   {mesocycle.description && (
@@ -338,15 +345,17 @@ export default function Mesocycles() {
                     >
                       {hasActiveInstance ? 'Active Meso Running' : 'Start Instance'}
                     </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(mesocycle.id);
-                      }}
-                      className="text-red-600 hover:text-red-800 text-sm font-medium ml-auto"
-                    >
-                      Delete
-                    </button>
+                    {!mesocycle.is_stock && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(mesocycle.id);
+                        }}
+                        className="text-red-600 hover:text-red-800 text-sm font-medium ml-auto"
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

@@ -13,11 +13,15 @@ class Mesocycle(Base):
 
     A mesocycle template contains workout templates with exercises. Users can
     start instances of this template to actually train.
+
+    Stock mesocycles (is_stock=True, user_id=None) are available to all users.
+    Custom mesocycles (is_stock=False, user_id=set) are only available to the creating user.
     """
     __tablename__ = "mesocycles"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    is_stock = Column(Integer, default=0, nullable=False, index=True)  # 0 = custom, 1 = stock (using int for SQLite)
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
 

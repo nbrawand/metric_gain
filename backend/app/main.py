@@ -1,8 +1,33 @@
 """Main FastAPI application."""
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
+from app.database import SessionLocal
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Run startup and shutdown tasks."""
+    # Startup: Seed database with stock data
+    db = SessionLocal()
+    try:
+        from app.utils.seed_exercises import seed_exercises
+        from app.utils.seed_mesocycles import seed_mesocycles
+
+        seed_exercises(db)
+        seed_mesocycles(db)
+    except Exception as e:
+        print(f"Error during seeding: {e}")
+    finally:
+        db.close()
+
+    yield  # App runs here
+
+    # Shutdown tasks (if any)
+
 
 # Create FastAPI app
 app = FastAPI(
@@ -11,6 +36,7 @@ app = FastAPI(
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # Configure CORS

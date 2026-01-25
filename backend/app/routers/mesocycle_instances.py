@@ -207,10 +207,11 @@ async def start_mesocycle_instance(
             detail="Mesocycle template not found"
         )
 
-    if template.user_id != current_user.id:
+    # Allow starting from own templates or stock templates
+    if template.user_id != current_user.id and not template.is_stock:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only start instances from your own templates"
+            detail="You can only start instances from your own templates or stock templates"
         )
 
     # Create instance

@@ -28,14 +28,20 @@ async def list_mesocycles(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Get list of user's mesocycles.
+    Get list of user's mesocycles and stock mesocycles.
 
     Returns simplified list without nested workout templates.
     """
+    from sqlalchemy import or_
     mesocycles = (
         db.query(Mesocycle)
-        .filter(Mesocycle.user_id == current_user.id)
-        .order_by(Mesocycle.created_at.desc())
+        .filter(
+            or_(
+                Mesocycle.user_id == current_user.id,
+                Mesocycle.is_stock == 1
+            )
+        )
+        .order_by(Mesocycle.is_stock.desc(), Mesocycle.created_at.desc())
         .all()
     )
 
@@ -78,8 +84,8 @@ async def get_mesocycle(
             status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle not found"
         )
 
-    # Check ownership
-    if mesocycle.user_id != current_user.id:
+    # Check ownership (allow access to stock mesocycles)
+    if mesocycle.user_id != current_user.id and not mesocycle.is_stock:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have access to this mesocycle",
@@ -209,6 +215,13 @@ async def update_mesocycle(
             status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle not found"
         )
 
+    # Prevent editing of stock mesocycles
+    if mesocycle.is_stock:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Stock mesocycles cannot be modified",
+        )
+
     # Check ownership
     if mesocycle.user_id != current_user.id:
         raise HTTPException(
@@ -264,6 +277,13 @@ async def delete_mesocycle(
             status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle not found"
         )
 
+    # Prevent deletion of stock mesocycles
+    if mesocycle.is_stock:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Stock mesocycles cannot be deleted",
+        )
+
     # Check ownership
     if mesocycle.user_id != current_user.id:
         raise HTTPException(
@@ -296,6 +316,13 @@ async def add_workout_template(
     if not mesocycle:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle not found"
+        )
+
+    # Prevent modifying stock mesocycles
+    if mesocycle.is_stock:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Stock mesocycles cannot be modified",
         )
 
     # Check ownership
