@@ -445,8 +445,8 @@ export default function WorkoutExecution() {
                     const isSkipped = set.skipped;
                     return (
                       <div key={set.id} className={`mb-3 ${isSkipped ? 'opacity-50' : ''}`}>
-                        <div className="grid grid-cols-12 gap-2 items-center">
-                          <div className="col-span-1 text-gray-500">⋮</div>
+                        <div className="grid grid-cols-12 gap-2 items-start">
+                          <div className="col-span-1 text-gray-500 pt-2">⋮</div>
 
                           <div className="col-span-4">
                             <input
@@ -486,7 +486,7 @@ export default function WorkoutExecution() {
                             )}
                           </div>
 
-                          <div className="col-span-3 flex justify-center">
+                          <div className="col-span-3 flex justify-center pt-1">
                             <button
                               onClick={() => handleToggleSkipped(set.id)}
                               className={`w-8 h-8 rounded border-2 flex items-center justify-center transition-colors ${
