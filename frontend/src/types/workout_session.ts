@@ -16,6 +16,7 @@ export interface WorkoutSet {
   weight: number;
   reps: number;
   rir?: number;
+  skipped: boolean; // True if user skipped this set
   target_weight?: number;
   target_reps?: number;
   target_rir?: number;
@@ -51,6 +52,7 @@ export interface WorkoutSetUpdate {
   weight?: number;
   reps?: number;
   rir?: number;
+  skipped?: boolean;
   target_weight?: number;
   target_reps?: number;
   target_rir?: number;

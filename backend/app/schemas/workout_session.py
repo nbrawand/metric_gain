@@ -16,6 +16,7 @@ class WorkoutSetBase(BaseModel):
     weight: float = Field(..., ge=0)
     reps: int = Field(..., ge=0)  # Allow 0 for sets not yet performed
     rir: Optional[int] = Field(None, ge=0, le=10)
+    skipped: bool = False  # True if the user skipped this set
     target_weight: Optional[float] = Field(None, ge=0)
     target_reps: Optional[int] = Field(None, ge=0)  # Allow 0 for optional targets
     target_rir: Optional[int] = Field(None, ge=0, le=10)
@@ -37,6 +38,7 @@ class WorkoutSetUpdate(BaseModel):
     weight: Optional[float] = Field(None, ge=0)
     reps: Optional[int] = Field(None, ge=0)  # Allow 0 for sets not yet performed
     rir: Optional[int] = Field(None, ge=0, le=10)
+    skipped: Optional[bool] = None  # True if the user skipped this set
     target_weight: Optional[float] = Field(None, ge=0)
     target_reps: Optional[int] = Field(None, ge=0)  # Allow 0 for optional targets
     target_rir: Optional[int] = Field(None, ge=0, le=10)

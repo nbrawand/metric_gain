@@ -71,6 +71,7 @@ class WorkoutSet(Base):
     weight = Column(Float, nullable=False)  # Weight used (in kg or lbs based on user preference)
     reps = Column(Integer, nullable=False)  # Actual reps performed
     rir = Column(Integer, nullable=True)  # Reps In Reserve (how many more could have been done)
+    skipped = Column(Integer, default=0, nullable=False)  # 0 = not skipped, 1 = skipped (using int for SQLite compatibility)
 
     # Target values (what was planned vs what was achieved)
     target_weight = Column(Float, nullable=True)  # What weight was recommended

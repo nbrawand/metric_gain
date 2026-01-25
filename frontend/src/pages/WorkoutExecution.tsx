@@ -126,6 +126,62 @@ export default function WorkoutExecution() {
     return set ? set[field].toString() : '0';
   };
 
+  // Toggle skipped state for a set
+  const handleToggleSkipped = async (setId: number) => {
+    if (!accessToken || !session) return;
+
+    const set = session.workout_sets.find((s) => s.id === setId);
+    if (!set) return;
+
+    const newSkipped = !set.skipped;
+
+    // Update local state immediately for responsive UI
+    setSession((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        workout_sets: prev.workout_sets.map((s) =>
+          s.id === setId
+            ? { ...s, skipped: newSkipped, weight: newSkipped ? 0 : s.weight, reps: newSkipped ? 0 : s.reps }
+            : s
+        ),
+      };
+    });
+
+    // If marking as skipped, also clear the input values
+    if (newSkipped) {
+      setInputValues((prev) => ({
+        ...prev,
+        [setId]: { weight: '0', reps: '0' },
+      }));
+    }
+
+    // Save to server
+    try {
+      await updateWorkoutSet(
+        session.id,
+        setId,
+        {
+          skipped: newSkipped,
+          ...(newSkipped ? { weight: 0, reps: 0 } : {})
+        },
+        accessToken
+      );
+    } catch (err) {
+      console.error('Error toggling skipped:', err);
+      // Revert on error
+      setSession((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          workout_sets: prev.workout_sets.map((s) =>
+            s.id === setId ? { ...s, skipped: !newSkipped } : s
+          ),
+        };
+      });
+    }
+  };
+
   const handleCompleteWorkout = async () => {
     if (!accessToken || !session || !instance) return;
 
@@ -386,8 +442,9 @@ export default function WorkoutExecution() {
                   {/* Sets */}
                   {exerciseSets.sort((a, b) => a.set_number - b.set_number).map((set) => {
                     const recommendation = getWeightRecommendation(set);
+                    const isSkipped = set.skipped;
                     return (
-                      <div key={set.id} className="mb-3">
+                      <div key={set.id} className={`mb-3 ${isSkipped ? 'opacity-50' : ''}`}>
                         <div className="grid grid-cols-12 gap-2 items-center">
                           <div className="col-span-1 text-gray-500">⋮</div>
 
@@ -397,10 +454,13 @@ export default function WorkoutExecution() {
                               value={getInputValue(set.id, 'weight')}
                               onChange={(e) => handleInputChange(set.id, 'weight', e.target.value)}
                               onBlur={() => handleInputBlur(set.id, 'weight')}
-                              className="w-full bg-gray-700 text-white text-center rounded py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                              disabled={isSkipped}
+                              className={`w-full bg-gray-700 text-white text-center rounded py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                                isSkipped ? 'cursor-not-allowed line-through' : ''
+                              }`}
                               placeholder={set.target_weight ? set.target_weight.toString() : "0"}
                             />
-                            {recommendation && (
+                            {recommendation && !isSkipped && (
                               <div className="text-xs text-teal-400 text-center mt-1">
                                 {recommendation}
                               </div>
@@ -413,10 +473,13 @@ export default function WorkoutExecution() {
                               value={getInputValue(set.id, 'reps')}
                               onChange={(e) => handleInputChange(set.id, 'reps', e.target.value)}
                               onBlur={() => handleInputBlur(set.id, 'reps')}
-                              className="w-full bg-gray-700 text-white text-center rounded py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                              disabled={isSkipped}
+                              className={`w-full bg-gray-700 text-white text-center rounded py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                                isSkipped ? 'cursor-not-allowed line-through' : ''
+                              }`}
                               placeholder={set.target_reps ? set.target_reps.toString() : "0"}
                             />
-                            {set.target_reps && set.reps === 0 && (
+                            {set.target_reps && set.reps === 0 && !isSkipped && (
                               <div className="text-xs text-gray-400 text-center mt-1">
                                 Target: {set.target_reps} reps
                               </div>
@@ -424,11 +487,19 @@ export default function WorkoutExecution() {
                           </div>
 
                           <div className="col-span-3 flex justify-center">
-                            <div className={`w-8 h-8 rounded border-2 ${
-                              set.weight > 0 && set.reps > 0
-                                ? 'bg-teal-500 border-teal-500'
-                                : 'border-gray-600'
-                            }`}></div>
+                            <button
+                              onClick={() => handleToggleSkipped(set.id)}
+                              className={`w-8 h-8 rounded border-2 flex items-center justify-center transition-colors ${
+                                set.skipped
+                                  ? 'bg-gray-600 border-gray-500 text-gray-400'
+                                  : set.weight > 0 && set.reps > 0
+                                  ? 'bg-teal-500 border-teal-500 text-white'
+                                  : 'border-gray-600 hover:border-gray-500'
+                              }`}
+                              title={set.skipped ? 'Click to unskip' : 'Click to skip this set'}
+                            >
+                              {set.skipped ? '✕' : set.weight > 0 && set.reps > 0 ? '✓' : ''}
+                            </button>
                           </div>
                         </div>
                       </div>
