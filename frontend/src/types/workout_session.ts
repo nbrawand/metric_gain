@@ -109,6 +109,8 @@ export interface WorkoutSessionCreate {
   day_number: number;
   duration_minutes?: number;
   notes?: string;
+  source_instance_id?: number;
+  source_week_number?: number;
 }
 
 /**

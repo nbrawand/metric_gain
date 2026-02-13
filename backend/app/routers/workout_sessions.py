@@ -61,10 +61,10 @@ def create_workout_session(
     current_user: User = Depends(get_current_user),
 ):
     """Create a new workout session and auto-generate sets from template."""
-    # Create the workout session
+    # Create the workout session (exclude source fields not in DB model)
     workout_session = WorkoutSession(
         user_id=current_user.id,
-        **session_data.model_dump()
+        **session_data.model_dump(exclude={"source_instance_id", "source_week_number"})
     )
     db.add(workout_session)
     db.flush()  # Get the session ID without committing
@@ -91,6 +91,24 @@ def create_workout_session(
                 for ps in prev_sets:
                     prev_sets_map[(ps.exercise_id, ps.set_number)] = ps
 
+        # For week 1 with source instance, look up logged sets from source
+        source_sets_map = {}
+        if (session_data.week_number == 1
+                and session_data.source_instance_id is not None
+                and session_data.source_week_number is not None):
+            source_session = db.query(WorkoutSession).filter(
+                WorkoutSession.mesocycle_instance_id == session_data.source_instance_id,
+                WorkoutSession.user_id == current_user.id,
+                WorkoutSession.week_number == session_data.source_week_number,
+                WorkoutSession.day_number == session_data.day_number,
+            ).first()
+            if source_session:
+                source_sets = db.query(WorkoutSet).filter(
+                    WorkoutSet.workout_session_id == source_session.id
+                ).all()
+                for ss in source_sets:
+                    source_sets_map[(ss.exercise_id, ss.set_number)] = ss
+
         # Auto-generate workout sets from template exercises
         for template_exercise in template.exercises:
             # Look up exercise muscle group for set progression
@@ -104,10 +122,19 @@ def create_workout_session(
             for set_num in range(1, num_sets + 1):
                 # Calculate target weight from previous week: +2.5%, min +2.5 lbs
                 target_weight = None
+                target_reps = template_exercise.target_reps_max
                 prev_set = prev_sets_map.get((template_exercise.exercise_id, set_num))
                 if prev_set and prev_set.weight > 0:
                     increase = max(prev_set.weight * 0.025, 2.5)
                     target_weight = round(prev_set.weight + increase, 1)
+
+                # For week 1 with source, use source set's logged weight/reps as targets
+                source_set = source_sets_map.get((template_exercise.exercise_id, set_num))
+                if source_set:
+                    if source_set.weight > 0:
+                        target_weight = source_set.weight
+                    if source_set.reps > 0:
+                        target_reps = source_set.reps
 
                 workout_set = WorkoutSet(
                     workout_session_id=workout_session.id,
@@ -117,7 +144,7 @@ def create_workout_session(
                     weight=0,  # User will fill this in
                     reps=0,  # User will fill this in
                     target_weight=target_weight,
-                    target_reps=template_exercise.target_reps_max,
+                    target_reps=target_reps,
                     target_rir=template_exercise.starting_rir,
                 )
                 db.add(workout_set)

@@ -369,7 +369,7 @@ export default function WorkoutExecution() {
     }
 
     // No previous data available
-    return 'a weight you can do at 5-15 reps at 3 RIR';
+    return 'a weight you can do at 5-15 reps at the recommended RIR';
   };
 
   // Group exercises by muscle group
@@ -497,6 +497,26 @@ export default function WorkoutExecution() {
                 ))}
               </div>
             </div>
+
+            {/* End Mesocycle Button */}
+            <div className="mt-6 pt-4 border-t border-gray-700">
+              <button
+                onClick={async () => {
+                  if (!confirm('Are you sure you want to end this mesocycle? This will mark it as completed.')) return;
+                  try {
+                    await updateMesocycleInstance(instance.id, { status: 'completed' }, accessToken!);
+                    setShowCalendar(false);
+                    navigate('/');
+                  } catch (err) {
+                    console.error('Error ending mesocycle:', err);
+                    alert('Failed to end mesocycle');
+                  }
+                }}
+                className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                End Mesocycle
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -568,7 +588,7 @@ export default function WorkoutExecution() {
                               placeholder={set.target_weight ? set.target_weight.toString() : "0"}
                             />
                             {recommendation && !isSkipped && (
-                              <div className="text-xs text-gray-400 text-center mt-1">
+                              <div className="text-xs text-teal-400 text-center mt-1">
                                 We recommend: {recommendation}
                               </div>
                             )}
@@ -589,18 +609,18 @@ export default function WorkoutExecution() {
                             />
                             {set.reps === 0 && !isSkipped && (() => {
                               const trainingWeeks = mesocycle.weeks - 1;
-                              const weekRir = Math.min(3, trainingWeeks - session.week_number);
+                              const weekRir = Math.min(3, trainingWeeks - session.week_number + 1);
                               const isDeload = session.week_number === mesocycle.weeks;
                               if (isDeload) return null;
                               if (session.week_number === 1) {
                                 return (
-                                  <div className="text-xs text-gray-400 text-center mt-1">
-                                    We recommend: {weekRir} RIR
+                                  <div className="text-xs text-teal-400 text-center mt-1">
+                                    We recommend: {set.target_reps ? `${set.target_reps} reps or ` : ''}{weekRir} RIR
                                   </div>
                                 );
                               }
                               return (
-                                <div className="text-xs text-gray-400 text-center mt-1">
+                                <div className="text-xs text-teal-400 text-center mt-1">
                                   We recommend: {set.target_reps ? `${set.target_reps} reps or ` : ''}{weekRir} RIR
                                 </div>
                               );

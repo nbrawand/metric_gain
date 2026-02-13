@@ -75,7 +75,8 @@ class WorkoutSessionBase(BaseModel):
 class WorkoutSessionCreate(WorkoutSessionBase):
     """Schema for creating a workout session."""
 
-    pass
+    source_instance_id: Optional[int] = None
+    source_week_number: Optional[int] = None
 
 
 class WorkoutSessionUpdate(BaseModel):

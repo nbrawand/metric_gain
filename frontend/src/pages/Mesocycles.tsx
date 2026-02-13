@@ -35,6 +35,12 @@ export default function Mesocycles() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
 
+  // Start Mesocycle Modal state
+  const [showStartModal, setShowStartModal] = useState(false);
+  const [startingMesocycle, setStartingMesocycle] = useState<MesocycleListItem | null>(null);
+  const [selectedSourceInstance, setSelectedSourceInstance] = useState<number | null>(null);
+  const [selectedSourceWeek, setSelectedSourceWeek] = useState<number | null>(null);
+
   // Form state for creating mesocycle
   const [mesocycleData, setMesocycleData] = useState({
     name: '',
@@ -101,7 +107,11 @@ export default function Mesocycles() {
     }
   };
 
-  const handleStartMesocycle = async (mesocycle: MesocycleListItem) => {
+  const handleStartMesocycle = async (
+    mesocycle: MesocycleListItem,
+    sourceInstanceId?: number | null,
+    sourceWeekNumber?: number | null,
+  ) => {
     if (!accessToken) return;
 
     // Check if there's already an active instance
@@ -130,13 +140,20 @@ export default function Mesocycles() {
       // Create the first workout session (Week 1, Day 1)
       const firstTemplate = fullMesocycle.workout_templates.find(wt => wt.order_index === 0) || fullMesocycle.workout_templates[0];
 
-      const session = await createWorkoutSession({
+      const sessionData: import('../types/workout_session').WorkoutSessionCreate = {
         mesocycle_instance_id: instance.id,
         workout_template_id: firstTemplate.id,
         workout_date: today,
         week_number: 1,
         day_number: 1,
-      }, accessToken);
+      };
+
+      if (sourceInstanceId && sourceWeekNumber) {
+        sessionData.source_instance_id = sourceInstanceId;
+        sessionData.source_week_number = sourceWeekNumber;
+      }
+
+      const session = await createWorkoutSession(sessionData, accessToken);
 
       // Navigate to the workout execution page
       navigate(`/workout/${session.id}`);
@@ -337,7 +354,11 @@ export default function Mesocycles() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleStartMesocycle(mesocycle);
+                        if (hasActiveInstance) return;
+                        setStartingMesocycle(mesocycle);
+                        setSelectedSourceInstance(null);
+                        setSelectedSourceWeek(null);
+                        setShowStartModal(true);
                       }}
                       disabled={hasActiveInstance}
                       className={`px-4 py-2 rounded text-sm font-medium transition ${
@@ -407,6 +428,115 @@ export default function Mesocycles() {
             </div>
           </div>
         )}
+
+        {/* Start Mesocycle Modal */}
+        {showStartModal && startingMesocycle && (() => {
+          const completedForTemplate = instances.filter(
+            i => i.status === 'completed' && i.mesocycle_template_id === startingMesocycle.id
+          );
+          return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-gray-800 rounded-lg max-w-md w-full">
+                <div className="p-6 border-b border-gray-700">
+                  <h2 className="text-xl font-bold text-white">Start: {startingMesocycle.name}</h2>
+                </div>
+
+                <div className="p-6 space-y-6">
+                  {/* Start Fresh */}
+                  <button
+                    onClick={() => {
+                      setShowStartModal(false);
+                      handleStartMesocycle(startingMesocycle);
+                    }}
+                    className="w-full bg-teal-600 hover:bg-teal-700 text-white py-3 px-4 rounded-lg font-medium transition"
+                  >
+                    Start Fresh
+                  </button>
+
+                  {/* Start from Previous */}
+                  {completedForTemplate.length > 0 && (
+                    <div className="border-t border-gray-700 pt-4">
+                      <h3 className="text-sm font-medium text-gray-300 mb-3">Start from Previous Instance</h3>
+                      <p className="text-xs text-gray-400 mb-3">
+                        Seed week 1 target weights and reps from a previous run of this template.
+                      </p>
+
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs text-gray-400 mb-1">Previous Instance</label>
+                          <select
+                            value={selectedSourceInstance ?? ''}
+                            onChange={(e) => {
+                              setSelectedSourceInstance(e.target.value ? Number(e.target.value) : null);
+                              setSelectedSourceWeek(null);
+                            }}
+                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+                          >
+                            <option value="">Select an instance...</option>
+                            {completedForTemplate
+                              .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+                              .slice(0, 5)
+                              .map(inst => (
+                                <option key={inst.id} value={inst.id}>
+                                  Started {new Date(inst.start_date).toLocaleDateString()}
+                                  {' — Completed '}
+                                  {new Date(inst.updated_at).toLocaleDateString()}{' '}
+                                  {new Date(inst.updated_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+
+                        {selectedSourceInstance && (
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Source Week</label>
+                            <select
+                              value={selectedSourceWeek ?? ''}
+                              onChange={(e) => setSelectedSourceWeek(e.target.value ? Number(e.target.value) : null)}
+                              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+                            >
+                              <option value="">Select a week...</option>
+                              {Array.from({ length: startingMesocycle.weeks - 1 }, (_, i) => i + 1).map(w => (
+                                <option key={w} value={w}>Week {w}</option>
+                              ))}
+                            </select>
+                            <p className="text-xs text-gray-500 mt-1 italic">
+                              Recommended: select a week 2-3 weeks before the deload (last week).
+                            </p>
+                          </div>
+                        )}
+
+                        <button
+                          onClick={() => {
+                            setShowStartModal(false);
+                            handleStartMesocycle(startingMesocycle, selectedSourceInstance, selectedSourceWeek);
+                          }}
+                          disabled={!selectedSourceInstance || !selectedSourceWeek}
+                          className={`w-full py-3 px-4 rounded-lg font-medium transition ${
+                            selectedSourceInstance && selectedSourceWeek
+                              ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                              : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                          }`}
+                        >
+                          Start from Previous
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-4 border-t border-gray-700 flex justify-end">
+                  <button
+                    onClick={() => setShowStartModal(false)}
+                    className="px-4 py-2 text-gray-400 hover:text-gray-300 text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Create Mesocycle Template Modal */}
         {showCreateModal && (
