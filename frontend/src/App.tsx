@@ -6,6 +6,7 @@ import { Exercises } from './pages/Exercises';
 import Mesocycles from './pages/Mesocycles';
 import MesocycleDetail from './pages/MesocycleDetail';
 import WorkoutExecution from './pages/WorkoutExecution';
+import HowItWorks from './pages/HowItWorks';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
@@ -51,6 +52,14 @@ function App() {
           element={
             <ProtectedRoute>
               <WorkoutExecution />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/how-it-works"
+          element={
+            <ProtectedRoute>
+              <HowItWorks />
             </ProtectedRoute>
           }
         />

@@ -210,6 +210,12 @@ export function Home() {
               <h1 className="text-2xl font-bold text-white">Metric Gain</h1>
             </div>
             <div className="flex items-center gap-6">
+              <button
+                onClick={() => navigate('/how-it-works')}
+                className="text-gray-300 hover:text-white transition-colors"
+              >
+                How It Works
+              </button>
               {activeInstance && (
                 <button
                   onClick={() => setShowCalendar(true)}
