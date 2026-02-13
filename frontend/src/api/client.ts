@@ -34,7 +34,17 @@ async function fetchApi<T>(
 
     try {
       const errorData = await response.json();
-      error.detail = errorData.detail || error.detail;
+      if (Array.isArray(errorData.detail)) {
+        // FastAPI validation errors: [{loc: [...], msg: "...", type: "..."}]
+        error.detail = errorData.detail
+          .map((e: { loc?: string[]; msg?: string }) => {
+            const field = e.loc?.[e.loc.length - 1];
+            return field ? `${field}: ${e.msg}` : e.msg;
+          })
+          .join('. ');
+      } else {
+        error.detail = errorData.detail || error.detail;
+      }
     } catch {
       // If error response is not JSON, use default message
     }

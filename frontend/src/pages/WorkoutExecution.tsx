@@ -538,11 +538,24 @@ export default function WorkoutExecution() {
                               }`}
                               placeholder={set.target_reps ? set.target_reps.toString() : "0"}
                             />
-                            {set.target_reps && set.reps === 0 && !isSkipped && (
-                              <div className="text-xs text-gray-400 text-center mt-1">
-                                Target: {set.target_reps} reps
-                              </div>
-                            )}
+                            {set.reps === 0 && !isSkipped && (() => {
+                              const trainingWeeks = mesocycle.weeks - 1;
+                              const weekRir = Math.min(3, trainingWeeks - session.week_number);
+                              const isDeload = session.week_number === mesocycle.weeks;
+                              if (isDeload) return null;
+                              if (session.week_number === 1) {
+                                return (
+                                  <div className="text-xs text-gray-400 text-center mt-1">
+                                    {weekRir} RIR
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div className="text-xs text-gray-400 text-center mt-1">
+                                  {set.target_reps ? `${set.target_reps} reps or ` : ''}{weekRir} RIR
+                                </div>
+                              );
+                            })()}
                           </div>
 
                           <div className="col-span-3 flex justify-center pt-1">

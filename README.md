@@ -81,6 +81,35 @@ cd frontend
 npm run test
 ```
 
+### Full Database Reset
+
+This wipes all data (users, mesocycles, workouts), re-runs migrations, and re-seeds stock data (49 exercises + Push Pull Legs template). The backend seeds automatically on startup.
+
+```bash
+# 1. Stop the backend (if running)
+kill $(lsof -ti:8000) 2>/dev/null
+
+# 2. Drop all tables and recreate schema
+docker-compose exec -T postgres psql -U metricgain -d metricgain_dev -c \
+  "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO metricgain;"
+
+# 3. Re-run all migrations
+cd backend
+source venv/bin/activate
+alembic upgrade head
+
+# 4. Restart backend (seeds exercises + stock mesocycles on startup)
+uvicorn app.main:app --reload
+```
+
+After restart, register a new account at `http://localhost:5173`.
+
+**What gets seeded on startup** (see `backend/app/main.py`):
+- `seed_exercises()` — 49 default exercises across all muscle groups
+- `seed_mesocycles()` — Push Pull Legs 6-day template (stock, available to all users)
+
+Seed scripts are in `backend/app/utils/seed_exercises.py` and `backend/app/utils/seed_mesocycles.py`. They only run if no stock data exists yet.
+
 ## Project Structure
 
 ```
