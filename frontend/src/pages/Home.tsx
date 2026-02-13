@@ -210,6 +210,14 @@ export function Home() {
               <h1 className="text-2xl font-bold text-white">Metric Gain</h1>
             </div>
             <div className="flex items-center gap-6">
+              {activeInstance && (
+                <button
+                  onClick={() => setShowCalendar(true)}
+                  className="text-gray-300 hover:text-white transition-colors"
+                >
+                  Current Mesocycle
+                </button>
+              )}
               <button
                 onClick={() => navigate('/exercises')}
                 className="text-gray-300 hover:text-white transition-colors"

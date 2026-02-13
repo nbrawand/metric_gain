@@ -20,6 +20,7 @@ export default function WorkoutExecution() {
   const [allSessions, setAllSessions] = useState<WorkoutSessionListItem[]>([]);
   const [showCalendar, setShowCalendar] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [completionBanner, setCompletionBanner] = useState<{ week: number; day: number } | null>(null);
 
   // Local input state to prevent re-renders while typing
   const [inputValues, setInputValues] = useState<SetInputValues>({});
@@ -182,10 +183,20 @@ export default function WorkoutExecution() {
     }
   };
 
+  // Auto-dismiss completion banner after 3 seconds
+  useEffect(() => {
+    if (!completionBanner) return;
+    const timer = setTimeout(() => setCompletionBanner(null), 3000);
+    return () => clearTimeout(timer);
+  }, [completionBanner]);
+
   const handleCompleteWorkout = async () => {
     if (!accessToken || !session || !instance) return;
 
     const mesocycle = instance.mesocycle_template;
+    const completedWeek = session.week_number;
+    const completedDay = session.day_number;
+    const daysPerWeek = mesocycle.workout_templates?.length || mesocycle.days_per_week;
 
     try {
       await updateWorkoutSession(
@@ -195,15 +206,58 @@ export default function WorkoutExecution() {
       );
 
       // Check if all workouts in the mesocycle are now completed
-      const totalWorkouts = mesocycle.weeks * (mesocycle.workout_templates?.length || mesocycle.days_per_week);
-      const completedCount = allSessions.filter(s => s.status === 'completed').length + 1; // +1 for this workout
+      const totalWorkouts = mesocycle.weeks * daysPerWeek;
+      const completedCount = allSessions.filter(s => s.status === 'completed').length + 1;
 
       if (completedCount >= totalWorkouts) {
-        // All workouts completed, end the mesocycle instance
         await updateMesocycleInstance(instance.id, { status: 'completed' }, accessToken);
+        navigate('/');
+        return;
       }
 
-      navigate('/');
+      // Find the next workout: next day in same week, or day 1 of next week
+      let nextWeek = completedWeek;
+      let nextDay = completedDay + 1;
+      if (nextDay > daysPerWeek) {
+        nextDay = 1;
+        nextWeek = completedWeek + 1;
+      }
+
+      // If we've exceeded the total weeks, go home
+      if (nextWeek > mesocycle.weeks) {
+        navigate('/');
+        return;
+      }
+
+      // Check if a session already exists for the next workout
+      const existingSession = allSessions.find(
+        s => s.week_number === nextWeek && s.day_number === nextDay
+      );
+
+      if (existingSession) {
+        navigate(`/workout/${existingSession.id}`);
+      } else {
+        // Create the next session
+        const templateIndex = nextDay - 1;
+        const template = mesocycle.workout_templates?.[templateIndex];
+
+        if (template) {
+          const newSession = await createWorkoutSession({
+            mesocycle_instance_id: instance.id,
+            workout_template_id: template.id,
+            workout_date: new Date().toISOString().split('T')[0],
+            week_number: nextWeek,
+            day_number: nextDay,
+          }, accessToken);
+          navigate(`/workout/${newSession.id}`);
+        } else {
+          navigate('/');
+          return;
+        }
+      }
+
+      // Show the completion banner for the workout we just finished
+      setCompletionBanner({ week: completedWeek, day: completedDay });
     } catch (err) {
       console.error('Error completing workout:', err);
     }
@@ -315,9 +369,9 @@ export default function WorkoutExecution() {
           </button>
           <button
             onClick={() => setShowCalendar(!showCalendar)}
-            className="text-gray-400 hover:text-white"
+            className="text-gray-400 hover:text-white text-sm"
           >
-            📅
+            Current Mesocycle
           </button>
         </div>
         <h1 className="text-sm text-gray-400 uppercase">{mesocycle.name}</h1>
@@ -325,6 +379,15 @@ export default function WorkoutExecution() {
           WEEK {session.week_number} &bull; DAY {session.day_number}
         </h2>
       </div>
+
+      {/* Completion Banner */}
+      {completionBanner && (
+        <div className="fixed top-0 left-0 right-0 z-50 flex justify-center animate-slide-down">
+          <div className="bg-teal-600 text-white px-6 py-3 rounded-b-lg shadow-lg text-center">
+            <p className="font-semibold">Week {completionBanner.week}, Day {completionBanner.day} Complete</p>
+          </div>
+        </div>
+      )}
 
       {/* Calendar Popup */}
       {showCalendar && mesocycle && (
