@@ -110,6 +110,24 @@ After restart, register a new account at `http://localhost:5173`.
 
 Seed scripts are in `backend/app/utils/seed_exercises.py` and `backend/app/utils/seed_mesocycles.py`. They only run if no stock data exists yet.
 
+### Database Backup & Restore
+
+**Backup:**
+```bash
+# Backup with auto-generated timestamp filename
+./scripts/backup-db.sh
+
+# Backup with a custom name
+./scripts/backup-db.sh before_migration
+```
+
+Backups are saved to `backups/` (gitignored). Each file is a full SQL dump including `DROP` statements for clean restores.
+
+**Restore:**
+```bash
+docker-compose exec -T postgres psql -U metricgain -d metricgain_dev < backups/<filename>.sql
+```
+
 ## Project Structure
 
 ```
