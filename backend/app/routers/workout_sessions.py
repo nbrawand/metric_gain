@@ -4,7 +4,7 @@ from typing import List
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 
 from app.database import get_db
@@ -65,7 +65,12 @@ def create_workout_session(
                 db.add(workout_set)
 
     db.commit()
-    db.refresh(workout_session)
+
+    # Reload with exercise data
+    workout_session = db.query(WorkoutSession).options(
+        joinedload(WorkoutSession.workout_sets).joinedload(WorkoutSet.exercise)
+    ).filter(WorkoutSession.id == workout_session.id).first()
+
     return workout_session
 
 
@@ -126,7 +131,9 @@ def get_workout_session(
     current_user: User = Depends(get_current_user),
 ):
     """Get a specific workout session by ID."""
-    workout_session = db.query(WorkoutSession).filter(
+    workout_session = db.query(WorkoutSession).options(
+        joinedload(WorkoutSession.workout_sets).joinedload(WorkoutSet.exercise)
+    ).filter(
         WorkoutSession.id == session_id,
         WorkoutSession.user_id == current_user.id
     ).first()

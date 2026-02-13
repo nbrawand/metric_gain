@@ -176,10 +176,6 @@ export function Home() {
                             className={`w-full py-2 px-3 rounded text-xs font-medium transition-colors ${
                               status === 'completed'
                                 ? 'bg-teal-600 text-white hover:bg-teal-700'
-                                : status === 'in_progress'
-                                ? 'bg-teal-800 text-white hover:bg-teal-700'
-                                : status === 'skipped'
-                                ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600 cursor-pointer'
                             }`}
                           >

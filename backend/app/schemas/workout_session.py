@@ -4,6 +4,7 @@ from datetime import date, datetime
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
+from app.schemas.exercise import ExerciseResponse
 
 
 # WorkoutSet Schemas
@@ -52,6 +53,7 @@ class WorkoutSetResponse(WorkoutSetBase):
     workout_session_id: int
     created_at: datetime
     updated_at: datetime
+    exercise: Optional[ExerciseResponse] = None  # Populated exercise details
 
     class Config:
         from_attributes = True
