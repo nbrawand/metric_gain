@@ -23,12 +23,16 @@ BIG_MUSCLE_GROUPS = {"Chest", "Back", "Quadriceps", "Hamstrings", "Glutes"}
 SMALL_MUSCLE_GROUPS = {"Shoulders", "Biceps", "Triceps", "Calves", "Core"}
 
 
-def get_sets_for_week(muscle_group: str, week_number: int) -> int:
+def get_sets_for_week(muscle_group: str, week_number: int, total_weeks: int = 0) -> int:
     """Calculate number of sets for a muscle group in a given week.
 
     Formula: sets = week * growth_rate + starting_sets
     Big muscles: growth_rate = 0.5, Small muscles: growth_rate = 1
+    Deload week (last week): always 1 set per exercise
     """
+    if total_weeks > 0 and week_number == total_weeks:
+        return 1
+
     if muscle_group in BIG_MUSCLE_GROUPS:
         growth_rate = 1.0
     elif muscle_group in SMALL_MUSCLE_GROUPS:
@@ -118,7 +122,8 @@ def create_workout_session(
             muscle_group = exercise.muscle_group if exercise else "Other"
 
             # Calculate sets based on muscle group and week number
-            num_sets = get_sets_for_week(muscle_group, session_data.week_number)
+            total_weeks = template.mesocycle.weeks if template.mesocycle else 0
+            num_sets = get_sets_for_week(muscle_group, session_data.week_number, total_weeks)
             for set_num in range(1, num_sets + 1):
                 # Calculate target weight from previous week: +2.5%, min +2.5 lbs
                 target_weight = None

@@ -609,19 +609,15 @@ export default function WorkoutExecution() {
                             />
                             {set.reps === 0 && !isSkipped && (() => {
                               const trainingWeeks = mesocycle.weeks - 1;
-                              const weekRir = Math.min(3, trainingWeeks - session.week_number + 1);
                               const isDeload = session.week_number === mesocycle.weeks;
-                              if (isDeload) return null;
-                              if (session.week_number === 1) {
-                                return (
-                                  <div className="text-xs text-teal-400 text-center mt-1">
-                                    We recommend: {set.target_reps ? `${set.target_reps} reps or ` : ''}{weekRir} RIR
-                                  </div>
-                                );
-                              }
+                              const weekRir = isDeload
+                                ? 8
+                                : trainingWeeks <= 1
+                                  ? 3
+                                  : Math.round(3 * (trainingWeeks - session.week_number) / (trainingWeeks - 1));
                               return (
                                 <div className="text-xs text-teal-400 text-center mt-1">
-                                  We recommend: {set.target_reps ? `${set.target_reps} reps or ` : ''}{weekRir} RIR
+                                  We recommend: {isDeload ? '' : set.target_reps ? `${set.target_reps} reps or ` : ''}{weekRir} RIR
                                 </div>
                               );
                             })()}

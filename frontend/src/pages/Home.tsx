@@ -276,14 +276,10 @@ export function Home() {
             Welcome, {user?.full_name || user?.email}!
           </h2>
 
-          <p className="text-gray-300 mb-6">
-            You've successfully logged in to Metric Gain. This is your dashboard where you'll
-            be able to manage your workouts, track your progress, and more.
-          </p>
-
           <div className="bg-gray-700 border border-gray-600 rounded-lg p-4 sm:p-6">
             <h3 className="text-lg sm:text-xl font-semibold text-white mb-3">Getting Started</h3>
             <ol className="space-y-2 text-gray-300 list-decimal list-inside">
+              <li>Check out <a href="/how-it-works" className="text-teal-400 font-medium hover:text-teal-300">How It Works</a> to learn the basics</li>
               <li>Click <span className="text-teal-400 font-medium">Mesocycles</span> in the menu above</li>
               <li>Create a new mesocycle template with your workouts</li>
               <li>Click <span className="text-teal-400 font-medium">Start Instance</span> to begin training</li>
