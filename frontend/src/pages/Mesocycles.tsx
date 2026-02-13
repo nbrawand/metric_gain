@@ -270,23 +270,25 @@ export default function Mesocycles() {
       {/* Header */}
       <header className="bg-gray-800 border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-          <button
-            onClick={() => navigate('/')}
-            className="text-blue-400 hover:text-blue-300 mb-3 inline-block"
-          >
-            &larr; Back to Home
-          </button>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <h1 className="text-2xl font-bold text-white">Mesocycle Templates</h1>
-              <p className="text-gray-400 mt-1 text-sm sm:text-base">Plan and manage your training blocks</p>
+            <h1 className="text-2xl font-bold text-white">Mesocycle Templates</h1>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition text-sm sm:text-base w-full sm:w-auto"
+              >
+                Create Mesocycle Template
+              </button>
+              <button
+                onClick={() => navigate('/')}
+                className="text-gray-400 hover:text-white transition border border-gray-600 rounded-lg p-2 hover:border-gray-400"
+                title="Home"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z" />
+                </svg>
+              </button>
             </div>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition text-sm sm:text-base w-full sm:w-auto"
-            >
-              Create Mesocycle Template
-            </button>
           </div>
         </div>
       </header>

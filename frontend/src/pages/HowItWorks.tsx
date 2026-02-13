@@ -12,13 +12,18 @@ export default function HowItWorks() {
       {/* Header */}
       <header className="bg-gray-800 border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-          <button
-            onClick={() => navigate('/')}
-            className="text-blue-400 hover:text-blue-300 mb-3 inline-block"
-          >
-            &larr; Back to Home
-          </button>
-          <h1 className="text-2xl font-bold text-white">How It Works</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-white">How It Works</h1>
+            <button
+              onClick={() => navigate('/')}
+              className="text-gray-400 hover:text-white transition border border-gray-600 rounded-lg p-2 hover:border-gray-400"
+              title="Home"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z" />
+              </svg>
+            </button>
+          </div>
         </div>
       </header>
 
