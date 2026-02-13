@@ -206,39 +206,37 @@ export function Home() {
       <header className="bg-gray-800 border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-bold text-white">Metric Gain</h1>
-            </div>
-            <div className="flex items-center gap-6">
+            <h1 className="text-xl sm:text-2xl font-bold text-white">Metric Gain</h1>
+            <div className="flex items-center gap-3 sm:gap-6 flex-wrap justify-end">
               <button
                 onClick={() => navigate('/how-it-works')}
-                className="text-gray-300 hover:text-white transition-colors"
+                className="text-sm sm:text-base text-gray-300 hover:text-white transition-colors"
               >
                 How It Works
               </button>
               {activeInstance && (
                 <button
                   onClick={() => setShowCalendar(true)}
-                  className="text-gray-300 hover:text-white transition-colors"
+                  className="text-sm sm:text-base text-gray-300 hover:text-white transition-colors"
                 >
-                  Current Mesocycle
+                  Current Meso
                 </button>
               )}
               <button
                 onClick={() => navigate('/exercises')}
-                className="text-gray-300 hover:text-white transition-colors"
+                className="text-sm sm:text-base text-gray-300 hover:text-white transition-colors"
               >
                 Exercises
               </button>
               <button
                 onClick={() => navigate('/mesocycles')}
-                className="text-gray-300 hover:text-white transition-colors"
+                className="text-sm sm:text-base text-gray-300 hover:text-white transition-colors"
               >
                 Mesocycles
               </button>
               <button
                 onClick={handleLogout}
-                className="text-gray-300 hover:text-white transition-colors"
+                className="text-sm sm:text-base text-gray-300 hover:text-white transition-colors"
               >
                 Logout
               </button>
@@ -251,13 +249,13 @@ export function Home() {
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {/* Active Mesocycle Card */}
         {activeInstance && mesocycle && (
-          <div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-lg shadow-xl p-8 mb-6">
-            <div className="flex items-center justify-between">
+          <div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-lg shadow-xl p-4 sm:p-8 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-bold text-white mb-2">
+                <h2 className="text-xl sm:text-2xl font-bold text-white mb-1 sm:mb-2">
                   {mesocycle.name}
                 </h2>
-                <p className="text-teal-100">
+                <p className="text-teal-100 text-sm sm:text-base">
                   Week {Math.floor(workoutSessions.filter(s => s.status === 'completed').length / mesocycle.days_per_week) + 1} of {mesocycle.weeks}
                   {' • '}
                   {workoutSessions.filter(s => s.status === 'completed').length} workouts completed
@@ -265,7 +263,7 @@ export function Home() {
               </div>
               <button
                 onClick={handleContinueMesocycle}
-                className="bg-white text-teal-700 px-8 py-4 rounded-lg font-bold text-lg hover:bg-teal-50 transition-colors shadow-lg"
+                className="bg-white text-teal-700 px-6 py-3 sm:px-8 sm:py-4 rounded-lg font-bold text-base sm:text-lg hover:bg-teal-50 transition-colors shadow-lg w-full sm:w-auto"
               >
                 Continue Mesocycle →
               </button>
@@ -273,8 +271,8 @@ export function Home() {
           </div>
         )}
 
-        <div className="bg-gray-800 rounded-lg shadow-xl p-8">
-          <h2 className="text-3xl font-bold text-white mb-4">
+        <div className="bg-gray-800 rounded-lg shadow-xl p-4 sm:p-8">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">
             Welcome, {user?.full_name || user?.email}!
           </h2>
 
@@ -283,8 +281,8 @@ export function Home() {
             be able to manage your workouts, track your progress, and more.
           </p>
 
-          <div className="bg-gray-700 border border-gray-600 rounded-lg p-6">
-            <h3 className="text-xl font-semibold text-white mb-3">Getting Started</h3>
+          <div className="bg-gray-700 border border-gray-600 rounded-lg p-4 sm:p-6">
+            <h3 className="text-lg sm:text-xl font-semibold text-white mb-3">Getting Started</h3>
             <ol className="space-y-2 text-gray-300 list-decimal list-inside">
               <li>Click <span className="text-teal-400 font-medium">Mesocycles</span> in the menu above</li>
               <li>Create a new mesocycle template with your workouts</li>

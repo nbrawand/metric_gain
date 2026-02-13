@@ -535,13 +535,13 @@ export default function WorkoutExecution() {
                   </div>
 
                   {/* Column Headers */}
-                  <div className="grid grid-cols-12 gap-2 text-xs text-gray-400 mb-2">
+                  <div className="grid grid-cols-12 gap-1 sm:gap-2 text-xs text-gray-400 mb-2">
                     <div className="col-span-1"></div>
                     <div className="col-span-4 text-center">WEIGHT</div>
                     <div className="col-span-4 text-center">REPS ⓘ</div>
                     <div className="col-span-3 text-center">
                       <div>LOG</div>
-                      <div className="text-[10px] text-gray-500 mt-1">Sets left empty are logged as skipped</div>
+                      <div className="text-[10px] sm:text-xs text-gray-500 mt-1 leading-tight">Sets left empty are logged as skipped</div>
                     </div>
                   </div>
 
@@ -551,7 +551,7 @@ export default function WorkoutExecution() {
                     const isSkipped = set.skipped;
                     return (
                       <div key={set.id} className={`mb-3 ${isSkipped ? 'opacity-50' : ''}`}>
-                        <div className="grid grid-cols-12 gap-2 items-start">
+                        <div className="grid grid-cols-12 gap-1 sm:gap-2 items-start">
                           <div className="col-span-1 text-gray-500 pt-2">⋮</div>
 
                           <div className="col-span-4">
@@ -562,7 +562,7 @@ export default function WorkoutExecution() {
                               onChange={(e) => handleInputChange(set.id, 'weight', e.target.value)}
                               onBlur={() => handleInputBlur(set.id, 'weight')}
                               disabled={isSkipped}
-                              className={`w-full bg-gray-700 text-white text-center rounded py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                              className={`w-full bg-gray-700 text-white text-center rounded py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 ${
                                 isSkipped ? 'cursor-not-allowed line-through' : ''
                               }`}
                               placeholder={set.target_weight ? set.target_weight.toString() : "0"}
@@ -582,7 +582,7 @@ export default function WorkoutExecution() {
                               onChange={(e) => handleInputChange(set.id, 'reps', e.target.value)}
                               onBlur={() => handleInputBlur(set.id, 'reps')}
                               disabled={isSkipped}
-                              className={`w-full bg-gray-700 text-white text-center rounded py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                              className={`w-full bg-gray-700 text-white text-center rounded py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 ${
                                 isSkipped ? 'cursor-not-allowed line-through' : ''
                               }`}
                               placeholder={set.target_reps ? set.target_reps.toString() : "0"}

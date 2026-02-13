@@ -148,9 +148,9 @@ export default function MesocycleDetail() {
               </div>
             ) : (
               <>
-                <div className="flex justify-between items-start mb-4">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
                   <div>
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">{mesocycle.name}</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{mesocycle.name}</h1>
                     <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                       Template
                     </span>
@@ -175,7 +175,7 @@ export default function MesocycleDetail() {
                   <p className="text-gray-600 mb-4">{mesocycle.description}</p>
                 )}
 
-                <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                <div className="grid grid-cols-3 sm:grid-cols-3 gap-4 pt-4 border-t">
                   <div>
                     <span className="text-sm text-gray-600">Duration</span>
                     <p className="text-lg font-semibold text-gray-900">{mesocycle.weeks} weeks</p>

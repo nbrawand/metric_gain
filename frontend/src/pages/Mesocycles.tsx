@@ -259,14 +259,14 @@ export default function Mesocycles() {
           >
             &larr; Back to Home
           </button>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <h1 className="text-2xl font-bold text-white">Mesocycle Templates</h1>
-              <p className="text-gray-400 mt-1">Plan and manage your training blocks</p>
+              <p className="text-gray-400 mt-1 text-sm sm:text-base">Plan and manage your training blocks</p>
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition"
+              className="bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition text-sm sm:text-base w-full sm:w-auto"
             >
               Create Mesocycle Template
             </button>
