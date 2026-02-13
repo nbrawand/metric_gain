@@ -7,10 +7,36 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 
+import math
+
 from app.database import get_db
 from app.models.workout_session import WorkoutSession, WorkoutSet
+from app.models.exercise import Exercise
 from app.models.user import User
 from app.models.mesocycle import WorkoutTemplate
+
+# Muscle group set progression configuration
+# Starting sets = 2 for all muscle groups
+# Growth rate per week: big muscles = 1, small muscles = 1.5
+STARTING_SETS = 1
+BIG_MUSCLE_GROUPS = {"Chest", "Back", "Quadriceps", "Hamstrings", "Glutes"}
+SMALL_MUSCLE_GROUPS = {"Shoulders", "Biceps", "Triceps", "Calves", "Core"}
+
+
+def get_sets_for_week(muscle_group: str, week_number: int) -> int:
+    """Calculate number of sets for a muscle group in a given week.
+
+    Formula: sets = week * growth_rate + starting_sets
+    Big muscles: growth_rate = 0.5, Small muscles: growth_rate = 1
+    """
+    if muscle_group in BIG_MUSCLE_GROUPS:
+        growth_rate = 1.0
+    elif muscle_group in SMALL_MUSCLE_GROUPS:
+        growth_rate = 1.5
+    else:
+        growth_rate = 1.0  # Default to big muscle rate
+
+    return math.ceil(week_number * growth_rate + STARTING_SETS)
 from app.schemas.workout_session import (
     WorkoutSessionCreate,
     WorkoutSessionUpdate,
@@ -65,8 +91,14 @@ def create_workout_session(
 
         # Auto-generate workout sets from template exercises
         for template_exercise in template.exercises:
-            # Create sets based on the template (default: 3 sets per exercise)
-            num_sets = template_exercise.target_sets or 3
+            # Look up exercise muscle group for set progression
+            exercise = db.query(Exercise).filter(
+                Exercise.id == template_exercise.exercise_id
+            ).first()
+            muscle_group = exercise.muscle_group if exercise else "Other"
+
+            # Calculate sets based on muscle group and week number
+            num_sets = get_sets_for_week(muscle_group, session_data.week_number)
             for set_num in range(1, num_sets + 1):
                 # Calculate target weight from previous week: +2.5%, min +2.5 lbs
                 target_weight = None
