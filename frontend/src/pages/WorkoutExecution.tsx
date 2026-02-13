@@ -1,9 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { getWorkoutSession, updateWorkoutSet, updateWorkoutSession, listWorkoutSessions, createWorkoutSession, submitWorkoutFeedback } from '../api/workoutSessions';
+import { getWorkoutSession, updateWorkoutSet, updateWorkoutSession, listWorkoutSessions, createWorkoutSession, submitWorkoutFeedback, swapExercise, removeExercise, addExercise } from '../api/workoutSessions';
+import { getExercises } from '../api/exercises';
 import { getMesocycleInstance, updateMesocycleInstance } from '../api/mesocycles';
 import { WorkoutSession, WorkoutSet, WorkoutSessionListItem } from '../types/workout_session';
+import { Exercise } from '../types/exercise';
 import { MesocycleInstance } from '../types/mesocycle';
 
 // Local state for tracking input values before they're saved
@@ -23,6 +25,14 @@ export default function WorkoutExecution() {
   const [completionBanner, setCompletionBanner] = useState<{ week: number; day: number } | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [muscleFeedback, setMuscleFeedback] = useState<Record<string, string>>({});
+
+  // Exercise management state
+  const [showExerciseMenu, setShowExerciseMenu] = useState<number | null>(null); // exercise_id of open dropdown
+  const [showExercisePicker, setShowExercisePicker] = useState<'swap' | 'add' | null>(null);
+  const [swapTargetExerciseId, setSwapTargetExerciseId] = useState<number | null>(null);
+  const [availableExercises, setAvailableExercises] = useState<Exercise[]>([]);
+  const [exerciseSearch, setExerciseSearch] = useState('');
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // Local input state to prevent re-renders while typing
   const [inputValues, setInputValues] = useState<SetInputValues>({});
@@ -44,6 +54,70 @@ export default function WorkoutExecution() {
       setInputValues(initialValues);
     }
   }, [session]);
+
+  // Close exercise menu on click outside
+  useEffect(() => {
+    if (!showExerciseMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowExerciseMenu(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showExerciseMenu]);
+
+  // Load exercises when picker opens
+  useEffect(() => {
+    if (!showExercisePicker || !accessToken) return;
+    getExercises({ limit: 500 }, accessToken)
+      .then(setAvailableExercises)
+      .catch((err) => console.error('Error loading exercises:', err));
+  }, [showExercisePicker, accessToken]);
+
+  const handleRemoveExercise = async (exerciseId: number) => {
+    if (!accessToken || !session) return;
+    if (!confirm('Remove this exercise from the workout?')) return;
+    try {
+      const updated = await removeExercise(session.id, exerciseId, accessToken);
+      setSession(updated);
+      setShowExerciseMenu(null);
+    } catch (err) {
+      console.error('Error removing exercise:', err);
+    }
+  };
+
+  const handleOpenSwap = (exerciseId: number) => {
+    setSwapTargetExerciseId(exerciseId);
+    setShowExercisePicker('swap');
+    setExerciseSearch('');
+    setShowExerciseMenu(null);
+  };
+
+  const handleOpenAdd = () => {
+    setShowExercisePicker('add');
+    setExerciseSearch('');
+  };
+
+  const handleExercisePickerSelect = async (newExerciseId: number) => {
+    if (!accessToken || !session) return;
+    try {
+      let updated: WorkoutSession;
+      if (showExercisePicker === 'swap' && swapTargetExerciseId !== null) {
+        updated = await swapExercise(session.id, swapTargetExerciseId, newExerciseId, accessToken);
+      } else {
+        updated = await addExercise(session.id, newExerciseId, accessToken);
+      }
+      setSession(updated);
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail || 'Failed to update exercise';
+      alert(msg);
+      console.error('Error in exercise picker:', err);
+    } finally {
+      setShowExercisePicker(null);
+      setSwapTargetExerciseId(null);
+    }
+  };
 
   const loadWorkoutSession = async () => {
     if (!accessToken || !sessionId) return;
@@ -546,7 +620,9 @@ export default function WorkoutExecution() {
               </div>
 
               {/* Exercise Cards */}
-              {Object.entries(exerciseGroups).map(([exerciseName, exerciseSets]) => (
+              {Object.entries(exerciseGroups).map(([exerciseName, exerciseSets]) => {
+                const exerciseId = exerciseSets[0]?.exercise_id;
+                return (
                 <div key={exerciseName} className="bg-gray-800 rounded-lg p-4 mb-3">
                   <div className="flex items-center justify-between mb-3">
                     <div>
@@ -555,7 +631,36 @@ export default function WorkoutExecution() {
                         {exerciseSets[0]?.exercise?.equipment || 'BODYWEIGHT'}
                       </p>
                     </div>
-                    <button className="text-gray-400">ⓘ</button>
+                    {session.status !== 'completed' && (
+                      <div className="relative">
+                        <button
+                          onClick={() => setShowExerciseMenu(showExerciseMenu === exerciseId ? null : exerciseId)}
+                          className="text-gray-400 hover:text-white p-1"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <circle cx="10" cy="4" r="1.5" />
+                            <circle cx="10" cy="10" r="1.5" />
+                            <circle cx="10" cy="16" r="1.5" />
+                          </svg>
+                        </button>
+                        {showExerciseMenu === exerciseId && (
+                          <div ref={menuRef} className="absolute right-0 top-8 bg-gray-700 rounded-lg shadow-lg z-20 py-1 min-w-[160px]">
+                            <button
+                              onClick={() => handleOpenSwap(exerciseId)}
+                              className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-600"
+                            >
+                              Swap Exercise
+                            </button>
+                            <button
+                              onClick={() => handleRemoveExercise(exerciseId)}
+                              className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-600"
+                            >
+                              Remove Exercise
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Column Headers */}
@@ -647,11 +752,94 @@ export default function WorkoutExecution() {
                     );
                   })}
                 </div>
-              ))}
+              );
+              })}
             </div>
           );
         })}
+
+        {/* Add Exercise Button */}
+        {session.status !== 'completed' && (
+          <button
+            onClick={handleOpenAdd}
+            className="w-full border-2 border-dashed border-gray-600 rounded-lg py-3 text-gray-400 hover:text-white hover:border-gray-400 transition-colors"
+          >
+            + Add Exercise
+          </button>
+        )}
       </div>
+
+      {/* Exercise Picker Modal */}
+      {showExercisePicker && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-white">
+                {showExercisePicker === 'swap' ? 'Swap Exercise' : 'Add Exercise'}
+              </h3>
+              <button
+                onClick={() => { setShowExercisePicker(null); setSwapTargetExerciseId(null); }}
+                className="text-gray-400 hover:text-white text-xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            <input
+              type="text"
+              value={exerciseSearch}
+              onChange={(e) => setExerciseSearch(e.target.value)}
+              placeholder="Search exercises..."
+              className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              autoFocus
+            />
+
+            <div className="space-y-1 max-h-[60vh] overflow-y-auto">
+              {(() => {
+                // Filter out exercises already in the session
+                const currentExerciseIds = new Set(session.workout_sets.map(s => s.exercise_id));
+                const filtered = availableExercises
+                  .filter(ex =>
+                    !currentExerciseIds.has(ex.id) &&
+                    (ex.name.toLowerCase().includes(exerciseSearch.toLowerCase()) ||
+                     ex.muscle_group.toLowerCase().includes(exerciseSearch.toLowerCase()))
+                  );
+
+                // Group by muscle group
+                const grouped = filtered.reduce((acc, ex) => {
+                  acc[ex.muscle_group] = acc[ex.muscle_group] || [];
+                  acc[ex.muscle_group].push(ex);
+                  return acc;
+                }, {} as Record<string, Exercise[]>);
+
+                if (Object.keys(grouped).length === 0) {
+                  return <p className="text-gray-400 text-sm text-center py-4">No exercises found</p>;
+                }
+
+                return Object.entries(grouped).map(([group, exercises]) => (
+                  <div key={group}>
+                    <div className="text-xs text-gray-500 font-semibold uppercase px-2 py-1 sticky top-0 bg-gray-800">
+                      {group}
+                    </div>
+                    {exercises.map(ex => (
+                      <button
+                        key={ex.id}
+                        onClick={() => handleExercisePickerSelect(ex.id)}
+                        className="w-full text-left px-3 py-2 rounded hover:bg-gray-700 transition-colors"
+                      >
+                        <span className="text-white text-sm">{ex.name}</span>
+                        {ex.equipment && (
+                          <span className="text-gray-500 text-xs ml-2">{ex.equipment}</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                ));
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Feedback Modal */}
       {showFeedback && (

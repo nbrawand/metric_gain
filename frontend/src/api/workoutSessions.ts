@@ -155,6 +155,58 @@ export const deleteWorkoutSet = async (
   });
 };
 
+// Exercise Management endpoints (mid-workout swap/remove/add)
+export const swapExercise = async (
+  sessionId: number,
+  oldExerciseId: number,
+  newExerciseId: number,
+  accessToken: string
+): Promise<WorkoutSession> => {
+  const response = await axios.post(
+    `${API_BASE_URL}/v1/workout-sessions/${sessionId}/exercises/swap`,
+    { old_exercise_id: oldExerciseId, new_exercise_id: newExerciseId },
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+  return response.data;
+};
+
+export const removeExercise = async (
+  sessionId: number,
+  exerciseId: number,
+  accessToken: string
+): Promise<WorkoutSession> => {
+  const response = await axios.delete(
+    `${API_BASE_URL}/v1/workout-sessions/${sessionId}/exercises/${exerciseId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+  return response.data;
+};
+
+export const addExercise = async (
+  sessionId: number,
+  exerciseId: number,
+  accessToken: string
+): Promise<WorkoutSession> => {
+  const response = await axios.post(
+    `${API_BASE_URL}/v1/workout-sessions/${sessionId}/exercises/add`,
+    { exercise_id: exerciseId },
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+  return response.data;
+};
+
 // Workout Feedback endpoints
 export const submitWorkoutFeedback = async (
   sessionId: number,

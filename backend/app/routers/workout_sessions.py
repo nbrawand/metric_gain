@@ -51,11 +51,37 @@ from app.schemas.workout_session import (
     WorkoutSetResponse,
     WorkoutFeedbackCreate,
     WorkoutFeedbackResponse,
+    SwapExerciseRequest,
+    AddExerciseRequest,
 )
 from app.routers.auth import get_current_user
 
 
 router = APIRouter(prefix="/workout-sessions", tags=["workout-sessions"])
+
+
+def _generate_sets_from_template(db, workout_session, template, week_number, total_weeks):
+    """Generate workout sets from template exercises (Branch C helper)."""
+    for template_exercise in template.exercises:
+        exercise = db.query(Exercise).filter(
+            Exercise.id == template_exercise.exercise_id
+        ).first()
+        muscle_group = exercise.muscle_group if exercise else "Other"
+
+        num_sets = get_sets_for_week(muscle_group, week_number, total_weeks)
+        for set_num in range(1, num_sets + 1):
+            workout_set = WorkoutSet(
+                workout_session_id=workout_session.id,
+                exercise_id=template_exercise.exercise_id,
+                set_number=set_num,
+                order_index=template_exercise.order_index * 100 + set_num,
+                weight=0,
+                reps=0,
+                target_weight=None,
+                target_reps=template_exercise.target_reps_max,
+                target_rir=template_exercise.starting_rir,
+            )
+            db.add(workout_set)
 
 
 @router.post("/", response_model=WorkoutSessionResponse, status_code=status.HTTP_201_CREATED)
@@ -78,81 +104,115 @@ def create_workout_session(
         WorkoutTemplate.id == session_data.workout_template_id
     ).first()
 
-    if template and template.exercises:
-        # For week 2+, look up previous week's session to calculate target weights
-        prev_sets_map = {}
-        if session_data.week_number > 1:
-            prev_session = db.query(WorkoutSession).filter(
-                WorkoutSession.mesocycle_instance_id == session_data.mesocycle_instance_id,
-                WorkoutSession.user_id == current_user.id,
-                WorkoutSession.week_number == session_data.week_number - 1,
-                WorkoutSession.day_number == session_data.day_number,
-            ).first()
-            if prev_session:
-                prev_sets = db.query(WorkoutSet).filter(
-                    WorkoutSet.workout_session_id == prev_session.id
-                ).all()
-                for ps in prev_sets:
-                    prev_sets_map[(ps.exercise_id, ps.set_number)] = ps
+    total_weeks = template.mesocycle.weeks if (template and template.mesocycle) else 0
 
-        # For week 1 with source instance, look up logged sets from source
-        source_sets_map = {}
-        if (session_data.week_number == 1
-                and session_data.source_instance_id is not None
-                and session_data.source_week_number is not None):
-            source_session = db.query(WorkoutSession).filter(
-                WorkoutSession.mesocycle_instance_id == session_data.source_instance_id,
-                WorkoutSession.user_id == current_user.id,
-                WorkoutSession.week_number == session_data.source_week_number,
-                WorkoutSession.day_number == session_data.day_number,
-            ).first()
-            if source_session:
-                source_sets = db.query(WorkoutSet).filter(
-                    WorkoutSet.workout_session_id == source_session.id
-                ).all()
-                for ss in source_sets:
-                    source_sets_map[(ss.exercise_id, ss.set_number)] = ss
+    # Branch A: Week 2+ — derive exercises from most recent earlier session's actual sets
+    prev_session = None
+    if session_data.week_number > 1:
+        prev_session = db.query(WorkoutSession).filter(
+            WorkoutSession.mesocycle_instance_id == session_data.mesocycle_instance_id,
+            WorkoutSession.user_id == current_user.id,
+            WorkoutSession.week_number < session_data.week_number,
+            WorkoutSession.day_number == session_data.day_number,
+        ).order_by(WorkoutSession.week_number.desc()).first()
 
-        # Auto-generate workout sets from template exercises
-        for template_exercise in template.exercises:
-            # Look up exercise muscle group for set progression
-            exercise = db.query(Exercise).filter(
-                Exercise.id == template_exercise.exercise_id
-            ).first()
+    if prev_session:
+        prev_sets = db.query(WorkoutSet).filter(
+            WorkoutSet.workout_session_id == prev_session.id
+        ).order_by(WorkoutSet.order_index, WorkoutSet.set_number).all()
+
+        # Group by exercise_id preserving order
+        from collections import OrderedDict
+        exercise_groups: OrderedDict[int, list] = OrderedDict()
+        for ps in prev_sets:
+            exercise_groups.setdefault(ps.exercise_id, []).append(ps)
+
+        for exercise_id, prev_exercise_sets in exercise_groups.items():
+            exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
             muscle_group = exercise.muscle_group if exercise else "Other"
-
-            # Calculate sets based on muscle group and week number
-            total_weeks = template.mesocycle.weeks if template.mesocycle else 0
             num_sets = get_sets_for_week(muscle_group, session_data.week_number, total_weeks)
+
             for set_num in range(1, num_sets + 1):
-                # Calculate target weight from previous week: +2.5%, min +2.5 lbs
+                # Find matching previous set for this set_number
+                prev_set = next((s for s in prev_exercise_sets if s.set_number == set_num), None)
+                # Fall back to last available set for targets
+                fallback_set = prev_set or prev_exercise_sets[-1]
+
                 target_weight = None
-                target_reps = template_exercise.target_reps_max
-                prev_set = prev_sets_map.get((template_exercise.exercise_id, set_num))
                 if prev_set and prev_set.weight > 0:
                     increase = max(prev_set.weight * 0.025, 2.5)
                     target_weight = round(prev_set.weight + increase, 1)
 
-                # For week 1 with source, use source set's logged weight/reps as targets
-                source_set = source_sets_map.get((template_exercise.exercise_id, set_num))
-                if source_set:
-                    if source_set.weight > 0:
-                        target_weight = source_set.weight
-                    if source_set.reps > 0:
-                        target_reps = source_set.reps
-
                 workout_set = WorkoutSet(
                     workout_session_id=workout_session.id,
-                    exercise_id=template_exercise.exercise_id,
+                    exercise_id=exercise_id,
                     set_number=set_num,
-                    order_index=template_exercise.order_index * 100 + set_num,
-                    weight=0,  # User will fill this in
-                    reps=0,  # User will fill this in
+                    order_index=fallback_set.order_index,
+                    weight=0,
+                    reps=0,
                     target_weight=target_weight,
-                    target_reps=target_reps,
-                    target_rir=template_exercise.starting_rir,
+                    target_reps=fallback_set.target_reps,
+                    target_rir=fallback_set.target_rir,
                 )
                 db.add(workout_set)
+
+    # Branch B: Week 1 with source instance — derive from source session
+    elif (session_data.week_number == 1
+            and session_data.source_instance_id is not None
+            and session_data.source_week_number is not None):
+        source_session = db.query(WorkoutSession).filter(
+            WorkoutSession.mesocycle_instance_id == session_data.source_instance_id,
+            WorkoutSession.user_id == current_user.id,
+            WorkoutSession.week_number == session_data.source_week_number,
+            WorkoutSession.day_number == session_data.day_number,
+        ).first()
+
+        if source_session:
+            source_sets = db.query(WorkoutSet).filter(
+                WorkoutSet.workout_session_id == source_session.id
+            ).order_by(WorkoutSet.order_index, WorkoutSet.set_number).all()
+
+            from collections import OrderedDict
+            exercise_groups: OrderedDict[int, list] = OrderedDict()
+            for ss in source_sets:
+                exercise_groups.setdefault(ss.exercise_id, []).append(ss)
+
+            for exercise_id, source_exercise_sets in exercise_groups.items():
+                exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
+                muscle_group = exercise.muscle_group if exercise else "Other"
+                num_sets = get_sets_for_week(muscle_group, session_data.week_number, total_weeks)
+
+                for set_num in range(1, num_sets + 1):
+                    source_set = next((s for s in source_exercise_sets if s.set_number == set_num), None)
+                    fallback_set = source_set or source_exercise_sets[-1]
+
+                    target_weight = None
+                    target_reps = fallback_set.target_reps
+                    if source_set:
+                        if source_set.weight > 0:
+                            target_weight = source_set.weight
+                        if source_set.reps > 0:
+                            target_reps = source_set.reps
+
+                    workout_set = WorkoutSet(
+                        workout_session_id=workout_session.id,
+                        exercise_id=exercise_id,
+                        set_number=set_num,
+                        order_index=fallback_set.order_index,
+                        weight=0,
+                        reps=0,
+                        target_weight=target_weight,
+                        target_reps=target_reps,
+                        target_rir=fallback_set.target_rir,
+                    )
+                    db.add(workout_set)
+        elif template and template.exercises:
+            # Source session not found, fall through to template
+            _generate_sets_from_template(db, workout_session, template, session_data.week_number, total_weeks)
+
+    # Branch C: Fallback to template (week 1 fresh, or no previous session found)
+    elif template and template.exercises:
+        _generate_sets_from_template(db, workout_session, template, session_data.week_number, total_weeks)
 
     db.commit()
 
@@ -425,6 +485,168 @@ def delete_workout_set(
     db.delete(workout_set)
     db.commit()
     return None
+
+
+# Exercise Management endpoints (mid-workout swap/remove/add)
+
+def _get_session_or_404(db, session_id: int, current_user: User) -> WorkoutSession:
+    """Get a workout session, verifying ownership. Raises 404 if not found."""
+    workout_session = db.query(WorkoutSession).filter(
+        WorkoutSession.id == session_id,
+        WorkoutSession.user_id == current_user.id,
+    ).first()
+    if not workout_session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workout session not found",
+        )
+    return workout_session
+
+
+def _reject_if_completed(workout_session: WorkoutSession):
+    """Raise 400 if the session is already completed."""
+    if workout_session.status == "completed":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot modify a completed session",
+        )
+
+
+def _reload_session(db, session_id: int) -> WorkoutSession:
+    """Reload a session with exercise data for response."""
+    return db.query(WorkoutSession).options(
+        joinedload(WorkoutSession.workout_sets).joinedload(WorkoutSet.exercise)
+    ).filter(WorkoutSession.id == session_id).first()
+
+
+@router.post("/{session_id}/exercises/swap", response_model=WorkoutSessionResponse)
+def swap_exercise(
+    session_id: int,
+    request: SwapExerciseRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Swap one exercise for another in a workout session."""
+    workout_session = _get_session_or_404(db, session_id, current_user)
+    _reject_if_completed(workout_session)
+
+    # Verify new exercise exists
+    new_exercise = db.query(Exercise).filter(Exercise.id == request.new_exercise_id).first()
+    if not new_exercise:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="New exercise not found",
+        )
+
+    # Find all sets for the old exercise
+    old_sets = db.query(WorkoutSet).filter(
+        WorkoutSet.workout_session_id == session_id,
+        WorkoutSet.exercise_id == request.old_exercise_id,
+    ).all()
+
+    if not old_sets:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Old exercise not found in this session",
+        )
+
+    # Update all sets: swap exercise, reset performance data
+    for ws in old_sets:
+        ws.exercise_id = request.new_exercise_id
+        ws.weight = 0
+        ws.reps = 0
+        ws.target_weight = None
+        ws.skipped = 0
+
+    db.commit()
+    return _reload_session(db, session_id)
+
+
+@router.delete("/{session_id}/exercises/{exercise_id}", response_model=WorkoutSessionResponse)
+def remove_exercise(
+    session_id: int,
+    exercise_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Remove all sets for an exercise from a workout session."""
+    workout_session = _get_session_or_404(db, session_id, current_user)
+    _reject_if_completed(workout_session)
+
+    deleted_count = db.query(WorkoutSet).filter(
+        WorkoutSet.workout_session_id == session_id,
+        WorkoutSet.exercise_id == exercise_id,
+    ).delete()
+
+    if deleted_count == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Exercise not found in this session",
+        )
+
+    db.commit()
+    return _reload_session(db, session_id)
+
+
+@router.post("/{session_id}/exercises/add", response_model=WorkoutSessionResponse)
+def add_exercise(
+    session_id: int,
+    request: AddExerciseRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Add a new exercise to a workout session."""
+    workout_session = _get_session_or_404(db, session_id, current_user)
+    _reject_if_completed(workout_session)
+
+    # Verify exercise exists
+    exercise = db.query(Exercise).filter(Exercise.id == request.exercise_id).first()
+    if not exercise:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Exercise not found",
+        )
+
+    # Reject if exercise already in session
+    existing = db.query(WorkoutSet).filter(
+        WorkoutSet.workout_session_id == session_id,
+        WorkoutSet.exercise_id == request.exercise_id,
+    ).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Exercise already exists in this session",
+        )
+
+    # Determine order_index: max existing + 100
+    max_order = db.query(func.max(WorkoutSet.order_index)).filter(
+        WorkoutSet.workout_session_id == session_id
+    ).scalar() or 0
+    new_order_index = max_order + 100
+
+    # Calculate number of sets
+    template = db.query(WorkoutTemplate).filter(
+        WorkoutTemplate.id == workout_session.workout_template_id
+    ).first()
+    total_weeks = template.mesocycle.weeks if (template and template.mesocycle) else 0
+    num_sets = get_sets_for_week(exercise.muscle_group, workout_session.week_number, total_weeks)
+
+    for set_num in range(1, num_sets + 1):
+        workout_set = WorkoutSet(
+            workout_session_id=session_id,
+            exercise_id=request.exercise_id,
+            set_number=set_num,
+            order_index=new_order_index,
+            weight=0,
+            reps=0,
+            target_weight=None,
+            target_reps=None,
+            target_rir=3,
+        )
+        db.add(workout_set)
+
+    db.commit()
+    return _reload_session(db, session_id)
 
 
 # Workout Feedback endpoints

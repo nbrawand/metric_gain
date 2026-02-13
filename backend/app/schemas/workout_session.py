@@ -129,6 +129,17 @@ class WorkoutFeedbackResponse(BaseModel):
         from_attributes = True
 
 
+class SwapExerciseRequest(BaseModel):
+    """Request schema for swapping an exercise in a session."""
+    old_exercise_id: int
+    new_exercise_id: int
+
+
+class AddExerciseRequest(BaseModel):
+    """Request schema for adding an exercise to a session."""
+    exercise_id: int
+
+
 class WorkoutSessionListResponse(BaseModel):
     """Schema for workout session list item (without sets)."""
 
