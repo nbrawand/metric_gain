@@ -137,6 +137,11 @@ export function Register() {
               error={formErrors.password}
               autoComplete="new-password"
             />
+            <ul className="text-xs text-gray-400 mb-4 -mt-2 ml-1 space-y-1">
+              <li className={formData.password.length >= 8 ? 'text-teal-400' : ''}>
+                {formData.password.length >= 8 ? '\u2713' : '\u2022'} At least 8 characters
+              </li>
+            </ul>
 
             <FormInput
               id="confirmPassword"
