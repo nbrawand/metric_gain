@@ -36,7 +36,7 @@ class Mesocycle(Base):
     # Relationships
     user = relationship("User", back_populates="mesocycles")
     workout_templates = relationship("WorkoutTemplate", back_populates="mesocycle", cascade="all, delete-orphan")
-    instances = relationship("MesocycleInstance", back_populates="mesocycle_template")
+    instances = relationship("MesocycleInstance", back_populates="mesocycle_template", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Mesocycle(id={self.id}, name='{self.name}', weeks={self.weeks})>"
