@@ -317,15 +317,14 @@ export default function WorkoutExecution() {
   };
 
   const getWeightRecommendation = (set: WorkoutSet): string => {
-    // If the set already has weight, don't override
     if (set.weight > 0) return '';
 
-    // Use target weight if available
     if (set.target_weight && set.target_weight > 0) {
-      return `Suggested: ${set.target_weight} lbs`;
+      return `${set.target_weight} lbs`;
     }
 
-    return '';
+    // No previous data available
+    return 'a weight you can do at 5-15 reps at 3 RIR';
   };
 
   // Group exercises by muscle group
@@ -520,8 +519,8 @@ export default function WorkoutExecution() {
                               placeholder={set.target_weight ? set.target_weight.toString() : "0"}
                             />
                             {recommendation && !isSkipped && (
-                              <div className="text-xs text-teal-400 text-center mt-1">
-                                {recommendation}
+                              <div className="text-xs text-gray-400 text-center mt-1">
+                                We recommend: {recommendation}
                               </div>
                             )}
                           </div>
@@ -546,13 +545,13 @@ export default function WorkoutExecution() {
                               if (session.week_number === 1) {
                                 return (
                                   <div className="text-xs text-gray-400 text-center mt-1">
-                                    {weekRir} RIR
+                                    We recommend: {weekRir} RIR
                                   </div>
                                 );
                               }
                               return (
                                 <div className="text-xs text-gray-400 text-center mt-1">
-                                  {set.target_reps ? `${set.target_reps} reps or ` : ''}{weekRir} RIR
+                                  We recommend: {set.target_reps ? `${set.target_reps} reps or ` : ''}{weekRir} RIR
                                 </div>
                               );
                             })()}

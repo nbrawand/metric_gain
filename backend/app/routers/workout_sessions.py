@@ -47,11 +47,34 @@ def create_workout_session(
     ).first()
 
     if template and template.exercises:
+        # For week 2+, look up previous week's session to calculate target weights
+        prev_sets_map = {}
+        if session_data.week_number > 1:
+            prev_session = db.query(WorkoutSession).filter(
+                WorkoutSession.mesocycle_instance_id == session_data.mesocycle_instance_id,
+                WorkoutSession.user_id == current_user.id,
+                WorkoutSession.week_number == session_data.week_number - 1,
+                WorkoutSession.day_number == session_data.day_number,
+            ).first()
+            if prev_session:
+                prev_sets = db.query(WorkoutSet).filter(
+                    WorkoutSet.workout_session_id == prev_session.id
+                ).all()
+                for ps in prev_sets:
+                    prev_sets_map[(ps.exercise_id, ps.set_number)] = ps
+
         # Auto-generate workout sets from template exercises
         for template_exercise in template.exercises:
             # Create sets based on the template (default: 3 sets per exercise)
             num_sets = template_exercise.target_sets or 3
             for set_num in range(1, num_sets + 1):
+                # Calculate target weight from previous week: +2.5%, min +2.5 lbs
+                target_weight = None
+                prev_set = prev_sets_map.get((template_exercise.exercise_id, set_num))
+                if prev_set and prev_set.weight > 0:
+                    increase = max(prev_set.weight * 0.025, 2.5)
+                    target_weight = round(prev_set.weight + increase, 1)
+
                 workout_set = WorkoutSet(
                     workout_session_id=workout_session.id,
                     exercise_id=template_exercise.exercise_id,
@@ -59,8 +82,9 @@ def create_workout_session(
                     order_index=template_exercise.order_index * 100 + set_num,
                     weight=0,  # User will fill this in
                     reps=0,  # User will fill this in
-                    target_reps=template_exercise.target_reps_max,  # Use max of rep range
-                    target_rir=template_exercise.starting_rir,  # Use starting RIR for week 1
+                    target_weight=target_weight,
+                    target_reps=template_exercise.target_reps_max,
+                    target_rir=template_exercise.starting_rir,
                 )
                 db.add(workout_set)
 
