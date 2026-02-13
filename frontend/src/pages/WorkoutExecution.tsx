@@ -75,6 +75,9 @@ export default function WorkoutExecution() {
 
   // Handle local input change (no API call, just update local state)
   const handleInputChange = (setId: number, field: 'weight' | 'reps', value: string) => {
+    // Allow empty string (user clearing the field) or valid non-negative numbers
+    if (value !== '' && !/^\d*\.?\d*$/.test(value)) return;
+
     setInputValues((prev) => ({
       ...prev,
       [setId]: {
@@ -103,10 +106,20 @@ export default function WorkoutExecution() {
   const handleInputBlur = useCallback(async (setId: number, field: 'weight' | 'reps') => {
     if (!accessToken || !session) return;
 
-    const value = inputValues[setId]?.[field];
-    if (value === undefined) return;
+    const rawValue = inputValues[setId]?.[field];
+    if (rawValue === undefined) return;
 
-    const numValue = parseFloat(value) || 0;
+    let numValue = Math.max(0, parseFloat(rawValue) || 0);
+    if (field === 'reps') numValue = Math.floor(numValue);
+
+    // Update the displayed value to the cleaned number
+    const displayValue = numValue.toString();
+    if (rawValue !== displayValue) {
+      setInputValues((prev) => ({
+        ...prev,
+        [setId]: { ...prev[setId], [field]: displayValue },
+      }));
+    }
 
     try {
       await updateWorkoutSet(
@@ -543,7 +556,8 @@ export default function WorkoutExecution() {
 
                           <div className="col-span-4">
                             <input
-                              type="number"
+                              type="text"
+                              inputMode="decimal"
                               value={getInputValue(set.id, 'weight')}
                               onChange={(e) => handleInputChange(set.id, 'weight', e.target.value)}
                               onBlur={() => handleInputBlur(set.id, 'weight')}
@@ -562,7 +576,8 @@ export default function WorkoutExecution() {
 
                           <div className="col-span-4">
                             <input
-                              type="number"
+                              type="text"
+                              inputMode="numeric"
                               value={getInputValue(set.id, 'reps')}
                               onChange={(e) => handleInputChange(set.id, 'reps', e.target.value)}
                               onBlur={() => handleInputBlur(set.id, 'reps')}
