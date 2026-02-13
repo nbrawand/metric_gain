@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { getWorkoutSession, updateWorkoutSet, updateWorkoutSession, listWorkoutSessions, createWorkoutSession } from '../api/workoutSessions';
+import { getWorkoutSession, updateWorkoutSet, updateWorkoutSession, listWorkoutSessions, createWorkoutSession, submitWorkoutFeedback } from '../api/workoutSessions';
 import { getMesocycleInstance, updateMesocycleInstance } from '../api/mesocycles';
 import { WorkoutSession, WorkoutSet, WorkoutSessionListItem } from '../types/workout_session';
 import { MesocycleInstance } from '../types/mesocycle';
@@ -21,6 +21,8 @@ export default function WorkoutExecution() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [completionBanner, setCompletionBanner] = useState<{ week: number; day: number } | null>(null);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [muscleFeedback, setMuscleFeedback] = useState<Record<string, string>>({});
 
   // Local input state to prevent re-renders while typing
   const [inputValues, setInputValues] = useState<SetInputValues>({});
@@ -189,6 +191,36 @@ export default function WorkoutExecution() {
     const timer = setTimeout(() => setCompletionBanner(null), 2000);
     return () => clearTimeout(timer);
   }, [completionBanner]);
+
+  const handleCompleteWorkoutClick = () => {
+    if (!session) return;
+    // Initialize feedback for each muscle group in this workout
+    const muscleGroups = Object.keys(groupedExercises);
+    const initial: Record<string, string> = {};
+    muscleGroups.forEach(mg => { initial[mg] = ''; });
+    setMuscleFeedback(initial);
+    setShowFeedback(true);
+  };
+
+  const handleSubmitFeedback = async () => {
+    if (!accessToken || !session) return;
+
+    // Send feedback to backend
+    const feedbackItems = Object.entries(muscleFeedback)
+      .filter(([, difficulty]) => difficulty !== '')
+      .map(([muscle_group, difficulty]) => ({ muscle_group, difficulty }));
+
+    if (feedbackItems.length > 0) {
+      try {
+        await submitWorkoutFeedback(session.id, feedbackItems, accessToken);
+      } catch (err) {
+        console.error('Failed to submit feedback:', err);
+      }
+    }
+
+    setShowFeedback(false);
+    await handleCompleteWorkout();
+  };
 
   const handleCompleteWorkout = async () => {
     if (!accessToken || !session || !instance) return;
@@ -494,7 +526,10 @@ export default function WorkoutExecution() {
                     <div className="col-span-1"></div>
                     <div className="col-span-4 text-center">WEIGHT</div>
                     <div className="col-span-4 text-center">REPS ⓘ</div>
-                    <div className="col-span-3 text-center">LOG</div>
+                    <div className="col-span-3 text-center">
+                      <div>LOG</div>
+                      <div className="text-[10px] text-gray-500 mt-1">Sets left empty are logged as skipped</div>
+                    </div>
                   </div>
 
                   {/* Sets */}
@@ -583,10 +618,58 @@ export default function WorkoutExecution() {
         })}
       </div>
 
+      {/* Feedback Modal */}
+      {showFeedback && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold text-white mb-1">Workout Report</h3>
+            <p className="text-sm text-gray-400 mb-4">How did each muscle group feel?</p>
+
+            <div className="space-y-4">
+              {Object.keys(muscleFeedback).map((mg) => (
+                <div key={mg}>
+                  <p className="text-sm font-medium text-gray-300 mb-2">{mg}</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {['Easy', 'Just Right', 'Difficult', 'Too Difficult'].map((option) => (
+                      <button
+                        key={option}
+                        onClick={() => setMuscleFeedback(prev => ({ ...prev, [mg]: option }))}
+                        className={`py-2 px-1 rounded text-xs font-medium transition-colors ${
+                          muscleFeedback[mg] === option
+                            ? 'bg-teal-600 text-white'
+                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => setShowFeedback(false)}
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-medium py-3 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitFeedback}
+                className="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-lg"
+              >
+                Submit & Complete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Complete Workout Button */}
       <div className="fixed bottom-0 left-0 right-0 bg-gray-800 p-4 shadow-lg">
         <button
-          onClick={handleCompleteWorkout}
+          onClick={handleCompleteWorkoutClick}
           className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-lg"
         >
           Complete Workout

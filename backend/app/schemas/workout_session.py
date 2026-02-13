@@ -104,6 +104,30 @@ class WorkoutSessionResponse(WorkoutSessionBase):
         from_attributes = True
 
 
+# WorkoutFeedback Schemas
+class WorkoutFeedbackItem(BaseModel):
+    """Single muscle group feedback item."""
+    muscle_group: str
+    difficulty: str = Field(..., pattern="^(Easy|Just Right|Difficult|Too Difficult)$")
+
+
+class WorkoutFeedbackCreate(BaseModel):
+    """Schema for submitting workout feedback."""
+    feedback: List[WorkoutFeedbackItem]
+
+
+class WorkoutFeedbackResponse(BaseModel):
+    """Schema for feedback in responses."""
+    id: int
+    workout_session_id: int
+    muscle_group: str
+    difficulty: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class WorkoutSessionListResponse(BaseModel):
     """Schema for workout session list item (without sets)."""
 

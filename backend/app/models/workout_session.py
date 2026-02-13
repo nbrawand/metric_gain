@@ -44,6 +44,7 @@ class WorkoutSession(Base):
     mesocycle_instance = relationship("MesocycleInstance", back_populates="workout_sessions")
     workout_template = relationship("WorkoutTemplate")
     workout_sets = relationship("WorkoutSet", back_populates="workout_session", cascade="all, delete-orphan")
+    feedback = relationship("WorkoutFeedback", back_populates="workout_session", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<WorkoutSession(id={self.id}, date={self.workout_date}, week={self.week_number}, status='{self.status}')>"
@@ -91,3 +92,23 @@ class WorkoutSet(Base):
 
     def __repr__(self):
         return f"<WorkoutSet(id={self.id}, exercise_id={self.exercise_id}, set={self.set_number}, weight={self.weight}, reps={self.reps})>"
+
+
+class WorkoutFeedback(Base):
+    """
+    WorkoutFeedback model storing per-muscle-group difficulty ratings
+    submitted when a user completes a workout session.
+    """
+    __tablename__ = "workout_feedback"
+
+    id = Column(Integer, primary_key=True, index=True)
+    workout_session_id = Column(Integer, ForeignKey("workout_sessions.id", ondelete="CASCADE"), nullable=False, index=True)
+    muscle_group = Column(String(100), nullable=False)
+    difficulty = Column(String(50), nullable=False)  # Easy, Just Right, Difficult, Too Difficult
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # Relationships
+    workout_session = relationship("WorkoutSession", back_populates="feedback")
+
+    def __repr__(self):
+        return f"<WorkoutFeedback(id={self.id}, muscle_group='{self.muscle_group}', difficulty='{self.difficulty}')>"

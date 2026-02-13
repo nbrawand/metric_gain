@@ -10,7 +10,7 @@ from sqlalchemy import func
 import math
 
 from app.database import get_db
-from app.models.workout_session import WorkoutSession, WorkoutSet
+from app.models.workout_session import WorkoutSession, WorkoutSet, WorkoutFeedback
 from app.models.exercise import Exercise
 from app.models.user import User
 from app.models.mesocycle import WorkoutTemplate
@@ -45,6 +45,8 @@ from app.schemas.workout_session import (
     WorkoutSetCreate,
     WorkoutSetUpdate,
     WorkoutSetResponse,
+    WorkoutFeedbackCreate,
+    WorkoutFeedbackResponse,
 )
 from app.routers.auth import get_current_user
 
@@ -391,3 +393,46 @@ def delete_workout_set(
     db.delete(workout_set)
     db.commit()
     return None
+
+
+# Workout Feedback endpoints
+@router.post("/{session_id}/feedback", response_model=List[WorkoutFeedbackResponse], status_code=status.HTTP_201_CREATED)
+def submit_workout_feedback(
+    session_id: int,
+    feedback_data: WorkoutFeedbackCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Submit muscle group difficulty feedback for a workout session."""
+    workout_session = db.query(WorkoutSession).filter(
+        WorkoutSession.id == session_id,
+        WorkoutSession.user_id == current_user.id
+    ).first()
+
+    if not workout_session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workout session not found"
+        )
+
+    # Delete any existing feedback for this session (allow re-submission)
+    db.query(WorkoutFeedback).filter(
+        WorkoutFeedback.workout_session_id == session_id
+    ).delete()
+
+    # Create new feedback entries
+    created = []
+    for item in feedback_data.feedback:
+        fb = WorkoutFeedback(
+            workout_session_id=session_id,
+            muscle_group=item.muscle_group,
+            difficulty=item.difficulty,
+        )
+        db.add(fb)
+        created.append(fb)
+
+    db.commit()
+    for fb in created:
+        db.refresh(fb)
+
+    return created

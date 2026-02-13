@@ -154,3 +154,20 @@ export const deleteWorkoutSet = async (
     },
   });
 };
+
+// Workout Feedback endpoints
+export const submitWorkoutFeedback = async (
+  sessionId: number,
+  feedback: { muscle_group: string; difficulty: string }[],
+  accessToken: string
+): Promise<void> => {
+  await axios.post(
+    `${API_BASE_URL}/v1/workout-sessions/${sessionId}/feedback`,
+    { feedback },
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+};

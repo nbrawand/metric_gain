@@ -566,3 +566,199 @@ def test_workout_session_isolation_between_users(client, auth_headers, sample_me
     # Try to access user1's session as user2
     response = client.get(f"/v1/workout-sessions/{session_id}", headers=user2_headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+# Workout Feedback Tests
+
+def test_submit_workout_feedback(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
+    """Test submitting muscle group feedback for a workout session."""
+    mesocycle = sample_mesocycle_with_workouts
+    instance = sample_mesocycle_instance
+    template_id = mesocycle["workout_templates"][0]["id"]
+
+    # Create session
+    session_data = {
+        "mesocycle_instance_id": instance["id"],
+        "workout_template_id": template_id,
+        "workout_date": str(date.today()),
+        "week_number": 1,
+        "day_number": 1
+    }
+    create_response = client.post("/v1/workout-sessions/", json=session_data, headers=auth_headers)
+    session_id = create_response.json()["id"]
+
+    # Submit feedback
+    feedback_data = {
+        "feedback": [
+            {"muscle_group": "Chest", "difficulty": "Just Right"},
+            {"muscle_group": "Triceps", "difficulty": "Easy"},
+            {"muscle_group": "Shoulders", "difficulty": "Difficult"},
+        ]
+    }
+    response = client.post(
+        f"/v1/workout-sessions/{session_id}/feedback",
+        json=feedback_data,
+        headers=auth_headers
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
+
+    assert len(data) == 3
+    muscle_groups = {item["muscle_group"] for item in data}
+    assert muscle_groups == {"Chest", "Triceps", "Shoulders"}
+
+    difficulties = {item["muscle_group"]: item["difficulty"] for item in data}
+    assert difficulties["Chest"] == "Just Right"
+    assert difficulties["Triceps"] == "Easy"
+    assert difficulties["Shoulders"] == "Difficult"
+
+    # Each entry should have an id and workout_session_id
+    for item in data:
+        assert "id" in item
+        assert item["workout_session_id"] == session_id
+        assert "created_at" in item
+
+
+def test_submit_feedback_replaces_existing(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
+    """Test that re-submitting feedback replaces the previous entries."""
+    mesocycle = sample_mesocycle_with_workouts
+    instance = sample_mesocycle_instance
+    template_id = mesocycle["workout_templates"][0]["id"]
+
+    # Create session
+    session_data = {
+        "mesocycle_instance_id": instance["id"],
+        "workout_template_id": template_id,
+        "workout_date": str(date.today()),
+        "week_number": 1,
+        "day_number": 1
+    }
+    create_response = client.post("/v1/workout-sessions/", json=session_data, headers=auth_headers)
+    session_id = create_response.json()["id"]
+
+    # Submit initial feedback
+    feedback_data = {
+        "feedback": [
+            {"muscle_group": "Chest", "difficulty": "Easy"},
+        ]
+    }
+    client.post(
+        f"/v1/workout-sessions/{session_id}/feedback",
+        json=feedback_data,
+        headers=auth_headers
+    )
+
+    # Re-submit with updated feedback
+    updated_feedback = {
+        "feedback": [
+            {"muscle_group": "Chest", "difficulty": "Too Difficult"},
+            {"muscle_group": "Back", "difficulty": "Just Right"},
+        ]
+    }
+    response = client.post(
+        f"/v1/workout-sessions/{session_id}/feedback",
+        json=updated_feedback,
+        headers=auth_headers
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
+
+    # Should only have the new entries, not the old ones
+    assert len(data) == 2
+    difficulties = {item["muscle_group"]: item["difficulty"] for item in data}
+    assert difficulties["Chest"] == "Too Difficult"
+    assert difficulties["Back"] == "Just Right"
+
+
+def test_submit_feedback_invalid_difficulty(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
+    """Test that submitting feedback with an invalid difficulty value is rejected."""
+    mesocycle = sample_mesocycle_with_workouts
+    instance = sample_mesocycle_instance
+    template_id = mesocycle["workout_templates"][0]["id"]
+
+    # Create session
+    session_data = {
+        "mesocycle_instance_id": instance["id"],
+        "workout_template_id": template_id,
+        "workout_date": str(date.today()),
+        "week_number": 1,
+        "day_number": 1
+    }
+    create_response = client.post("/v1/workout-sessions/", json=session_data, headers=auth_headers)
+    session_id = create_response.json()["id"]
+
+    # Submit feedback with invalid difficulty
+    feedback_data = {
+        "feedback": [
+            {"muscle_group": "Chest", "difficulty": "Super Hard"},
+        ]
+    }
+    response = client.post(
+        f"/v1/workout-sessions/{session_id}/feedback",
+        json=feedback_data,
+        headers=auth_headers
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+def test_submit_feedback_nonexistent_session(client, auth_headers):
+    """Test submitting feedback for a workout session that doesn't exist."""
+    feedback_data = {
+        "feedback": [
+            {"muscle_group": "Chest", "difficulty": "Easy"},
+        ]
+    }
+    response = client.post(
+        "/v1/workout-sessions/99999/feedback",
+        json=feedback_data,
+        headers=auth_headers
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_submit_feedback_other_users_session(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
+    """Test that a user cannot submit feedback for another user's session."""
+    mesocycle = sample_mesocycle_with_workouts
+    instance = sample_mesocycle_instance
+    template_id = mesocycle["workout_templates"][0]["id"]
+
+    # Create session as user1
+    session_data = {
+        "mesocycle_instance_id": instance["id"],
+        "workout_template_id": template_id,
+        "workout_date": str(date.today()),
+        "week_number": 1,
+        "day_number": 1
+    }
+    create_response = client.post("/v1/workout-sessions/", json=session_data, headers=auth_headers)
+    session_id = create_response.json()["id"]
+
+    # Create a second user
+    user2_response = client.post(
+        "/v1/auth/register",
+        json={
+            "email": "feedback_test2@example.com",
+            "password": "testpass123",
+            "full_name": "Feedback Tester"
+        }
+    )
+    user2_token = user2_response.json()["access_token"]
+    user2_headers = {"Authorization": f"Bearer {user2_token}"}
+
+    # Try to submit feedback as user2 for user1's session
+    feedback_data = {
+        "feedback": [
+            {"muscle_group": "Chest", "difficulty": "Easy"},
+        ]
+    }
+    response = client.post(
+        f"/v1/workout-sessions/{session_id}/feedback",
+        json=feedback_data,
+        headers=user2_headers
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
