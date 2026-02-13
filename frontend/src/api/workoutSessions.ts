@@ -207,6 +207,40 @@ export const addExercise = async (
   return response.data;
 };
 
+// Per-exercise set add/remove endpoints
+export const addSetToExercise = async (
+  sessionId: number,
+  exerciseId: number,
+  accessToken: string
+): Promise<WorkoutSession> => {
+  const response = await axios.post(
+    `${API_BASE_URL}/v1/workout-sessions/${sessionId}/exercises/${exerciseId}/sets`,
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+  return response.data;
+};
+
+export const removeSetFromExercise = async (
+  sessionId: number,
+  exerciseId: number,
+  accessToken: string
+): Promise<WorkoutSession> => {
+  const response = await axios.delete(
+    `${API_BASE_URL}/v1/workout-sessions/${sessionId}/exercises/${exerciseId}/sets`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+  return response.data;
+};
+
 // Workout Feedback endpoints
 export const submitWorkoutFeedback = async (
   sessionId: number,

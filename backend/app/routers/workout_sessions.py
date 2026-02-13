@@ -130,7 +130,16 @@ def create_workout_session(
         for exercise_id, prev_exercise_sets in exercise_groups.items():
             exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
             muscle_group = exercise.muscle_group if exercise else "Other"
-            num_sets = get_sets_for_week(muscle_group, session_data.week_number, total_weeks)
+
+            expected_prev = get_sets_for_week(muscle_group, prev_session.week_number, total_weeks)
+            actual_prev = len(prev_exercise_sets)
+            offset = actual_prev - expected_prev
+
+            is_deload = total_weeks > 0 and session_data.week_number == total_weeks
+            if is_deload:
+                num_sets = 1
+            else:
+                num_sets = max(1, get_sets_for_week(muscle_group, session_data.week_number, total_weeks) + offset)
 
             for set_num in range(1, num_sets + 1):
                 # Find matching previous set for this set_number
@@ -645,6 +654,97 @@ def add_exercise(
         )
         db.add(workout_set)
 
+    db.commit()
+    return _reload_session(db, session_id)
+
+
+# Per-exercise set add/remove endpoints
+
+@router.post(
+    "/{session_id}/exercises/{exercise_id}/sets",
+    response_model=WorkoutSessionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def add_set_to_exercise(
+    session_id: int,
+    exercise_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Add a set to a specific exercise in a workout session."""
+    workout_session = _get_session_or_404(db, session_id, current_user)
+    _reject_if_completed(workout_session)
+
+    existing_sets = (
+        db.query(WorkoutSet)
+        .filter(
+            WorkoutSet.workout_session_id == session_id,
+            WorkoutSet.exercise_id == exercise_id,
+        )
+        .order_by(WorkoutSet.set_number.desc())
+        .all()
+    )
+
+    if not existing_sets:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Exercise not found in this session",
+        )
+
+    last_set = existing_sets[0]
+    new_set = WorkoutSet(
+        workout_session_id=session_id,
+        exercise_id=exercise_id,
+        set_number=last_set.set_number + 1,
+        order_index=last_set.order_index,
+        weight=0,
+        reps=0,
+        target_weight=None,
+        target_reps=last_set.target_reps,
+        target_rir=last_set.target_rir,
+    )
+    db.add(new_set)
+    db.commit()
+    return _reload_session(db, session_id)
+
+
+@router.delete(
+    "/{session_id}/exercises/{exercise_id}/sets",
+    response_model=WorkoutSessionResponse,
+)
+def remove_set_from_exercise(
+    session_id: int,
+    exercise_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Remove the last set from a specific exercise in a workout session."""
+    workout_session = _get_session_or_404(db, session_id, current_user)
+    _reject_if_completed(workout_session)
+
+    existing_sets = (
+        db.query(WorkoutSet)
+        .filter(
+            WorkoutSet.workout_session_id == session_id,
+            WorkoutSet.exercise_id == exercise_id,
+        )
+        .order_by(WorkoutSet.set_number.desc())
+        .all()
+    )
+
+    if not existing_sets:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Exercise not found in this session",
+        )
+
+    if len(existing_sets) <= 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot remove the last set",
+        )
+
+    db.delete(existing_sets[0])
     db.commit()
     return _reload_session(db, session_id)
 

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { getWorkoutSession, updateWorkoutSet, updateWorkoutSession, listWorkoutSessions, createWorkoutSession, submitWorkoutFeedback, swapExercise, removeExercise, addExercise } from '../api/workoutSessions';
+import { getWorkoutSession, updateWorkoutSet, updateWorkoutSession, listWorkoutSessions, createWorkoutSession, submitWorkoutFeedback, swapExercise, removeExercise, addExercise, addSetToExercise, removeSetFromExercise } from '../api/workoutSessions';
 import { getExercises } from '../api/exercises';
 import { getMesocycleInstance, updateMesocycleInstance } from '../api/mesocycles';
 import { WorkoutSession, WorkoutSet, WorkoutSessionListItem } from '../types/workout_session';
@@ -97,6 +97,26 @@ export default function WorkoutExecution() {
   const handleOpenAdd = () => {
     setShowExercisePicker('add');
     setExerciseSearch('');
+  };
+
+  const handleAddSet = async (exerciseId: number) => {
+    if (!accessToken || !session) return;
+    try {
+      const updated = await addSetToExercise(session.id, exerciseId, accessToken);
+      setSession(updated);
+    } catch (err) {
+      console.error('Error adding set:', err);
+    }
+  };
+
+  const handleRemoveSet = async (exerciseId: number) => {
+    if (!accessToken || !session) return;
+    try {
+      const updated = await removeSetFromExercise(session.id, exerciseId, accessToken);
+      setSession(updated);
+    } catch (err) {
+      console.error('Error removing set:', err);
+    }
   };
 
   const handleExercisePickerSelect = async (newExerciseId: number) => {
@@ -751,6 +771,30 @@ export default function WorkoutExecution() {
                       </div>
                     );
                   })}
+
+                  {/* Add/Remove Set Controls */}
+                  {session.status !== 'completed' && (
+                    <div className="border-t border-gray-700 pt-3 flex items-center justify-center gap-4">
+                      <button
+                        onClick={() => handleRemoveSet(exerciseId)}
+                        disabled={exerciseSets.length <= 1}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
+                          exerciseSets.length <= 1
+                            ? 'bg-gray-700 text-gray-600 cursor-not-allowed'
+                            : 'bg-gray-700 text-gray-300 hover:bg-red-600 hover:text-white'
+                        }`}
+                      >
+                        −
+                      </button>
+                      <span className="text-sm text-gray-400">{exerciseSets.length} {exerciseSets.length === 1 ? 'set' : 'sets'}</span>
+                      <button
+                        onClick={() => handleAddSet(exerciseId)}
+                        className="w-8 h-8 rounded-full bg-gray-700 text-gray-300 hover:bg-teal-600 hover:text-white flex items-center justify-center text-sm font-bold transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
               })}
