@@ -261,14 +261,14 @@ export default function Mesocycles() {
           </button>
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Training Mesocycles</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Mesocycle Templates</h1>
               <p className="text-gray-600 mt-1">Plan and manage your training blocks</p>
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
             >
-              Create Mesocycle
+              Create Mesocycle Template
             </button>
           </div>
         </div>
@@ -363,7 +363,49 @@ export default function Mesocycles() {
           </div>
         )}
 
-        {/* Create Mesocycle Modal */}
+        {/* Completed Mesocycles */}
+        {instances.filter(i => i.status === 'completed').length > 0 && (
+          <div className="mt-10">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Completed Mesocycles</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {instances
+                .filter(i => i.status === 'completed')
+                .sort((a, b) => new Date(b.end_date || b.updated_at).getTime() - new Date(a.end_date || a.updated_at).getTime())
+                .map((inst) => (
+                  <div key={inst.id} className="bg-white rounded-lg shadow p-6">
+                    <div className="flex justify-between items-start mb-3">
+                      <h3 className="text-xl font-semibold text-gray-900">{inst.template_name}</h3>
+                      <span className="px-2 py-1 rounded text-xs font-medium bg-teal-100 text-teal-800">
+                        Completed
+                      </span>
+                    </div>
+                    <div className="space-y-2 text-sm text-gray-600">
+                      <div className="flex justify-between">
+                        <span>Duration:</span>
+                        <span className="font-medium text-gray-900">{inst.template_weeks} weeks</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Days/Week:</span>
+                        <span className="font-medium text-gray-900">{inst.template_days_per_week}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Started:</span>
+                        <span className="font-medium text-gray-900">{new Date(inst.start_date).toLocaleDateString()}</span>
+                      </div>
+                      {inst.end_date && (
+                        <div className="flex justify-between">
+                          <span>Finished:</span>
+                          <span className="font-medium text-gray-900">{new Date(inst.end_date).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
+        {/* Create Mesocycle Template Modal */}
         {showCreateModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
             <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -583,7 +625,7 @@ export default function Mesocycles() {
                     disabled={creating}
                     className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400"
                   >
-                    {creating ? 'Creating...' : 'Create Mesocycle'}
+                    {creating ? 'Creating...' : 'Create Mesocycle Template'}
                   </button>
                 </div>
               </form>

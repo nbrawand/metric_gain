@@ -186,7 +186,7 @@ export default function WorkoutExecution() {
   // Auto-dismiss completion banner after 3 seconds
   useEffect(() => {
     if (!completionBanner) return;
-    const timer = setTimeout(() => setCompletionBanner(null), 3000);
+    const timer = setTimeout(() => setCompletionBanner(null), 2000);
     return () => clearTimeout(timer);
   }, [completionBanner]);
 
@@ -382,7 +382,7 @@ export default function WorkoutExecution() {
 
       {/* Completion Banner */}
       {completionBanner && (
-        <div className="fixed top-0 left-0 right-0 z-50 flex justify-center animate-slide-down">
+        <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none animate-slide-down">
           <div className="bg-teal-600 text-white px-6 py-3 rounded-b-lg shadow-lg text-center">
             <p className="font-semibold">Week {completionBanner.week}, Day {completionBanner.day} Complete</p>
           </div>
