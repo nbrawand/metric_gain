@@ -23,7 +23,7 @@ const INSTANCES_ENDPOINT = '/v1/mesocycle-instances';
  * Get list of user's mesocycles (simplified, without nested templates)
  */
 export async function listMesocycles(accessToken: string): Promise<MesocycleListItem[]> {
-  return get<MesocycleListItem[]>(MESOCYCLES_ENDPOINT, accessToken);
+  return get<MesocycleListItem[]>(`${MESOCYCLES_ENDPOINT}/`, accessToken);
 }
 
 /**
@@ -37,7 +37,7 @@ export async function getMesocycle(id: number, accessToken: string): Promise<Mes
  * Create a new mesocycle with workout templates and exercises
  */
 export async function createMesocycle(data: MesocycleCreate, accessToken: string): Promise<Mesocycle> {
-  return post<Mesocycle>(MESOCYCLES_ENDPOINT, data, accessToken);
+  return post<Mesocycle>(`${MESOCYCLES_ENDPOINT}/`, data, accessToken);
 }
 
 /**
@@ -81,8 +81,8 @@ export async function listMesocycleInstances(
   accessToken?: string
 ): Promise<MesocycleInstanceListItem[]> {
   const url = statusFilter
-    ? `${INSTANCES_ENDPOINT}?status_filter=${statusFilter}`
-    : INSTANCES_ENDPOINT;
+    ? `${INSTANCES_ENDPOINT}/?status_filter=${statusFilter}`
+    : `${INSTANCES_ENDPOINT}/`;
   return get<MesocycleInstanceListItem[]>(url, accessToken!);
 }
 
@@ -107,7 +107,7 @@ export async function startMesocycleInstance(
   data: MesocycleInstanceCreate,
   accessToken: string
 ): Promise<MesocycleInstance> {
-  return post<MesocycleInstance>(INSTANCES_ENDPOINT, data, accessToken);
+  return post<MesocycleInstance>(`${INSTANCES_ENDPOINT}/`, data, accessToken);
 }
 
 /**
