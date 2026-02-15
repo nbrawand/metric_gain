@@ -52,6 +52,9 @@ export default function Mesocycles() {
   // Workout templates state
   const [workoutTemplates, setWorkoutTemplates] = useState<WorkoutTemplateCreate[]>([]);
 
+  // Collapsed state for workout day sections in create modal
+  const [collapsedDays, setCollapsedDays] = useState<Set<number>>(new Set());
+
   // Ref to hold pre-populated workout templates (from copy) so the days_per_week effect doesn't overwrite them
   const pendingTemplatesRef = useRef<WorkoutTemplateCreate[] | null>(null);
 
@@ -252,6 +255,15 @@ export default function Mesocycles() {
     }
   };
 
+  const toggleDayCollapsed = (index: number) => {
+    setCollapsedDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
   const resetForm = () => {
     setMesocycleData({
       name: '',
@@ -260,6 +272,7 @@ export default function Mesocycles() {
       days_per_week: 4,
     });
     setWorkoutTemplates([]);
+    setCollapsedDays(new Set());
   };
 
   const updateWorkoutTemplate = (index: number, field: string, value: string) => {
@@ -705,140 +718,161 @@ export default function Mesocycles() {
                   </p>
 
                   {workoutTemplates.map((workout, dayIndex) => (
-                      <div key={dayIndex} className="border border-gray-600 rounded-lg p-4 sm:p-6 mb-4 bg-gray-700">
-                        <div className="mb-3">
-                          <h4 className="font-medium text-white mb-1">Day {dayIndex + 1}</h4>
-                          <p className="text-xs text-gray-400">Workout for training day {dayIndex + 1}</p>
-                        </div>
-
-                        <div className="space-y-3 mb-4">
+                      <div key={dayIndex} className="border border-gray-600 rounded-lg mb-4 bg-gray-700 overflow-hidden">
+                        {/* Collapsible header */}
+                        <button
+                          type="button"
+                          onClick={() => toggleDayCollapsed(dayIndex)}
+                          className="w-full p-4 sm:px-6 flex items-center justify-between text-left hover:bg-gray-650 transition-colors"
+                        >
                           <div>
-                            <label className="block text-gray-300 text-sm font-medium mb-2">Workout Name *</label>
-                            <input
-                              type="text"
-                              placeholder="Workout name"
-                              value={workout.name}
-                              onChange={(e) =>
-                                updateWorkoutTemplate(dayIndex, 'name', e.target.value)
-                              }
-                              className="w-full px-4 py-3 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              required
-                            />
+                            <h4 className="font-medium text-white">Day {dayIndex + 1}: {workout.name || 'Untitled'}</h4>
+                            <p className="text-xs text-gray-400">{workout.exercises.length} exercise{workout.exercises.length !== 1 ? 's' : ''}</p>
                           </div>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className={`h-5 w-5 text-gray-400 transition-transform ${collapsedDays.has(dayIndex) ? '' : 'rotate-180'}`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
 
-                          <div>
-                            <label className="block text-gray-300 text-sm font-medium mb-2">Description</label>
-                            <textarea
-                              placeholder="Description (optional)"
-                              value={workout.description}
-                              onChange={(e) =>
-                                updateWorkoutTemplate(dayIndex, 'description', e.target.value)
-                              }
-                              className="w-full px-4 py-3 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              rows={2}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Exercises */}
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium text-gray-300">Exercises</span>
-                            <button
-                              type="button"
-                              onClick={() => addExerciseToWorkout(dayIndex)}
-                              className="bg-teal-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-teal-700 transition-colors"
-                            >
-                              Add Exercise
-                            </button>
-                          </div>
-
-                          {workout.exercises.map((exercise, exerciseIndex) => (
-                            <div
-                              key={exerciseIndex}
-                              className="border border-gray-500 rounded-lg p-3 sm:p-4 bg-gray-600"
-                            >
-                              <div className="flex justify-between items-start mb-3">
-                                <span className="text-sm font-medium text-gray-300">
-                                  Exercise {exerciseIndex + 1}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => removeExercise(dayIndex, exerciseIndex)}
-                                  className="text-red-400 hover:text-red-300 text-xs font-medium transition-colors"
-                                >
-                                  Remove
-                                </button>
+                        {!collapsedDays.has(dayIndex) && (
+                          <div className="px-4 pb-4 sm:px-6 sm:pb-6">
+                            <div className="space-y-3 mb-4">
+                              <div>
+                                <label className="block text-gray-300 text-sm font-medium mb-2">Workout Name *</label>
+                                <input
+                                  type="text"
+                                  placeholder="Workout name"
+                                  value={workout.name}
+                                  onChange={(e) =>
+                                    updateWorkoutTemplate(dayIndex, 'name', e.target.value)
+                                  }
+                                  className="w-full px-4 py-3 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  required
+                                />
                               </div>
 
-                              <div className="space-y-3 text-sm">
-                                <div>
-                                  <label className="block text-gray-300 text-xs font-medium mb-1">Muscle Group</label>
-                                  <select
-                                    value={exercises.find(ex => ex.id === exercise.exercise_id)?.muscle_group || muscleGroups[0] || ''}
-                                    onChange={(e) => {
-                                      const group = e.target.value;
-                                      const firstInGroup = exercises.find(ex => ex.muscle_group === group);
-                                      if (firstInGroup) {
-                                        updateExercise(dayIndex, exerciseIndex, 'exercise_id', firstInGroup.id);
-                                      }
-                                    }}
-                                    className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                  >
-                                    {muscleGroups.map((group) => (
-                                      <option key={group} value={group}>{group}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <div>
-                                  <label className="block text-gray-300 text-xs font-medium mb-1">Exercise</label>
-                                  <select
-                                    value={exercise.exercise_id}
-                                    onChange={(e) =>
-                                      updateExercise(
-                                        dayIndex,
-                                        exerciseIndex,
-                                        'exercise_id',
-                                        parseInt(e.target.value)
-                                      )
-                                    }
-                                    className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                  >
-                                    {exercises
-                                      .filter(ex => ex.muscle_group === (exercises.find(e => e.id === exercise.exercise_id)?.muscle_group))
-                                      .map((ex) => (
-                                        <option key={ex.id} value={ex.id}>
-                                          {ex.name}
-                                        </option>
-                                      ))}
-                                  </select>
-                                </div>
-
-                                <div>
-                                  <label className="block text-gray-300 text-xs font-medium mb-1">Notes (optional)</label>
-                                  <input
-                                    type="text"
-                                    placeholder="Add any notes for this exercise..."
-                                    value={exercise.notes || ''}
-                                    onChange={(e) =>
-                                      updateExercise(
-                                        dayIndex,
-                                        exerciseIndex,
-                                        'notes',
-                                        e.target.value
-                                      )
-                                    }
-                                    className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-lg text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                  />
-                                </div>
-
-                                <p className="text-xs text-gray-400 italic">
-                                  Sets, reps, and RIR will be automatically determined by the algorithm.
-                                </p>
+                              <div>
+                                <label className="block text-gray-300 text-sm font-medium mb-2">Description</label>
+                                <textarea
+                                  placeholder="Description (optional)"
+                                  value={workout.description}
+                                  onChange={(e) =>
+                                    updateWorkoutTemplate(dayIndex, 'description', e.target.value)
+                                  }
+                                  className="w-full px-4 py-3 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  rows={2}
+                                />
                               </div>
                             </div>
-                          ))}
-                        </div>
+
+                            {/* Exercises */}
+                            <div className="space-y-3">
+                              <span className="text-sm font-medium text-gray-300">Exercises</span>
+
+                              {workout.exercises.map((exercise, exerciseIndex) => (
+                                <div
+                                  key={exerciseIndex}
+                                  className="border border-gray-500 rounded-lg p-3 sm:p-4 bg-gray-600"
+                                >
+                                  <div className="flex justify-between items-start mb-3">
+                                    <span className="text-sm font-medium text-gray-300">
+                                      Exercise {exerciseIndex + 1}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeExercise(dayIndex, exerciseIndex)}
+                                      className="text-red-400 hover:text-red-300 text-xs font-medium transition-colors"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+
+                                  <div className="space-y-3 text-sm">
+                                    <div>
+                                      <label className="block text-gray-300 text-xs font-medium mb-1">Muscle Group</label>
+                                      <select
+                                        value={exercises.find(ex => ex.id === exercise.exercise_id)?.muscle_group || muscleGroups[0] || ''}
+                                        onChange={(e) => {
+                                          const group = e.target.value;
+                                          const firstInGroup = exercises.find(ex => ex.muscle_group === group);
+                                          if (firstInGroup) {
+                                            updateExercise(dayIndex, exerciseIndex, 'exercise_id', firstInGroup.id);
+                                          }
+                                        }}
+                                        className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                      >
+                                        {muscleGroups.map((group) => (
+                                          <option key={group} value={group}>{group}</option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                    <div>
+                                      <label className="block text-gray-300 text-xs font-medium mb-1">Exercise</label>
+                                      <select
+                                        value={exercise.exercise_id}
+                                        onChange={(e) =>
+                                          updateExercise(
+                                            dayIndex,
+                                            exerciseIndex,
+                                            'exercise_id',
+                                            parseInt(e.target.value)
+                                          )
+                                        }
+                                        className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                      >
+                                        {exercises
+                                          .filter(ex => ex.muscle_group === (exercises.find(e => e.id === exercise.exercise_id)?.muscle_group))
+                                          .map((ex) => (
+                                            <option key={ex.id} value={ex.id}>
+                                              {ex.name}
+                                            </option>
+                                          ))}
+                                      </select>
+                                    </div>
+
+                                    <div>
+                                      <label className="block text-gray-300 text-xs font-medium mb-1">Notes (optional)</label>
+                                      <input
+                                        type="text"
+                                        placeholder="Add any notes for this exercise..."
+                                        value={exercise.notes || ''}
+                                        onChange={(e) =>
+                                          updateExercise(
+                                            dayIndex,
+                                            exerciseIndex,
+                                            'notes',
+                                            e.target.value
+                                          )
+                                        }
+                                        className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-lg text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                      />
+                                    </div>
+
+                                    <p className="text-xs text-gray-400 italic">
+                                      Sets, reps, and RIR will be automatically determined by the algorithm.
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Add Exercise button at the bottom */}
+                              <button
+                                type="button"
+                                onClick={() => addExerciseToWorkout(dayIndex)}
+                                className="w-full bg-teal-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors"
+                              >
+                                + Add Exercise
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )
                   )}

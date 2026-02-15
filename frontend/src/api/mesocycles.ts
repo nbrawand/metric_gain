@@ -3,7 +3,7 @@
  */
 
 import { get, post, put, patch, del } from './client';
-import {
+import type {
   Mesocycle,
   MesocycleListItem,
   MesocycleCreate,
@@ -65,6 +65,21 @@ export async function addWorkoutTemplate(
   return post<WorkoutTemplate>(
     `${MESOCYCLES_ENDPOINT}/${mesocycleId}/workout-templates`,
     data,
+    accessToken
+  );
+}
+
+/**
+ * Replace all workout templates for a mesocycle
+ */
+export async function replaceWorkoutTemplates(
+  mesocycleId: number,
+  templates: WorkoutTemplateCreate[],
+  accessToken: string
+): Promise<Mesocycle> {
+  return put<Mesocycle>(
+    `${MESOCYCLES_ENDPOINT}/${mesocycleId}/workout-templates`,
+    templates,
     accessToken
   );
 }

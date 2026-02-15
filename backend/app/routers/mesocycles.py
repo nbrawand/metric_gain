@@ -383,3 +383,111 @@ async def add_workout_template(
             workout_exercise.exercise = exercise
 
     return workout_template
+
+
+@router.put(
+    "/{mesocycle_id}/workout-templates",
+    response_model=MesocycleResponse,
+)
+async def replace_workout_templates(
+    mesocycle_id: int,
+    workout_templates_data: List[WorkoutTemplateCreate],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Replace all workout templates for a mesocycle.
+
+    Deletes all existing workout templates (and their exercises via cascade)
+    and creates new ones from the provided data.
+    """
+    mesocycle = db.query(Mesocycle).filter(Mesocycle.id == mesocycle_id).first()
+
+    if not mesocycle:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle not found"
+        )
+
+    if mesocycle.is_stock:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Stock mesocycles cannot be modified",
+        )
+
+    if mesocycle.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only modify your own mesocycles",
+        )
+
+    # Delete all existing workout templates (cascades to exercises)
+    db.query(WorkoutExercise).filter(
+        WorkoutExercise.workout_template_id.in_(
+            db.query(WorkoutTemplate.id).filter(
+                WorkoutTemplate.mesocycle_id == mesocycle_id
+            )
+        )
+    ).delete(synchronize_session=False)
+    db.query(WorkoutTemplate).filter(
+        WorkoutTemplate.mesocycle_id == mesocycle_id
+    ).delete(synchronize_session=False)
+
+    # Create new workout templates
+    for workout_data in workout_templates_data:
+        workout_template = WorkoutTemplate(
+            mesocycle_id=mesocycle_id,
+            name=workout_data.name,
+            description=workout_data.description,
+            order_index=workout_data.order_index,
+        )
+        db.add(workout_template)
+        db.flush()
+
+        for exercise_data in workout_data.exercises:
+            exercise = db.query(Exercise).filter(Exercise.id == exercise_data.exercise_id).first()
+            if not exercise:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Exercise with ID {exercise_data.exercise_id} not found",
+                )
+            if exercise.is_custom and exercise.user_id != current_user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"You don't have access to exercise with ID {exercise_data.exercise_id}",
+                )
+
+            db.add(WorkoutExercise(
+                workout_template_id=workout_template.id,
+                exercise_id=exercise_data.exercise_id,
+                order_index=exercise_data.order_index,
+                target_sets=exercise_data.target_sets,
+                target_reps_min=exercise_data.target_reps_min,
+                target_reps_max=exercise_data.target_reps_max,
+                starting_rir=exercise_data.starting_rir,
+                ending_rir=exercise_data.ending_rir,
+                notes=exercise_data.notes,
+            ))
+
+    db.commit()
+
+    # Load and return full mesocycle
+    mesocycle = (
+        db.query(Mesocycle)
+        .filter(Mesocycle.id == mesocycle_id)
+        .options(
+            joinedload(Mesocycle.workout_templates).joinedload(
+                WorkoutTemplate.exercises
+            )
+        )
+        .first()
+    )
+
+    for workout in mesocycle.workout_templates:
+        for workout_exercise in workout.exercises:
+            exercise = (
+                db.query(Exercise).filter(Exercise.id == workout_exercise.exercise_id).first()
+            )
+            if exercise:
+                workout_exercise.exercise = exercise
+
+    return mesocycle
