@@ -2,7 +2,7 @@
  * Mesocycles page - List and create training mesocycles
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   listMesocycles,
@@ -52,6 +52,9 @@ export default function Mesocycles() {
   // Workout templates state
   const [workoutTemplates, setWorkoutTemplates] = useState<WorkoutTemplateCreate[]>([]);
 
+  // Ref to hold pre-populated workout templates (from copy) so the days_per_week effect doesn't overwrite them
+  const pendingTemplatesRef = useRef<WorkoutTemplateCreate[] | null>(null);
+
   // Load mesocycles and exercises
   useEffect(() => {
     loadData();
@@ -59,6 +62,11 @@ export default function Mesocycles() {
 
   // Initialize workout templates when days_per_week changes
   useEffect(() => {
+    if (pendingTemplatesRef.current) {
+      setWorkoutTemplates(pendingTemplatesRef.current);
+      pendingTemplatesRef.current = null;
+      return;
+    }
     const newTemplates: WorkoutTemplateCreate[] = [];
     for (let i = 0; i < mesocycleData.days_per_week; i++) {
       newTemplates.push({
@@ -79,7 +87,7 @@ export default function Mesocycles() {
       const [mesocyclesData, instancesData, exercisesData] = await Promise.all([
         listMesocycles(accessToken),
         listMesocycleInstances(undefined, accessToken),
-        getExercises({}, accessToken),
+        getExercises({ limit: 500 }, accessToken),
       ]);
       setMesocycles(mesocyclesData);
       setInstances(instancesData);
@@ -104,6 +112,45 @@ export default function Mesocycles() {
     } catch (err) {
       alert('Failed to delete mesocycle');
       console.error('Error deleting mesocycle:', err);
+    }
+  };
+
+  const handleCopyMesocycle = async (id: number) => {
+    if (!accessToken) return;
+
+    try {
+      const original = await getMesocycle(id, accessToken);
+
+      const copiedTemplates: WorkoutTemplateCreate[] = original.workout_templates.map((wt) => ({
+        name: wt.name,
+        description: wt.description,
+        order_index: wt.order_index,
+        exercises: wt.exercises.map((ex) => ({
+          exercise_id: ex.exercise_id,
+          order_index: ex.order_index,
+          target_sets: ex.target_sets,
+          target_reps_min: ex.target_reps_min,
+          target_reps_max: ex.target_reps_max,
+          starting_rir: ex.starting_rir,
+          ending_rir: ex.ending_rir,
+          notes: ex.notes,
+        })),
+      }));
+
+      // Store templates in ref so the days_per_week effect uses them instead of blank ones
+      pendingTemplatesRef.current = copiedTemplates;
+
+      setMesocycleData({
+        name: `${original.name} (Copy)`,
+        description: original.description || '',
+        weeks: original.weeks,
+        days_per_week: original.days_per_week,
+      });
+
+      setShowCreateModal(true);
+    } catch (err) {
+      alert('Failed to load mesocycle for copying');
+      console.error('Error copying mesocycle:', err);
     }
   };
 
@@ -261,6 +308,9 @@ export default function Mesocycles() {
   // Check if there's already an active instance
   const hasActiveInstance = instances.some(i => i.status === 'active');
 
+  // Derive sorted muscle groups from loaded exercises
+  const muscleGroups = [...new Set(exercises.map(ex => ex.muscle_group))].sort();
+
   if (loading) {
     return <div className="p-8 text-gray-300 bg-gray-900 min-h-screen">Loading mesocycles...</div>;
   }
@@ -371,13 +421,22 @@ export default function Mesocycles() {
                     >
                       {hasActiveInstance ? 'Active Meso Running' : 'Start Instance'}
                     </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCopyMesocycle(mesocycle.id);
+                      }}
+                      className="px-4 py-2 rounded text-sm font-medium transition bg-teal-600 hover:bg-teal-700 text-white ml-auto"
+                    >
+                      Copy
+                    </button>
                     {!mesocycle.is_stock && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDelete(mesocycle.id);
                         }}
-                        className="text-red-400 hover:text-red-300 text-sm font-medium ml-auto"
+                        className="text-red-400 hover:text-red-300 text-sm font-medium"
                       >
                         Delete
                       </button>
@@ -543,16 +602,32 @@ export default function Mesocycles() {
         {/* Create Mesocycle Template Modal */}
         {showCreateModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <div className="bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Header */}
               <div className="p-6 border-b border-gray-700 sticky top-0 bg-gray-800 z-10">
-                <h2 className="text-2xl font-bold text-white">Create New Mesocycle</h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-white">Create New Mesocycle</h2>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCreateModal(false);
+                      resetForm();
+                    }}
+                    className="text-gray-400 hover:text-white transition border border-gray-600 rounded-lg p-2 hover:border-gray-400"
+                    title="Close"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
               <form onSubmit={handleCreateMesocycle} className="p-6">
                 {/* Mesocycle Basic Info */}
                 <div className="space-y-4 mb-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                    <label className="block text-gray-300 text-sm font-medium mb-2">
                       Mesocycle Name *
                     </label>
                     <input
@@ -561,13 +636,13 @@ export default function Mesocycles() {
                       onChange={(e) =>
                         setMesocycleData({ ...mesocycleData, name: e.target.value })
                       }
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-white"
+                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                    <label className="block text-gray-300 text-sm font-medium mb-2">
                       Description
                     </label>
                     <textarea
@@ -575,13 +650,13 @@ export default function Mesocycles() {
                       onChange={(e) =>
                         setMesocycleData({ ...mesocycleData, description: e.target.value })
                       }
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-white"
+                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       rows={2}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                    <label className="block text-gray-300 text-sm font-medium mb-2">
                       Weeks (3-12) *
                     </label>
                     <input
@@ -592,13 +667,13 @@ export default function Mesocycles() {
                       onChange={(e) =>
                         setMesocycleData({ ...mesocycleData, weeks: parseInt(e.target.value) })
                       }
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-white"
+                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                    <label className="block text-gray-300 text-sm font-medium mb-2">
                       Training Days Per Week *
                     </label>
                     <select
@@ -606,7 +681,7 @@ export default function Mesocycles() {
                       onChange={(e) =>
                         setMesocycleData({ ...mesocycleData, days_per_week: parseInt(e.target.value) })
                       }
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-white"
+                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     >
                       <option value="1">1 day per week</option>
@@ -630,33 +705,39 @@ export default function Mesocycles() {
                   </p>
 
                   {workoutTemplates.map((workout, dayIndex) => (
-                      <div key={dayIndex} className="border border-gray-600 rounded-lg p-4 mb-4 bg-gray-700">
+                      <div key={dayIndex} className="border border-gray-600 rounded-lg p-4 sm:p-6 mb-4 bg-gray-700">
                         <div className="mb-3">
                           <h4 className="font-medium text-white mb-1">Day {dayIndex + 1}</h4>
                           <p className="text-xs text-gray-400">Workout for training day {dayIndex + 1}</p>
                         </div>
 
                         <div className="space-y-3 mb-4">
-                          <input
-                            type="text"
-                            placeholder="Workout name"
-                            value={workout.name}
-                            onChange={(e) =>
-                              updateWorkoutTemplate(dayIndex, 'name', e.target.value)
-                            }
-                            className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400"
-                            required
-                          />
+                          <div>
+                            <label className="block text-gray-300 text-sm font-medium mb-2">Workout Name *</label>
+                            <input
+                              type="text"
+                              placeholder="Workout name"
+                              value={workout.name}
+                              onChange={(e) =>
+                                updateWorkoutTemplate(dayIndex, 'name', e.target.value)
+                              }
+                              className="w-full px-4 py-3 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              required
+                            />
+                          </div>
 
-                          <textarea
-                            placeholder="Description (optional)"
-                            value={workout.description}
-                            onChange={(e) =>
-                              updateWorkoutTemplate(dayIndex, 'description', e.target.value)
-                            }
-                            className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400"
-                            rows={2}
-                          />
+                          <div>
+                            <label className="block text-gray-300 text-sm font-medium mb-2">Description</label>
+                            <textarea
+                              placeholder="Description (optional)"
+                              value={workout.description}
+                              onChange={(e) =>
+                                updateWorkoutTemplate(dayIndex, 'description', e.target.value)
+                              }
+                              className="w-full px-4 py-3 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              rows={2}
+                            />
+                          </div>
                         </div>
 
                         {/* Exercises */}
@@ -666,7 +747,7 @@ export default function Mesocycles() {
                             <button
                               type="button"
                               onClick={() => addExerciseToWorkout(dayIndex)}
-                              className="bg-teal-600 text-white px-3 py-1 rounded text-xs hover:bg-teal-700"
+                              className="bg-teal-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-teal-700 transition-colors"
                             >
                               Add Exercise
                             </button>
@@ -675,24 +756,42 @@ export default function Mesocycles() {
                           {workout.exercises.map((exercise, exerciseIndex) => (
                             <div
                               key={exerciseIndex}
-                              className="border border-gray-500 rounded p-3 bg-gray-600"
+                              className="border border-gray-500 rounded-lg p-3 sm:p-4 bg-gray-600"
                             >
-                              <div className="flex justify-between items-start mb-2">
+                              <div className="flex justify-between items-start mb-3">
                                 <span className="text-sm font-medium text-gray-300">
                                   Exercise {exerciseIndex + 1}
                                 </span>
                                 <button
                                   type="button"
                                   onClick={() => removeExercise(dayIndex, exerciseIndex)}
-                                  className="text-red-400 hover:text-red-300 text-xs"
+                                  className="text-red-400 hover:text-red-300 text-xs font-medium transition-colors"
                                 >
                                   Remove
                                 </button>
                               </div>
 
-                              <div className="space-y-2 text-sm">
+                              <div className="space-y-3 text-sm">
                                 <div>
-                                  <label className="text-xs text-gray-400 block mb-1">Exercise</label>
+                                  <label className="block text-gray-300 text-xs font-medium mb-1">Muscle Group</label>
+                                  <select
+                                    value={exercises.find(ex => ex.id === exercise.exercise_id)?.muscle_group || muscleGroups[0] || ''}
+                                    onChange={(e) => {
+                                      const group = e.target.value;
+                                      const firstInGroup = exercises.find(ex => ex.muscle_group === group);
+                                      if (firstInGroup) {
+                                        updateExercise(dayIndex, exerciseIndex, 'exercise_id', firstInGroup.id);
+                                      }
+                                    }}
+                                    className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  >
+                                    {muscleGroups.map((group) => (
+                                      <option key={group} value={group}>{group}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="block text-gray-300 text-xs font-medium mb-1">Exercise</label>
                                   <select
                                     value={exercise.exercise_id}
                                     onChange={(e) =>
@@ -703,18 +802,20 @@ export default function Mesocycles() {
                                         parseInt(e.target.value)
                                       )
                                     }
-                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-500 rounded text-sm text-white"
+                                    className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                   >
-                                    {exercises.map((ex) => (
-                                      <option key={ex.id} value={ex.id}>
-                                        {ex.name}
-                                      </option>
-                                    ))}
+                                    {exercises
+                                      .filter(ex => ex.muscle_group === (exercises.find(e => e.id === exercise.exercise_id)?.muscle_group))
+                                      .map((ex) => (
+                                        <option key={ex.id} value={ex.id}>
+                                          {ex.name}
+                                        </option>
+                                      ))}
                                   </select>
                                 </div>
 
                                 <div>
-                                  <label className="text-xs text-gray-400 block mb-1">Notes (optional)</label>
+                                  <label className="block text-gray-300 text-xs font-medium mb-1">Notes (optional)</label>
                                   <input
                                     type="text"
                                     placeholder="Add any notes for this exercise..."
@@ -727,7 +828,7 @@ export default function Mesocycles() {
                                         e.target.value
                                       )
                                     }
-                                    className="w-full px-2 py-1 bg-gray-700 border border-gray-500 rounded text-sm text-white placeholder-gray-400"
+                                    className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-lg text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                   />
                                 </div>
 
@@ -744,21 +845,21 @@ export default function Mesocycles() {
                 </div>
 
                 {/* Form Actions */}
-                <div className="flex justify-end gap-3 pt-4 border-t border-gray-700 sticky bottom-0 bg-gray-800">
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-700 sticky bottom-0 bg-gray-800 py-4">
                   <button
                     type="button"
                     onClick={() => {
                       setShowCreateModal(false);
                       resetForm();
                     }}
-                    className="px-6 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700"
+                    className="px-6 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors font-medium"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={creating}
-                    className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:bg-teal-800"
+                    className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:bg-teal-800 disabled:cursor-not-allowed transition-colors font-medium"
                   >
                     {creating ? 'Creating...' : 'Create Mesocycle Template'}
                   </button>

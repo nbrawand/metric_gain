@@ -51,6 +51,7 @@ export function Exercises() {
             search: searchTerm || undefined,
             muscle_group: selectedMuscleGroup || undefined,
             include_custom: !showCustomOnly,
+            limit: 500,
           },
           accessToken
         ),
