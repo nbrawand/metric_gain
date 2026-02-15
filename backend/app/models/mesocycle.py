@@ -36,7 +36,7 @@ class Mesocycle(Base):
     # Relationships
     user = relationship("User", back_populates="mesocycles")
     workout_templates = relationship("WorkoutTemplate", back_populates="mesocycle", cascade="all, delete-orphan")
-    instances = relationship("MesocycleInstance", back_populates="mesocycle_template", cascade="all, delete-orphan")
+    instances = relationship("MesocycleInstance", back_populates="mesocycle_template")
 
     def __repr__(self):
         return f"<Mesocycle(id={self.id}, name='{self.name}', weeks={self.weeks})>"
@@ -53,7 +53,12 @@ class MesocycleInstance(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    mesocycle_template_id = Column(Integer, ForeignKey("mesocycles.id", ondelete="CASCADE"), nullable=False, index=True)
+    mesocycle_template_id = Column(Integer, ForeignKey("mesocycles.id", ondelete="SET NULL"), nullable=True, index=True)
+
+    # Snapshot fields (captured at instance creation for when template is deleted)
+    template_name = Column(String(255), nullable=True)
+    template_weeks = Column(Integer, nullable=True)
+    template_days_per_week = Column(Integer, nullable=True)
 
     # Status: active, completed, abandoned
     status = Column(String(50), default="active", nullable=False, index=True)

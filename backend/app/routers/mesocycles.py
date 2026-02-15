@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
-from app.models.mesocycle import Mesocycle, WorkoutTemplate, WorkoutExercise
+from app.models.mesocycle import Mesocycle, MesocycleInstance, WorkoutTemplate, WorkoutExercise
 from app.models.user import User
 from app.models.exercise import Exercise
 from app.schemas.mesocycle import (
@@ -289,6 +289,21 @@ async def delete_mesocycle(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only delete your own mesocycles",
+        )
+
+    # Block deletion if there are active instances
+    active_instances = (
+        db.query(MesocycleInstance)
+        .filter(
+            MesocycleInstance.mesocycle_template_id == mesocycle_id,
+            MesocycleInstance.status == "active",
+        )
+        .count()
+    )
+    if active_instances > 0:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot delete template with active instances. End the active instance first.",
         )
 
     db.delete(mesocycle)

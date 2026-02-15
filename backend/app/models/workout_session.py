@@ -20,7 +20,7 @@ class WorkoutSession(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     mesocycle_instance_id = Column(Integer, ForeignKey("mesocycle_instances.id", ondelete="CASCADE"), nullable=False, index=True)
-    workout_template_id = Column(Integer, ForeignKey("workout_templates.id", ondelete="CASCADE"), nullable=False, index=True)
+    workout_template_id = Column(Integer, ForeignKey("workout_templates.id", ondelete="SET NULL"), nullable=True, index=True)
 
     # Workout details
     workout_date = Column(Date, nullable=False, index=True)  # When the workout was performed

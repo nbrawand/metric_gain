@@ -41,10 +41,20 @@ async def list_mesocycle_instances(
 
     instances = query.order_by(MesocycleInstance.created_at.desc()).all()
 
-    # Convert to list response with template info
+    # Convert to list response with template info (prefer snapshots, fall back to template query)
     result = []
     for instance in instances:
-        template = db.query(Mesocycle).filter(Mesocycle.id == instance.mesocycle_template_id).first()
+        # Use snapshot fields if available, otherwise fall back to template query
+        if instance.template_name is not None:
+            t_name = instance.template_name
+            t_weeks = instance.template_weeks
+            t_days = instance.template_days_per_week
+        else:
+            template = db.query(Mesocycle).filter(Mesocycle.id == instance.mesocycle_template_id).first()
+            t_name = template.name if template else "Unknown"
+            t_weeks = template.weeks if template else 0
+            t_days = template.days_per_week if template else 0
+
         result.append(
             MesocycleInstanceListResponse(
                 id=instance.id,
@@ -55,9 +65,9 @@ async def list_mesocycle_instances(
                 end_date=instance.end_date,
                 created_at=instance.created_at,
                 updated_at=instance.updated_at,
-                template_name=template.name if template else "Unknown",
-                template_weeks=template.weeks if template else 0,
-                template_days_per_week=template.days_per_week if template else 0,
+                template_name=t_name,
+                template_weeks=t_weeks,
+                template_days_per_week=t_days,
             )
         )
 
@@ -214,10 +224,13 @@ async def start_mesocycle_instance(
             detail="You can only start instances from your own templates or stock templates"
         )
 
-    # Create instance
+    # Create instance with snapshot fields
     new_instance = MesocycleInstance(
         user_id=current_user.id,
         mesocycle_template_id=instance_data.mesocycle_template_id,
+        template_name=template.name,
+        template_weeks=template.weeks,
+        template_days_per_week=template.days_per_week,
         status="active",
         start_date=instance_data.start_date or date.today(),
     )

@@ -333,6 +333,7 @@ export default function WorkoutExecution() {
     if (!accessToken || !session || !instance) return;
 
     const mesocycle = instance.mesocycle_template;
+    if (!mesocycle) return;
     const completedWeek = session.week_number;
     const completedDay = session.day_number;
     const daysPerWeek = mesocycle.workout_templates?.length || mesocycle.days_per_week;
@@ -430,6 +431,7 @@ export default function WorkoutExecution() {
     } else if (instance && accessToken) {
       // No session exists, create one for this week/day
       const mesocycle = instance.mesocycle_template;
+      if (!mesocycle) return;
       const templateIndex = dayNum - 1;
       const template = mesocycle.workout_templates?.[templateIndex];
 

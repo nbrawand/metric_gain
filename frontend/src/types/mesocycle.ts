@@ -124,13 +124,16 @@ export interface MesocycleUpdate {
 export interface MesocycleInstance {
   id: number;
   user_id: number;
-  mesocycle_template_id: number;
+  mesocycle_template_id: number | null;
   status: 'active' | 'completed' | 'abandoned';
   start_date: string;
   end_date?: string;
   created_at: string;
   updated_at: string;
-  mesocycle_template: Mesocycle; // Full template with workouts
+  template_name: string | null;
+  template_weeks: number | null;
+  template_days_per_week: number | null;
+  mesocycle_template: Mesocycle | null; // Null if template was deleted
 }
 
 /**
@@ -139,7 +142,7 @@ export interface MesocycleInstance {
 export interface MesocycleInstanceListItem {
   id: number;
   user_id: number;
-  mesocycle_template_id: number;
+  mesocycle_template_id: number | null;
   status: 'active' | 'completed' | 'abandoned';
   start_date: string;
   end_date?: string;

@@ -95,6 +95,7 @@ class WorkoutSessionResponse(WorkoutSessionBase):
 
     id: int
     user_id: int
+    workout_template_id: Optional[int]  # Nullable after template deletion
     status: str
     created_at: datetime
     updated_at: datetime
@@ -146,7 +147,7 @@ class WorkoutSessionListResponse(BaseModel):
     id: int
     user_id: int
     mesocycle_instance_id: int
-    workout_template_id: int
+    workout_template_id: Optional[int]
     workout_date: date
     week_number: int
     day_number: int

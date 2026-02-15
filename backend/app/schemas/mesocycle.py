@@ -174,15 +174,20 @@ class MesocycleInstanceResponse(BaseModel):
 
     id: int
     user_id: int
-    mesocycle_template_id: int
+    mesocycle_template_id: Optional[int]
     status: str
     start_date: date
     end_date: Optional[date]
     created_at: datetime
     updated_at: datetime
 
-    # Include template details
-    mesocycle_template: MesocycleResponse
+    # Snapshot fields (captured at instance creation)
+    template_name: Optional[str] = None
+    template_weeks: Optional[int] = None
+    template_days_per_week: Optional[int] = None
+
+    # Include template details (None if template was deleted)
+    mesocycle_template: Optional[MesocycleResponse] = None
 
     class Config:
         from_attributes = True
@@ -193,14 +198,14 @@ class MesocycleInstanceListResponse(BaseModel):
 
     id: int
     user_id: int
-    mesocycle_template_id: int
+    mesocycle_template_id: Optional[int]
     status: str
     start_date: date
     end_date: Optional[date]
     created_at: datetime
     updated_at: datetime
 
-    # Basic template info
+    # Basic template info (from snapshots, with fallback to template)
     template_name: str
     template_weeks: int
     template_days_per_week: int

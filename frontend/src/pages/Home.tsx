@@ -74,6 +74,7 @@ export function Home() {
     } else if (activeInstance && accessToken) {
       // No session exists, create one for this week/day
       const mesocycle = activeInstance.mesocycle_template;
+      if (!mesocycle) return;
       const templateIndex = dayNum - 1;
       const template = mesocycle.workout_templates?.[templateIndex];
 

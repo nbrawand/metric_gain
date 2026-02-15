@@ -112,8 +112,8 @@ export default function Mesocycles() {
     try {
       await deleteMesocycle(id, accessToken);
       setMesocycles(mesocycles.filter((m) => m.id !== id));
-    } catch (err) {
-      alert('Failed to delete mesocycle');
+    } catch (err: any) {
+      alert(err?.detail || 'Failed to delete mesocycle');
       console.error('Error deleting mesocycle:', err);
     }
   };
