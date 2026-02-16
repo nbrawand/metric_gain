@@ -26,6 +26,8 @@ export default function WorkoutExecution() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [muscleFeedback, setMuscleFeedback] = useState<Record<string, string>>({});
 
+  const [showInfo, setShowInfo] = useState(false);
+
   // Exercise management state
   const [showExerciseMenu, setShowExerciseMenu] = useState<number | null>(null); // exercise_id of open dropdown
   const [showExercisePicker, setShowExercisePicker] = useState<'swap' | 'add' | null>(null);
@@ -688,7 +690,7 @@ export default function WorkoutExecution() {
                   <div className="grid grid-cols-12 gap-1 sm:gap-2 text-xs text-gray-400 mb-2">
                     <div className="col-span-1"></div>
                     <div className="col-span-4 text-center">WEIGHT</div>
-                    <div className="col-span-4 text-center">REPS ⓘ</div>
+                    <div className="col-span-4 text-center">REPS <button onClick={() => setShowInfo(true)} className="text-gray-400 hover:text-white">ⓘ</button></div>
                     <div className="col-span-3 text-center">
                       <div>LOG</div>
                       <div className="text-[10px] sm:text-xs text-gray-500 mt-1 leading-tight">Sets left empty are logged as skipped</div>
@@ -934,6 +936,47 @@ export default function WorkoutExecution() {
                 Submit & Complete
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Info Modal */}
+      {showInfo && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-white">Quick Guide</h3>
+              <button
+                onClick={() => setShowInfo(false)}
+                className="text-gray-400 hover:text-white text-xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 text-sm text-gray-300">
+              <div>
+                <p className="font-medium text-white mb-1">Picking a Weight</p>
+                <p>Choose a weight where you can complete your target reps with the shown RIR (Reps In Reserve) — that's how many more reps you <span className="italic">could</span> have done.</p>
+              </div>
+
+              <div>
+                <p className="font-medium text-white mb-1">What is RIR?</p>
+                <p>3 RIR = stop with 3 reps left in the tank. 0 RIR = you couldn't do another rep. Each week the RIR drops so you gradually push harder.</p>
+              </div>
+
+              <div>
+                <p className="font-medium text-white mb-1">Rest Between Sets</p>
+                <p>No timer here on purpose. Rest until you feel ready to give your next set full effort. That's usually 2-4 minutes for big lifts, 1-2 for smaller ones.</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowInfo(false)}
+              className="w-full mt-5 bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 rounded-lg"
+            >
+              Got it
+            </button>
           </div>
         </div>
       )}
