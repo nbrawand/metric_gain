@@ -15,7 +15,7 @@ export default function About() {
           There's a lot of bad workout advice out there. We believe evidence-based exercise science can genuinely improve people's lives, so we built an app around it.
         </p>
         <p className="text-gray-300 leading-relaxed mb-3">
-          Our goal is to help you understand the principles that actually drive results: progressive overload, structured mesocycles, fatigue management, and recovery. Not gimmicks, not guesswork. Just concepts backed by research, built into a tool that guides you through them.
+          Our goal is to help you understand the principles that actually drive results: progressive overload, structured mesocycles, fatigue management, and recovery. No gimmicks. No guesswork. Just concepts backed by research, built into a tool that guides you through them.
         </p>
         <p className="text-gray-300 leading-relaxed">
           We want this app to be two things: <span className="text-white font-medium">informative</span> and <span className="text-white font-medium">affordable</span>. You shouldn't need a degree in exercise science or an expensive coach to train effectively.
@@ -29,7 +29,7 @@ export default function About() {
           We will never sell your data to advertisers. Period.
         </p>
         <p className="text-gray-300 leading-relaxed">
-          Your workout data is only used for one purpose: science! Your data is used to create better mathematical models in the app so that you, and everyone using the app, get more effective training recommendations. Not too much volume, not too little. Just the right amount to keep you progressing.
+          Your workout data is used for one purpose only: science. It helps us build better mathematical models so that you and everyone using the app receive more effective training recommendations. Not too much volume. Not too little. Just the right amount to keep you progressing.
         </p>
       </section>
 
