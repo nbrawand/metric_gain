@@ -281,10 +281,10 @@ export function Home() {
             <h3 className="text-lg sm:text-xl font-semibold text-white mb-3">Getting Started</h3>
             <ol className="space-y-2 text-gray-300 list-decimal list-inside">
               <li>Check out <a href="/how-it-works" className="text-teal-400 font-medium hover:text-teal-300">How It Works</a> to learn the basics</li>
-              <li>Click <span className="text-teal-400 font-medium">Mesocycles</span> in the menu above</li>
+              <li>Click <a href="/mesocycles" className="text-teal-400 font-medium hover:text-teal-300">Mesocycles</a> in the menu above</li>
               <li>Create a new mesocycle template with your workouts</li>
-              <li>Click <span className="text-teal-400 font-medium">Start Instance</span> to begin training</li>
-              <li>Return here and click <span className="text-teal-400 font-medium">Continue Mesocycle</span> to log workouts</li>
+              <li>Click Start Instance to begin training</li>
+              <li>Return here and click {activeInstance ? <a href="#" onClick={(e) => { e.preventDefault(); handleContinueMesocycle(); }} className="text-teal-400 font-medium hover:text-teal-300">Continue Mesocycle</a> : <span>Continue Mesocycle</span>} to log workouts</li>
             </ol>
           </div>
 
