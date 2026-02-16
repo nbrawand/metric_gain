@@ -152,6 +152,11 @@ def create_workout_session(
                     increase = max(prev_set.weight * 0.025, 2.5)
                     target_weight = round(prev_set.weight + increase, 1)
 
+                # Use actual reps performed in previous week, fall back to previous target
+                target_reps = fallback_set.target_reps
+                if prev_set and prev_set.reps > 0:
+                    target_reps = prev_set.reps
+
                 workout_set = WorkoutSet(
                     workout_session_id=workout_session.id,
                     exercise_id=exercise_id,
@@ -160,7 +165,7 @@ def create_workout_session(
                     weight=0,
                     reps=0,
                     target_weight=target_weight,
-                    target_reps=fallback_set.target_reps,
+                    target_reps=target_reps,
                     target_rir=fallback_set.target_rir,
                 )
                 db.add(workout_set)
@@ -302,6 +307,47 @@ def get_workout_session(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Workout session not found"
         )
+
+    # Refresh targets from previous week's actual data for in-progress sessions
+    if workout_session.status == "in_progress" and workout_session.week_number > 1:
+        prev_session = db.query(WorkoutSession).filter(
+            WorkoutSession.mesocycle_instance_id == workout_session.mesocycle_instance_id,
+            WorkoutSession.user_id == current_user.id,
+            WorkoutSession.week_number < workout_session.week_number,
+            WorkoutSession.day_number == workout_session.day_number,
+        ).order_by(WorkoutSession.week_number.desc()).first()
+
+        if prev_session:
+            prev_sets = db.query(WorkoutSet).filter(
+                WorkoutSet.workout_session_id == prev_session.id
+            ).all()
+            prev_map = {}
+            for ps in prev_sets:
+                prev_map.setdefault(ps.exercise_id, []).append(ps)
+
+            dirty = False
+            for ws in workout_session.workout_sets:
+                prev_exercise_sets = prev_map.get(ws.exercise_id)
+                if not prev_exercise_sets:
+                    continue
+                prev_set = next((s for s in prev_exercise_sets if s.set_number == ws.set_number), None)
+                if not prev_set:
+                    continue
+
+                if prev_set.reps > 0 and ws.target_reps != prev_set.reps:
+                    ws.target_reps = prev_set.reps
+                    dirty = True
+                if prev_set.weight > 0:
+                    new_target = round(prev_set.weight + max(prev_set.weight * 0.025, 2.5), 1)
+                    if ws.target_weight != new_target:
+                        ws.target_weight = new_target
+                        dirty = True
+
+            if dirty:
+                db.commit()
+                workout_session = db.query(WorkoutSession).options(
+                    joinedload(WorkoutSession.workout_sets).joinedload(WorkoutSet.exercise)
+                ).filter(WorkoutSession.id == session_id).first()
 
     return workout_session
 
