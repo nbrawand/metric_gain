@@ -1,22 +1,23 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { getActiveMesocycleInstance, updateMesocycleInstance } from '../api/mesocycles';
 import { listWorkoutSessions, createWorkoutSession } from '../api/workoutSessions';
 import { MesocycleInstance } from '../types/mesocycle';
 import { WorkoutSessionListItem } from '../types/workout_session';
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [activeInstance, setActiveInstance] = useState<MesocycleInstance | null>(null);
   const [workoutSessions, setWorkoutSessions] = useState<WorkoutSessionListItem[]>([]);
   const navigate = useNavigate();
+  const location = useLocation();
   const { logout, accessToken } = useAuthStore();
 
   useEffect(() => {
     loadActiveInstance();
-  }, [accessToken]);
+  }, [accessToken, location.pathname]);
 
   const loadActiveInstance = async () => {
     if (!accessToken) return;
@@ -153,9 +154,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
             {/* Nav Items */}
             <nav className="flex-1 px-4">
-              <button onClick={handleCurrentMesocycle} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
-                Current Mesocycle
-              </button>
+              {activeInstance && (
+                <button onClick={handleCurrentMesocycle} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
+                  Current Mesocycle
+                </button>
+              )}
               <button onClick={() => handleNav('/mesocycles')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
                 Mesocycles
               </button>
@@ -251,7 +254,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Page Content */}
-      {children}
+      <Outlet />
     </div>
   );
 }

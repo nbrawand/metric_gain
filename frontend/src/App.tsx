@@ -43,54 +43,14 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Layout><Home /></Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/exercises"
-          element={
-            <ProtectedRoute>
-              <Layout><Exercises /></Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/mesocycles"
-          element={
-            <ProtectedRoute>
-              <Layout><Mesocycles /></Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/mesocycles/:id"
-          element={
-            <ProtectedRoute>
-              <Layout><MesocycleDetail /></Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/workout/:sessionId"
-          element={
-            <ProtectedRoute>
-              <Layout><WorkoutExecution /></Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/how-it-works"
-          element={
-            <ProtectedRoute>
-              <Layout><HowItWorks /></Layout>
-            </ProtectedRoute>
-          }
-        />
+        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+          <Route path="/" element={<Home />} />
+          <Route path="/exercises" element={<Exercises />} />
+          <Route path="/mesocycles" element={<Mesocycles />} />
+          <Route path="/mesocycles/:id" element={<MesocycleDetail />} />
+          <Route path="/workout/:sessionId" element={<WorkoutExecution />} />
+          <Route path="/how-it-works" element={<HowItWorks />} />
+        </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
