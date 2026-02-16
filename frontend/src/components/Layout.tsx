@@ -13,10 +13,15 @@ export default function Layout() {
   const [workoutSessions, setWorkoutSessions] = useState<WorkoutSessionListItem[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout, accessToken } = useAuthStore();
+  const { logout, accessToken, isAuthenticated } = useAuthStore();
 
   useEffect(() => {
-    loadActiveInstance();
+    if (accessToken) {
+      loadActiveInstance();
+    } else {
+      setActiveInstance(null);
+      setWorkoutSessions([]);
+    }
   }, [accessToken, location.pathname]);
 
   const loadActiveInstance = async () => {
@@ -114,7 +119,7 @@ export default function Layout() {
     <div className="min-h-screen bg-gray-900">
       {/* Top Bar */}
       <div className="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between sticky top-0 z-40">
-        <Link to="/" className="text-xl font-bold text-white hover:text-teal-400 transition-colors">
+        <Link to={isAuthenticated ? '/' : '/login'} className="text-xl font-bold text-white hover:text-teal-400 transition-colors">
           Metric Gain
         </Link>
         <button
@@ -154,33 +159,57 @@ export default function Layout() {
 
             {/* Nav Items */}
             <nav className="flex-1 px-4">
-              {activeInstance && (
-                <button onClick={handleCurrentMesocycle} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
-                  Current Mesocycle
-                </button>
+              {isAuthenticated ? (
+                <>
+                  {activeInstance && (
+                    <button onClick={handleCurrentMesocycle} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
+                      Current Mesocycle
+                    </button>
+                  )}
+                  <button onClick={() => handleNav('/mesocycles')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
+                    Mesocycles
+                  </button>
+                  <button onClick={() => handleNav('/exercises')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
+                    Exercises
+                  </button>
+                  <button onClick={() => handleNav('/how-it-works')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
+                    How It Works
+                  </button>
+                  <button onClick={() => handleNav('/about')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
+                    About
+                  </button>
+                  <button onClick={() => handleNav('/')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
+                    Home
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => handleNav('/about')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
+                    About
+                  </button>
+                  <button onClick={() => handleNav('/how-it-works')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
+                    How It Works
+                  </button>
+                </>
               )}
-              <button onClick={() => handleNav('/mesocycles')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
-                Mesocycles
-              </button>
-              <button onClick={() => handleNav('/exercises')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
-                Exercises
-              </button>
-              <button onClick={() => handleNav('/how-it-works')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
-                How It Works
-              </button>
-              <button onClick={() => handleNav('/about')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
-                About
-              </button>
-              <button onClick={() => handleNav('/')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
-                Home
-              </button>
             </nav>
 
-            {/* Logout */}
+            {/* Footer */}
             <div className="px-4 pb-8 pt-4 border-t border-gray-700">
-              <button onClick={handleLogout} className="w-full text-left text-lg text-red-400 hover:text-red-300 py-4 transition-colors">
-                Logout
-              </button>
+              {isAuthenticated ? (
+                <button onClick={handleLogout} className="w-full text-left text-lg text-red-400 hover:text-red-300 py-4 transition-colors">
+                  Logout
+                </button>
+              ) : (
+                <>
+                  <button onClick={() => handleNav('/login')} className="w-full text-left text-lg text-teal-400 hover:text-teal-300 py-4 border-b border-gray-700 transition-colors">
+                    Login
+                  </button>
+                  <button onClick={() => handleNav('/register')} className="w-full text-left text-lg text-teal-400 hover:text-teal-300 py-4 transition-colors">
+                    Sign Up
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

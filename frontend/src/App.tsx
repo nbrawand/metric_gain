@@ -42,16 +42,18 @@ function App() {
     <BrowserRouter>
       <ConnectivityBanner />
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-          <Route path="/" element={<Home />} />
-          <Route path="/exercises" element={<Exercises />} />
-          <Route path="/mesocycles" element={<Mesocycles />} />
-          <Route path="/mesocycles/:id" element={<MesocycleDetail />} />
-          <Route path="/workout/:sessionId" element={<WorkoutExecution />} />
+        <Route element={<Layout />}>
+          {/* Public routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/about" element={<About />} />
+          {/* Protected routes */}
+          <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/exercises" element={<ProtectedRoute><Exercises /></ProtectedRoute>} />
+          <Route path="/mesocycles" element={<ProtectedRoute><Mesocycles /></ProtectedRoute>} />
+          <Route path="/mesocycles/:id" element={<ProtectedRoute><MesocycleDetail /></ProtectedRoute>} />
+          <Route path="/workout/:sessionId" element={<ProtectedRoute><WorkoutExecution /></ProtectedRoute>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
