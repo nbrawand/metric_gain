@@ -84,6 +84,22 @@ export async function replaceWorkoutTemplates(
   );
 }
 
+/**
+ * Update exercise notes on a mesocycle instance (not the template)
+ */
+export async function updateInstanceExerciseNotes(
+  instanceId: number,
+  workoutExerciseId: number,
+  notes: string,
+  accessToken: string
+): Promise<Record<string, string>> {
+  return patch<Record<string, string>>(
+    `${INSTANCES_ENDPOINT}/${instanceId}/exercise-notes`,
+    { workout_exercise_id: workoutExerciseId, notes },
+    accessToken
+  );
+}
+
 // ============================================
 // Mesocycle Instance Functions
 // ============================================

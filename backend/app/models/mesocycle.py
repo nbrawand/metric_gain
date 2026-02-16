@@ -60,6 +60,9 @@ class MesocycleInstance(Base):
     template_weeks = Column(Integer, nullable=True)
     template_days_per_week = Column(Integer, nullable=True)
 
+    # Per-exercise note overrides, JSON: {"workout_exercise_id": "notes"}
+    exercise_notes = Column(Text, nullable=True)
+
     # Status: active, completed, abandoned
     status = Column(String(50), default="active", nullable=False, index=True)
 

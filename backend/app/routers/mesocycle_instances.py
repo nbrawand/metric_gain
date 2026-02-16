@@ -1,9 +1,11 @@
 """Mesocycle instance endpoints for starting and managing active training blocks."""
 
-from typing import List
+import json
+from typing import List, Optional
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
@@ -329,6 +331,60 @@ async def update_mesocycle_instance(
 
     instance.mesocycle_template = template
     return instance
+
+
+class ExerciseNotesUpdate(BaseModel):
+    """Schema for updating exercise notes on an instance."""
+    workout_exercise_id: int
+    notes: Optional[str] = None
+
+
+@router.patch("/{instance_id}/exercise-notes")
+async def update_exercise_notes(
+    instance_id: int,
+    data: ExerciseNotesUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Update exercise notes on a mesocycle instance.
+
+    Stores per-exercise note overrides keyed by workout_exercise_id.
+    If notes is empty/null, the key is removed.
+    """
+    instance = db.query(MesocycleInstance).filter(
+        MesocycleInstance.id == instance_id
+    ).first()
+
+    if not instance:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Mesocycle instance not found"
+        )
+
+    if instance.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only update your own mesocycle instances"
+        )
+
+    # Load existing notes or start fresh
+    notes_dict = json.loads(instance.exercise_notes) if instance.exercise_notes else {}
+
+    # Set or delete the key
+    key = str(data.workout_exercise_id)
+    if data.notes:
+        notes_dict[key] = data.notes
+    else:
+        notes_dict.pop(key, None)
+
+    # Save back as JSON text
+    instance.exercise_notes = json.dumps(notes_dict) if notes_dict else None
+
+    db.commit()
+    db.refresh(instance)
+
+    return notes_dict
 
 
 @router.delete("/{instance_id}", status_code=status.HTTP_204_NO_CONTENT)

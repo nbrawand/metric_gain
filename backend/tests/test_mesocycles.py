@@ -628,3 +628,5 @@ def test_create_mesocycle_invalid_weeks(client, auth_headers, sample_exercise_id
     response = client.post("/v1/mesocycles/", json=mesocycle_data, headers=auth_headers)
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+

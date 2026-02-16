@@ -1,9 +1,10 @@
 """Pydantic schemas for Mesocycle, WorkoutTemplate, and WorkoutExercise models."""
 
+import json
 from datetime import date, datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from app.schemas.exercise import ExerciseResponse
 
 
@@ -185,6 +186,16 @@ class MesocycleInstanceResponse(BaseModel):
     template_name: Optional[str] = None
     template_weeks: Optional[int] = None
     template_days_per_week: Optional[int] = None
+
+    # Per-exercise note overrides keyed by workout_exercise_id
+    exercise_notes: Optional[dict] = None
+
+    @field_validator("exercise_notes", mode="before")
+    @classmethod
+    def parse_exercise_notes(cls, v):
+        if isinstance(v, str):
+            return json.loads(v)
+        return v
 
     # Include template details (None if template was deleted)
     mesocycle_template: Optional[MesocycleResponse] = None

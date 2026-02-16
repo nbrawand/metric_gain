@@ -133,6 +133,7 @@ export interface MesocycleInstance {
   template_name: string | null;
   template_weeks: number | null;
   template_days_per_week: number | null;
+  exercise_notes?: Record<string, string>;
   mesocycle_template: Mesocycle | null; // Null if template was deleted
 }
 

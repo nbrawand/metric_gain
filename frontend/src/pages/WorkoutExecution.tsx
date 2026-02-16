@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { getWorkoutSession, updateWorkoutSet, updateWorkoutSession, listWorkoutSessions, createWorkoutSession, submitWorkoutFeedback, swapExercise, removeExercise, addExercise, addSetToExercise, removeSetFromExercise } from '../api/workoutSessions';
 import { getExercises } from '../api/exercises';
-import { getMesocycleInstance, updateMesocycleInstance, updateWorkoutExercise } from '../api/mesocycles';
+import { getMesocycleInstance, updateMesocycleInstance, updateInstanceExerciseNotes } from '../api/mesocycles';
 import { WorkoutSession, WorkoutSet, WorkoutSessionListItem } from '../types/workout_session';
 import { Exercise } from '../types/exercise';
 import { MesocycleInstance } from '../types/mesocycle';
@@ -485,51 +485,44 @@ export default function WorkoutExecution() {
     return template.exercises.find(e => e.exercise_id === exerciseId) || null;
   };
 
-  const handleNotesEdit = (exerciseId: number) => {
+  // Get the effective notes for an exercise: instance override first, then template
+  const getEffectiveNotes = (exerciseId: number): string => {
     const templateExercise = getTemplateExercise(exerciseId);
+    if (!templateExercise) return '';
+    const instanceNote = instance?.exercise_notes?.[String(templateExercise.id)];
+    if (instanceNote !== undefined) return instanceNote;
+    return templateExercise.notes || '';
+  };
+
+  const handleNotesEdit = (exerciseId: number) => {
     setEditingNotesExerciseId(exerciseId);
-    setDraftNotes(templateExercise?.notes || '');
+    setDraftNotes(getEffectiveNotes(exerciseId));
   };
 
   const handleNotesSave = async (exerciseId: number) => {
     setEditingNotesExerciseId(null);
     if (!accessToken || !mesocycle || !session || !instance) return;
 
-    const template = mesocycle.workout_templates[session.day_number - 1];
-    if (!template) return;
-
-    const templateExercise = template.exercises.find(e => e.exercise_id === exerciseId);
+    const templateExercise = getTemplateExercise(exerciseId);
     if (!templateExercise) return;
 
     // Skip save if unchanged
-    if ((templateExercise.notes || '') === draftNotes) return;
+    const currentNotes = getEffectiveNotes(exerciseId);
+    if (currentNotes === draftNotes) return;
 
     try {
-      await updateWorkoutExercise(
-        mesocycle.id,
-        template.id,
+      const updatedNotes = await updateInstanceExerciseNotes(
+        instance.id,
         templateExercise.id,
-        { notes: draftNotes || undefined },
+        draftNotes,
         accessToken
       );
       // Update local instance state so the UI reflects the change
       setInstance(prev => {
-        if (!prev?.mesocycle_template) return prev;
+        if (!prev) return prev;
         return {
           ...prev,
-          mesocycle_template: {
-            ...prev.mesocycle_template,
-            workout_templates: prev.mesocycle_template.workout_templates.map(wt =>
-              wt.id === template.id
-                ? {
-                    ...wt,
-                    exercises: wt.exercises.map(e =>
-                      e.id === templateExercise.id ? { ...e, notes: draftNotes || undefined } : e
-                    ),
-                  }
-                : wt
-            ),
-          },
+          exercise_notes: updatedNotes,
         };
       });
     } catch (err) {
@@ -724,7 +717,7 @@ export default function WorkoutExecution() {
                         const templateExercise = getTemplateExercise(exerciseId);
                         if (!templateExercise) return null;
                         const isEditing = editingNotesExerciseId === exerciseId;
-                        const notes = templateExercise.notes;
+                        const notes = getEffectiveNotes(exerciseId);
 
                         if (isEditing) {
                           return (
