@@ -19,7 +19,7 @@ export function FormInput({ label, error, className = '', ...props }: FormInputP
         className={`
           w-full px-4 py-3 bg-gray-800 border rounded-lg
           text-white placeholder-gray-500
-          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+          focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent
           ${error ? 'border-red-500' : 'border-gray-700'}
           ${className}
         `}

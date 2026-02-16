@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { getActiveMesocycleInstance, updateMesocycleInstance } from '../api/mesocycles';
 import { listWorkoutSessions, createWorkoutSession } from '../api/workoutSessions';
@@ -12,7 +12,8 @@ import { WorkoutSessionListItem } from '../types/workout_session';
 
 export function Home() {
   const navigate = useNavigate();
-  const { user, logout, accessToken } = useAuthStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { user, accessToken } = useAuthStore();
   const [activeInstance, setActiveInstance] = useState<MesocycleInstance | null>(null);
   const [workoutSessions, setWorkoutSessions] = useState<WorkoutSessionListItem[]>([]);
   const [showCalendar, setShowCalendar] = useState(false);
@@ -20,6 +21,14 @@ export function Home() {
   useEffect(() => {
     loadActiveInstance();
   }, []);
+
+  // Open calendar when navigated with ?showCalendar=true
+  useEffect(() => {
+    if (searchParams.get('showCalendar') && activeInstance) {
+      setShowCalendar(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, activeInstance]);
 
   const loadActiveInstance = async () => {
     if (!accessToken) return;
@@ -120,15 +129,10 @@ export function Home() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
   const mesocycle = activeInstance?.mesocycle_template;
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <>
       {/* Calendar Popup */}
       {showCalendar && mesocycle && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -203,49 +207,6 @@ export function Home() {
         </div>
       )}
 
-      {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl sm:text-2xl font-bold text-white">Metric Gain</h1>
-            <div className="flex items-center gap-3 sm:gap-6 flex-wrap justify-end">
-              <button
-                onClick={() => navigate('/how-it-works')}
-                className="text-sm sm:text-base text-gray-300 hover:text-white transition-colors"
-              >
-                How It Works
-              </button>
-              {activeInstance && (
-                <button
-                  onClick={() => setShowCalendar(true)}
-                  className="text-sm sm:text-base text-gray-300 hover:text-white transition-colors"
-                >
-                  Current Meso
-                </button>
-              )}
-              <button
-                onClick={() => navigate('/exercises')}
-                className="text-sm sm:text-base text-gray-300 hover:text-white transition-colors"
-              >
-                Exercises
-              </button>
-              <button
-                onClick={() => navigate('/mesocycles')}
-                className="text-sm sm:text-base text-gray-300 hover:text-white transition-colors"
-              >
-                Mesocycles
-              </button>
-              <button
-                onClick={handleLogout}
-                className="text-sm sm:text-base text-gray-300 hover:text-white transition-colors"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {/* Active Mesocycle Card */}
@@ -311,6 +272,6 @@ export function Home() {
           </div>
         </div>
       </main>
-    </div>
+    </>
   );
 }

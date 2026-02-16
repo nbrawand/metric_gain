@@ -3,7 +3,6 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { getExercises, getMuscleGroups, createExercise, deleteExercise } from '../api/exercises';
 import type { Exercise, ExerciseCreate } from '../types/exercise';
@@ -11,7 +10,6 @@ import { FormInput } from '../components/FormInput';
 import { Button } from '../components/Button';
 
 export function Exercises() {
-  const navigate = useNavigate();
   const { accessToken } = useAuthStore();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [muscleGroups, setMuscleGroups] = useState<string[]>([]);
@@ -111,15 +109,6 @@ export function Exercises() {
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base w-full sm:w-auto"
               >
                 + Create Custom Exercise
-              </button>
-              <button
-                onClick={() => navigate('/')}
-                className="text-gray-400 hover:text-white transition border border-gray-600 rounded-lg p-2 hover:border-gray-400"
-                title="Home"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z" />
-                </svg>
               </button>
             </div>
           </div>

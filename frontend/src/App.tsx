@@ -9,6 +9,7 @@ import MesocycleDetail from './pages/MesocycleDetail';
 import WorkoutExecution from './pages/WorkoutExecution';
 import HowItWorks from './pages/HowItWorks';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import Layout from './components/Layout';
 import { useAuthStore } from './stores/authStore';
 import { setAuthStoreRef, onConnectivityChange, getServerReachable } from './api/client';
 
@@ -46,7 +47,7 @@ function App() {
           path="/"
           element={
             <ProtectedRoute>
-              <Home />
+              <Layout><Home /></Layout>
             </ProtectedRoute>
           }
         />
@@ -54,7 +55,7 @@ function App() {
           path="/exercises"
           element={
             <ProtectedRoute>
-              <Exercises />
+              <Layout><Exercises /></Layout>
             </ProtectedRoute>
           }
         />
@@ -62,7 +63,7 @@ function App() {
           path="/mesocycles"
           element={
             <ProtectedRoute>
-              <Mesocycles />
+              <Layout><Mesocycles /></Layout>
             </ProtectedRoute>
           }
         />
@@ -70,7 +71,7 @@ function App() {
           path="/mesocycles/:id"
           element={
             <ProtectedRoute>
-              <MesocycleDetail />
+              <Layout><MesocycleDetail /></Layout>
             </ProtectedRoute>
           }
         />
@@ -78,7 +79,7 @@ function App() {
           path="/workout/:sessionId"
           element={
             <ProtectedRoute>
-              <WorkoutExecution />
+              <Layout><WorkoutExecution /></Layout>
             </ProtectedRoute>
           }
         />
@@ -86,7 +87,7 @@ function App() {
           path="/how-it-works"
           element={
             <ProtectedRoute>
-              <HowItWorks />
+              <Layout><HowItWorks /></Layout>
             </ProtectedRoute>
           }
         />
