@@ -8,6 +8,7 @@ import Mesocycles from './pages/Mesocycles';
 import MesocycleDetail from './pages/MesocycleDetail';
 import WorkoutExecution from './pages/WorkoutExecution';
 import HowItWorks from './pages/HowItWorks';
+import About from './pages/About';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import { useAuthStore } from './stores/authStore';
@@ -50,6 +51,7 @@ function App() {
           <Route path="/mesocycles/:id" element={<MesocycleDetail />} />
           <Route path="/workout/:sessionId" element={<WorkoutExecution />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
+          <Route path="/about" element={<About />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
