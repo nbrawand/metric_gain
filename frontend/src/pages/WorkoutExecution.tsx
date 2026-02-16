@@ -461,11 +461,10 @@ export default function WorkoutExecution() {
     if (set.weight > 0) return '';
 
     if (set.target_weight && set.target_weight > 0) {
-      return `${set.target_weight} lbs`;
+      return `target: ${set.target_weight} lbs`;
     }
 
-    // No previous data available
-    return 'a weight you can do at 5-15 reps at the recommended RIR';
+    return '';
   };
 
   // Group exercises by muscle group
@@ -720,7 +719,7 @@ export default function WorkoutExecution() {
                             />
                             {recommendation && !isSkipped && (
                               <div className="text-xs text-teal-400 text-center mt-1">
-                                We recommend: {recommendation}
+                                {recommendation}
                               </div>
                             )}
                           </div>
@@ -748,7 +747,11 @@ export default function WorkoutExecution() {
                                   : Math.round(3 * (trainingWeeks - session.week_number) / (trainingWeeks - 1));
                               return (
                                 <div className="text-xs text-teal-400 text-center mt-1">
-                                  We recommend: {isDeload ? '' : set.target_reps ? `${set.target_reps} reps or ` : ''}{weekRir} RIR
+                                  {isDeload
+                                    ? `${weekRir} RIR`
+                                    : set.target_reps
+                                      ? `target: ${set.target_reps} reps or ${weekRir} RIR`
+                                      : `target: 6-15 reps at ${weekRir} RIR`}
                                 </div>
                               );
                             })()}
