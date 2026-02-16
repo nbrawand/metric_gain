@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { getWorkoutSession, updateWorkoutSet, updateWorkoutSession, listWorkoutSessions, createWorkoutSession, submitWorkoutFeedback, swapExercise, removeExercise, addExercise, addSetToExercise, removeSetFromExercise } from '../api/workoutSessions';
 import { getExercises } from '../api/exercises';
-import { getMesocycleInstance, updateMesocycleInstance } from '../api/mesocycles';
+import { getMesocycleInstance, updateMesocycleInstance, updateWorkoutExercise } from '../api/mesocycles';
 import { WorkoutSession, WorkoutSet, WorkoutSessionListItem } from '../types/workout_session';
 import { Exercise } from '../types/exercise';
 import { MesocycleInstance } from '../types/mesocycle';
@@ -27,6 +27,8 @@ export default function WorkoutExecution() {
   const [muscleFeedback, setMuscleFeedback] = useState<Record<string, string>>({});
 
   const [showInfo, setShowInfo] = useState(false);
+  const [showWeightInfo, setShowWeightInfo] = useState(false);
+  const [showLogInfo, setShowLogInfo] = useState(false);
 
   // Exercise management state
   const [showExerciseMenu, setShowExerciseMenu] = useState<number | null>(null); // exercise_id of open dropdown
@@ -35,6 +37,10 @@ export default function WorkoutExecution() {
   const [availableExercises, setAvailableExercises] = useState<Exercise[]>([]);
   const [exerciseSearch, setExerciseSearch] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Notes editing state
+  const [editingNotesExerciseId, setEditingNotesExerciseId] = useState<number | null>(null);
+  const [draftNotes, setDraftNotes] = useState('');
 
   // Local input state to prevent re-renders while typing
   const [inputValues, setInputValues] = useState<SetInputValues>({});
@@ -469,6 +475,68 @@ export default function WorkoutExecution() {
     return '';
   };
 
+  const mesocycle = instance?.mesocycle_template;
+
+  // Look up template exercise to get notes
+  const getTemplateExercise = (exerciseId: number) => {
+    if (!mesocycle?.workout_templates || !session) return null;
+    const template = mesocycle.workout_templates[session.day_number - 1];
+    if (!template) return null;
+    return template.exercises.find(e => e.exercise_id === exerciseId) || null;
+  };
+
+  const handleNotesEdit = (exerciseId: number) => {
+    const templateExercise = getTemplateExercise(exerciseId);
+    setEditingNotesExerciseId(exerciseId);
+    setDraftNotes(templateExercise?.notes || '');
+  };
+
+  const handleNotesSave = async (exerciseId: number) => {
+    setEditingNotesExerciseId(null);
+    if (!accessToken || !mesocycle || !session || !instance) return;
+
+    const template = mesocycle.workout_templates[session.day_number - 1];
+    if (!template) return;
+
+    const templateExercise = template.exercises.find(e => e.exercise_id === exerciseId);
+    if (!templateExercise) return;
+
+    // Skip save if unchanged
+    if ((templateExercise.notes || '') === draftNotes) return;
+
+    try {
+      await updateWorkoutExercise(
+        mesocycle.id,
+        template.id,
+        templateExercise.id,
+        { notes: draftNotes || undefined },
+        accessToken
+      );
+      // Update local instance state so the UI reflects the change
+      setInstance(prev => {
+        if (!prev?.mesocycle_template) return prev;
+        return {
+          ...prev,
+          mesocycle_template: {
+            ...prev.mesocycle_template,
+            workout_templates: prev.mesocycle_template.workout_templates.map(wt =>
+              wt.id === template.id
+                ? {
+                    ...wt,
+                    exercises: wt.exercises.map(e =>
+                      e.id === templateExercise.id ? { ...e, notes: draftNotes || undefined } : e
+                    ),
+                  }
+                : wt
+            ),
+          },
+        };
+      });
+    } catch (err) {
+      console.error('Error updating exercise notes:', err);
+    }
+  };
+
   // Group exercises by muscle group
   const groupedExercises = session?.workout_sets.reduce((acc, set) => {
     const muscleGroup = set.exercise?.muscle_group || 'Other';
@@ -486,8 +554,6 @@ export default function WorkoutExecution() {
       </div>
     );
   }
-
-  const mesocycle = instance?.mesocycle_template;
 
   if (error || !session || !instance || !mesocycle) {
     return (
@@ -648,11 +714,57 @@ export default function WorkoutExecution() {
                 return (
                 <div key={exerciseName} className="bg-gray-800 rounded-lg p-4 mb-3">
                   <div className="flex items-center justify-between mb-3">
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <h3 className="font-semibold">{exerciseName}</h3>
                       <p className="text-xs text-gray-400">
                         {exerciseSets[0]?.exercise?.equipment || 'BODYWEIGHT'}
                       </p>
+                      {/* Exercise Notes */}
+                      {mesocycle && (() => {
+                        const templateExercise = getTemplateExercise(exerciseId);
+                        if (!templateExercise) return null;
+                        const isEditing = editingNotesExerciseId === exerciseId;
+                        const notes = templateExercise.notes;
+
+                        if (isEditing) {
+                          return (
+                            <input
+                              type="text"
+                              value={draftNotes}
+                              onChange={(e) => setDraftNotes(e.target.value)}
+                              onBlur={() => handleNotesSave(exerciseId)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                              className="mt-1 w-full bg-gray-700 text-gray-300 text-xs rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                              placeholder="Add notes..."
+                              autoFocus
+                            />
+                          );
+                        }
+
+                        if (notes) {
+                          return (
+                            <p
+                              onClick={() => session.status !== 'completed' && handleNotesEdit(exerciseId)}
+                              className={`text-xs text-gray-500 italic mt-1 ${session.status !== 'completed' ? 'cursor-pointer hover:text-gray-300' : ''}`}
+                            >
+                              {notes}
+                            </p>
+                          );
+                        }
+
+                        if (session.status !== 'completed') {
+                          return (
+                            <button
+                              onClick={() => handleNotesEdit(exerciseId)}
+                              className="text-xs text-gray-600 hover:text-gray-400 mt-1"
+                            >
+                              + add note
+                            </button>
+                          );
+                        }
+
+                        return null;
+                      })()}
                     </div>
                     {session.status !== 'completed' && (
                       <div className="relative">
@@ -689,12 +801,9 @@ export default function WorkoutExecution() {
                   {/* Column Headers */}
                   <div className="grid grid-cols-12 gap-1 sm:gap-2 text-xs text-gray-400 mb-2">
                     <div className="col-span-1"></div>
-                    <div className="col-span-4 text-center">WEIGHT</div>
+                    <div className="col-span-4 text-center">WEIGHT <button onClick={() => setShowWeightInfo(true)} className="text-gray-400 hover:text-white">ⓘ</button></div>
                     <div className="col-span-4 text-center">REPS <button onClick={() => setShowInfo(true)} className="text-gray-400 hover:text-white">ⓘ</button></div>
-                    <div className="col-span-3 text-center">
-                      <div>LOG</div>
-                      <div className="text-[10px] sm:text-xs text-gray-500 mt-1 leading-tight">Sets left empty are logged as skipped</div>
-                    </div>
+                    <div className="col-span-3 text-center">LOG <button onClick={() => setShowLogInfo(true)} className="text-gray-400 hover:text-white">ⓘ</button></div>
                   </div>
 
                   {/* Sets */}
@@ -940,14 +1049,14 @@ export default function WorkoutExecution() {
         </div>
       )}
 
-      {/* Info Modal */}
-      {showInfo && (
+      {/* Weight Info Modal */}
+      {showWeightInfo && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-white">Quick Guide</h3>
               <button
-                onClick={() => setShowInfo(false)}
+                onClick={() => setShowWeightInfo(false)}
                 className="text-gray-400 hover:text-white text-xl"
               >
                 ✕
@@ -962,7 +1071,48 @@ export default function WorkoutExecution() {
 
               <div>
                 <p className="font-medium text-white mb-1">What is RIR?</p>
-                <p>3 RIR = stop with 3 reps left in the tank. 0 RIR = you couldn't do another rep. Each week the RIR drops so you gradually push harder.</p>
+                <p>3 RIR = stop when you think you can do only 3 more reps at the end of your set. 0 RIR = you couldn't do another rep. Each week the RIR drops so you gradually push harder.</p>
+              </div>
+
+              <div>
+                <p className="font-medium text-white mb-1">Rest Between Sets</p>
+                <p>No timer here on purpose. Rest until you feel ready to give your next set full effort. That's usually 2-4 minutes for big lifts, 1-2 for smaller ones.</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowWeightInfo(false)}
+              className="w-full mt-5 bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 rounded-lg"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Reps Info Modal */}
+      {showInfo && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-white">Reps Guide</h3>
+              <button
+                onClick={() => setShowInfo(false)}
+                className="text-gray-400 hover:text-white text-xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 text-sm text-gray-300">
+              <div>
+                <p className="font-medium text-white mb-1">Rep Range</p>
+                <p>Aim for 6-15 reps per set for muscle growth. If you can do more than 15, go heavier. If you can't hit 6, go lighter.</p>
+              </div>
+
+              <div>
+                <p className="font-medium text-white mb-1">What is RIR?</p>
+                <p>3 RIR = stop when you think you can do only 3 more reps at the end of your set. 0 RIR = you couldn't do another rep. Each week the RIR drops so you gradually push harder.</p>
               </div>
 
               <div>
@@ -973,6 +1123,32 @@ export default function WorkoutExecution() {
 
             <button
               onClick={() => setShowInfo(false)}
+              className="w-full mt-5 bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 rounded-lg"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Log Info Modal */}
+      {showLogInfo && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-white">Logging Sets</h3>
+              <button
+                onClick={() => setShowLogInfo(false)}
+                className="text-gray-400 hover:text-white text-xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-300">Sets left empty are logged as skipped. Enter a weight and reps to log a set, or leave both blank to skip it.</p>
+
+            <button
+              onClick={() => setShowLogInfo(false)}
               className="w-full mt-5 bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 rounded-lg"
             >
               Got it
