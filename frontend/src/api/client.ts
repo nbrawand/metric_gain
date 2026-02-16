@@ -36,6 +36,29 @@ function parseErrorResponse(response: Response, errorData?: unknown): ApiError {
 }
 
 /**
+ * Global connectivity state — tracks whether the backend is reachable.
+ * Components subscribe via onConnectivityChange().
+ */
+let _serverReachable = true;
+type ConnectivityListener = (reachable: boolean) => void;
+const _connectivityListeners = new Set<ConnectivityListener>();
+
+export function onConnectivityChange(listener: ConnectivityListener): () => void {
+  _connectivityListeners.add(listener);
+  return () => { _connectivityListeners.delete(listener); };
+}
+
+export function getServerReachable(): boolean {
+  return _serverReachable;
+}
+
+function setServerReachable(reachable: boolean) {
+  if (reachable === _serverReachable) return;
+  _serverReachable = reachable;
+  _connectivityListeners.forEach((fn) => fn(reachable));
+}
+
+/**
  * Hook for the auth store's setState, registered at app startup via setAuthStoreRef().
  * Allows the client to update the in-memory Zustand state after a token refresh.
  */
@@ -105,13 +128,24 @@ async function fetchApi<T>(
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
 
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+  } catch {
+    // Network error — server unreachable
+    setServerReachable(false);
+    const error: ApiError = { detail: 'An error occurred', status: 0 };
+    throw error;
+  }
+
+  // We got a response — server is reachable
+  setServerReachable(true);
 
   if (!response.ok) {
     let errorData: unknown;
