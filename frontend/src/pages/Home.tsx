@@ -3,32 +3,22 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { getActiveMesocycleInstance, updateMesocycleInstance } from '../api/mesocycles';
+import { getActiveMesocycleInstance } from '../api/mesocycles';
 import { listWorkoutSessions, createWorkoutSession } from '../api/workoutSessions';
 import { MesocycleInstance } from '../types/mesocycle';
 import { WorkoutSessionListItem } from '../types/workout_session';
 
 export function Home() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const { user, accessToken } = useAuthStore();
   const [activeInstance, setActiveInstance] = useState<MesocycleInstance | null>(null);
   const [workoutSessions, setWorkoutSessions] = useState<WorkoutSessionListItem[]>([]);
-  const [showCalendar, setShowCalendar] = useState(false);
 
   useEffect(() => {
     loadActiveInstance();
   }, []);
-
-  // Open calendar when navigated with ?showCalendar=true
-  useEffect(() => {
-    if (searchParams.get('showCalendar') && activeInstance) {
-      setShowCalendar(true);
-      setSearchParams({}, { replace: true });
-    }
-  }, [searchParams, activeInstance]);
 
   const loadActiveInstance = async () => {
     if (!accessToken) return;
@@ -51,81 +41,52 @@ export function Home() {
     }
   };
 
-  const handleContinueMesocycle = () => {
-    setShowCalendar(true);
-  };
-
-  const getDayLabel = (dayNumber: number): string => {
-    return `Day ${dayNumber}`;
-  };
-
-  const getSessionStatus = (weekNum: number, dayNum: number): 'completed' | 'in_progress' | 'skipped' | null => {
-    const foundSession = workoutSessions.find(
-      s => s.week_number === weekNum && s.day_number === dayNum
-    );
-    if (!foundSession) return null;
-    return foundSession.status as 'completed' | 'in_progress' | 'skipped';
-  };
-
-  const getSessionId = (weekNum: number, dayNum: number): number | null => {
-    const foundSession = workoutSessions.find(
-      s => s.week_number === weekNum && s.day_number === dayNum
-    );
-    return foundSession?.id || null;
-  };
-
-  const handleCalendarCellClick = async (weekNum: number, dayNum: number) => {
-    const sessId = getSessionId(weekNum, dayNum);
-    if (sessId) {
-      // Session exists, navigate to it
-      navigate(`/workout/${sessId}`);
-      setShowCalendar(false);
-    } else if (activeInstance && accessToken) {
-      // No session exists, create one for this week/day
-      const mesocycle = activeInstance.mesocycle_template;
-      if (!mesocycle) return;
-      const templateIndex = dayNum - 1;
-      const template = mesocycle.workout_templates?.[templateIndex];
-
-      if (!template) {
-        console.error('No workout template found for day', dayNum);
-        return;
-      }
-
-      try {
-        const newSession = await createWorkoutSession({
-          mesocycle_instance_id: activeInstance.id,
-          workout_template_id: template.id,
-          workout_date: new Date().toISOString().split('T')[0],
-          week_number: weekNum,
-          day_number: dayNum,
-        }, accessToken);
-
-        navigate(`/workout/${newSession.id}`);
-        setShowCalendar(false);
-      } catch (err) {
-        console.error('Error creating workout session:', err);
-      }
-    }
-  };
-
-  const handleEndMesocycle = async () => {
+  const handleContinueMesocycle = async () => {
     if (!activeInstance || !accessToken) return;
+    const meso = activeInstance.mesocycle_template;
+    if (!meso) return;
 
-    if (!confirm('Are you sure you want to end this mesocycle? This will mark it as completed.')) {
+    const daysPerWeek = meso.workout_templates?.length || meso.days_per_week;
+
+    // 1. If there's an in_progress session, go straight to it
+    const inProgress = workoutSessions.find(s => s.status === 'in_progress');
+    if (inProgress) {
+      navigate(`/workout/${inProgress.id}`);
       return;
     }
 
-    try {
-      await updateMesocycleInstance(activeInstance.id, { status: 'completed' }, accessToken);
-      setShowCalendar(false);
-      setActiveInstance(null);
-      setWorkoutSessions([]);
-      // Reload to check for any other active instances
-      loadActiveInstance();
-    } catch (err) {
-      console.error('Error ending mesocycle:', err);
-      alert('Failed to end mesocycle');
+    // 2. Walk week-by-week, day-by-day to find the first slot without a completed session
+    for (let week = 1; week <= meso.weeks; week++) {
+      for (let day = 1; day <= daysPerWeek; day++) {
+        const existing = workoutSessions.find(
+          s => s.week_number === week && s.day_number === day
+        );
+        if (existing && existing.status === 'completed') continue;
+
+        // Found the next slot — use existing session or create one
+        if (existing) {
+          navigate(`/workout/${existing.id}`);
+          return;
+        }
+
+        const templateIndex = day - 1;
+        const template = meso.workout_templates?.[templateIndex];
+        if (!template) continue;
+
+        try {
+          const newSession = await createWorkoutSession({
+            mesocycle_instance_id: activeInstance.id,
+            workout_template_id: template.id,
+            workout_date: new Date().toISOString().split('T')[0],
+            week_number: week,
+            day_number: day,
+          }, accessToken);
+          navigate(`/workout/${newSession.id}`);
+        } catch (err) {
+          console.error('Error creating workout session:', err);
+        }
+        return;
+      }
     }
   };
 
@@ -133,80 +94,6 @@ export function Home() {
 
   return (
     <>
-      {/* Calendar Popup */}
-      {showCalendar && mesocycle && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-white">{mesocycle.name}</h3>
-              <button
-                onClick={() => setShowCalendar(false)}
-                className="text-gray-400 hover:text-white text-xl"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Calendar Grid */}
-            <div className="overflow-x-auto">
-              <div className="inline-block min-w-full">
-                {/* Week Headers */}
-                <div className="flex gap-2 mb-2">
-                  <div className="w-12"></div>
-                  {Array.from({ length: mesocycle.weeks }, (_, i) => i + 1).map(weekNum => (
-                    <div key={weekNum} className="flex-1 min-w-[60px] text-center">
-                      <div className="text-xs text-gray-400 font-semibold">
-                        {weekNum === mesocycle.weeks ? 'DL' : `${weekNum}`}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Day Rows */}
-                {Array.from({ length: mesocycle.workout_templates?.length || mesocycle.days_per_week }, (_, i) => i + 1).map(dayNum => (
-                  <div key={dayNum} className="flex gap-2 mb-2">
-                    {/* Day Label */}
-                    <div className="w-12 flex items-center">
-                      <span className="text-xs text-gray-400">{getDayLabel(dayNum)}</span>
-                    </div>
-
-                    {/* Week Cells */}
-                    {Array.from({ length: mesocycle.weeks }, (_, i) => i + 1).map(weekNum => {
-                      const status = getSessionStatus(weekNum, dayNum);
-
-                      return (
-                        <div key={weekNum} className="flex-1 min-w-[60px]">
-                          <button
-                            onClick={() => handleCalendarCellClick(weekNum, dayNum)}
-                            className={`w-full py-2 px-3 rounded text-xs font-medium transition-colors ${
-                              status === 'completed'
-                                ? 'bg-teal-600 text-white hover:bg-teal-700'
-                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600 cursor-pointer'
-                            }`}
-                          >
-                            {getDayLabel(dayNum)}
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* End Mesocycle Button */}
-            <div className="mt-6 pt-4 border-t border-gray-700">
-              <button
-                onClick={handleEndMesocycle}
-                className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-              >
-                End Mesocycle
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {/* Active Mesocycle Card */}

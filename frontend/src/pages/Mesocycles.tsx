@@ -379,7 +379,7 @@ export default function Mesocycles() {
                           Stock
                         </span>
                       )}
-                      <span className="px-2 py-1 rounded text-xs font-medium bg-blue-900/50 text-blue-300">
+                      <span className="px-2 py-1 rounded text-xs font-medium bg-teal-900/50 text-teal-300">
                         Template
                       </span>
                     </div>
@@ -579,7 +579,7 @@ export default function Mesocycles() {
                           disabled={!selectedSourceInstance || !selectedSourceWeek}
                           className={`w-full py-3 px-4 rounded-lg font-medium transition ${
                             selectedSourceInstance && selectedSourceWeek
-                              ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                              ? 'bg-teal-600 hover:bg-teal-700 text-white'
                               : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                           }`}
                         >
@@ -640,7 +640,7 @@ export default function Mesocycles() {
                       onChange={(e) =>
                         setMesocycleData({ ...mesocycleData, name: e.target.value })
                       }
-                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                       required
                     />
                   </div>
@@ -654,7 +654,7 @@ export default function Mesocycles() {
                       onChange={(e) =>
                         setMesocycleData({ ...mesocycleData, description: e.target.value })
                       }
-                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                       rows={2}
                     />
                   </div>
@@ -671,7 +671,7 @@ export default function Mesocycles() {
                       onChange={(e) =>
                         setMesocycleData({ ...mesocycleData, weeks: parseInt(e.target.value) })
                       }
-                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                       required
                     />
                   </div>
@@ -685,7 +685,7 @@ export default function Mesocycles() {
                       onChange={(e) =>
                         setMesocycleData({ ...mesocycleData, days_per_week: parseInt(e.target.value) })
                       }
-                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                       required
                     >
                       <option value="1">1 day per week</option>
@@ -744,7 +744,7 @@ export default function Mesocycles() {
                                   onChange={(e) =>
                                     updateWorkoutTemplate(dayIndex, 'name', e.target.value)
                                   }
-                                  className="w-full px-4 py-3 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  className="w-full px-4 py-3 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                                   required
                                 />
                               </div>
@@ -757,7 +757,7 @@ export default function Mesocycles() {
                                   onChange={(e) =>
                                     updateWorkoutTemplate(dayIndex, 'description', e.target.value)
                                   }
-                                  className="w-full px-4 py-3 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  className="w-full px-4 py-3 bg-gray-600 border border-gray-500 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                                   rows={2}
                                 />
                               </div>
@@ -797,7 +797,7 @@ export default function Mesocycles() {
                                             updateExercise(dayIndex, exerciseIndex, 'exercise_id', firstInGroup.id);
                                           }
                                         }}
-                                        className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                                       >
                                         {muscleGroups.map((group) => (
                                           <option key={group} value={group}>{group}</option>
@@ -816,7 +816,7 @@ export default function Mesocycles() {
                                             parseInt(e.target.value)
                                           )
                                         }
-                                        className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                                       >
                                         {exercises
                                           .filter(ex => ex.muscle_group === (exercises.find(e => e.id === exercise.exercise_id)?.muscle_group))
@@ -842,7 +842,7 @@ export default function Mesocycles() {
                                             e.target.value
                                           )
                                         }
-                                        className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-lg text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-lg text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                                       />
                                     </div>
 

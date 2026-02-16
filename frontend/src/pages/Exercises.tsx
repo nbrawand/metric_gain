@@ -106,7 +106,7 @@ export function Exercises() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base w-full sm:w-auto"
+                className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors text-sm sm:text-base w-full sm:w-auto"
               >
                 + Create Custom Exercise
               </button>
@@ -130,7 +130,7 @@ export function Exercises() {
                 placeholder="Search exercises..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
 
@@ -142,7 +142,7 @@ export function Exercises() {
               <select
                 value={selectedMuscleGroup}
                 onChange={(e) => setSelectedMuscleGroup(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
               >
                 <option value="">All Muscle Groups</option>
                 {muscleGroups.map((group) => (
@@ -205,7 +205,7 @@ export function Exercises() {
                 </div>
 
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="px-2 py-1 bg-blue-900 text-blue-200 text-xs rounded">
+                  <span className="px-2 py-1 bg-teal-900 text-teal-200 text-xs rounded">
                     {exercise.muscle_group}
                   </span>
                   {exercise.is_custom && (
@@ -260,7 +260,7 @@ export function Exercises() {
                   onChange={(e) =>
                     setCreateFormData({ ...createFormData, muscle_group: e.target.value })
                   }
-                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
                   required
                 >
                   <option value="">Select a muscle group</option>
@@ -283,7 +283,7 @@ export function Exercises() {
                   onChange={(e) =>
                     setCreateFormData({ ...createFormData, equipment: e.target.value })
                   }
-                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
                 >
                   <option value="">Select equipment (optional)</option>
                   <option value="Barbell">Barbell</option>
@@ -311,7 +311,7 @@ export function Exercises() {
                   onChange={(e) =>
                     setCreateFormData({ ...createFormData, description: e.target.value })
                   }
-                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
                   rows={3}
                   placeholder="Describe the exercise..."
                 />

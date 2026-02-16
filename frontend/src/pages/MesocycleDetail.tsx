@@ -341,7 +341,7 @@ export default function MesocycleDetail() {
                   type="text"
                   value={editData.name}
                   onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   required
                 />
               </div>
@@ -350,7 +350,7 @@ export default function MesocycleDetail() {
                 <textarea
                   value={editData.description}
                   onChange={(e) => setEditData({ ...editData, description: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   rows={3}
                 />
               </div>
@@ -363,7 +363,7 @@ export default function MesocycleDetail() {
                     max="12"
                     value={editData.weeks}
                     onChange={(e) => setEditData({ ...editData, weeks: parseInt(e.target.value) })}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -371,7 +371,7 @@ export default function MesocycleDetail() {
                   <select
                     value={editData.days_per_week}
                     onChange={(e) => setEditData({ ...editData, days_per_week: parseInt(e.target.value) })}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   >
                     {[1, 2, 3, 4, 5, 6, 7].map((n) => (
                       <option key={n} value={n}>
@@ -392,7 +392,7 @@ export default function MesocycleDetail() {
                         Stock
                       </span>
                     )}
-                    <span className="px-2 py-1 rounded text-xs font-medium bg-blue-900/50 text-blue-300">
+                    <span className="px-2 py-1 rounded text-xs font-medium bg-teal-900/50 text-teal-300">
                       Template
                     </span>
                   </div>
@@ -484,7 +484,7 @@ export default function MesocycleDetail() {
                               type="text"
                               value={workout.name}
                               onChange={(e) => updateWorkoutTemplate(dayIndex, 'name', e.target.value)}
-                              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                               required
                             />
                           </div>
@@ -493,7 +493,7 @@ export default function MesocycleDetail() {
                             <textarea
                               value={workout.description || ''}
                               onChange={(e) => updateWorkoutTemplate(dayIndex, 'description', e.target.value)}
-                              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                               rows={2}
                             />
                           </div>
@@ -534,7 +534,7 @@ export default function MesocycleDetail() {
                                         updateExercise(dayIndex, exerciseIndex, 'exercise_id', firstInGroup.id);
                                       }
                                     }}
-                                    className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                                   >
                                     {muscleGroups.map((group) => (
                                       <option key={group} value={group}>{group}</option>
@@ -548,7 +548,7 @@ export default function MesocycleDetail() {
                                     onChange={(e) =>
                                       updateExercise(dayIndex, exerciseIndex, 'exercise_id', parseInt(e.target.value))
                                     }
-                                    className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                                   >
                                     {exercises
                                       .filter(
@@ -572,7 +572,7 @@ export default function MesocycleDetail() {
                                     onChange={(e) =>
                                       updateExercise(dayIndex, exerciseIndex, 'notes', e.target.value)
                                     }
-                                    className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                                   />
                                 </div>
                                 <p className="text-xs text-gray-400 italic">
