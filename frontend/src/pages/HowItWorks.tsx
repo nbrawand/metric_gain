@@ -113,10 +113,10 @@ export default function HowItWorks() {
           </p>
         </div>
         <div className="space-y-2 text-sm text-gray-300">
-          <p><span className="text-teal-400 font-medium">3 RIR</span> — You had three reps left in reserve. The set felt moderate.</p>
-          <p><span className="text-teal-400 font-medium">2 RIR</span> — You had two reps left. The set was challenging but controlled.</p>
-          <p><span className="text-teal-400 font-medium">1 RIR</span> — You had one rep left. The set was very hard and near your limit.</p>
-          <p><span className="text-teal-400 font-medium">0 RIR</span> — You could not have completed another rep. This is failure.</p>
+          <p><span className="text-teal-400 font-medium">3 RIR</span> -You had three reps left in reserve. The set felt moderate.</p>
+          <p><span className="text-teal-400 font-medium">2 RIR</span> -You had two reps left. The set was challenging but controlled.</p>
+          <p><span className="text-teal-400 font-medium">1 RIR</span> -You had one rep left. The set was very hard and near your limit.</p>
+          <p><span className="text-teal-400 font-medium">0 RIR</span> -You could not have completed another rep. This is failure.</p>
         </div>
         <p className="text-gray-300 leading-relaxed mt-3">
           Metric Gain uses RIR to manage training intensity across each mesocycle. Early weeks use higher RIR targets to allow volume accumulation, while the RIR decreases each week to increase intensity as the block progresses. The deload week uses a very high RIR target of 8 to allow full recovery.
