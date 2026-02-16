@@ -814,6 +814,7 @@ export default function WorkoutExecution() {
                               inputMode="decimal"
                               value={getInputValue(set.id, 'weight')}
                               onChange={(e) => handleInputChange(set.id, 'weight', e.target.value)}
+                              onFocus={(e) => e.target.select()}
                               onBlur={() => handleInputBlur(set.id, 'weight')}
                               disabled={isSkipped}
                               className={`w-full bg-gray-700 text-white text-center rounded py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 ${
@@ -834,6 +835,7 @@ export default function WorkoutExecution() {
                               inputMode="numeric"
                               value={getInputValue(set.id, 'reps')}
                               onChange={(e) => handleInputChange(set.id, 'reps', e.target.value)}
+                              onFocus={(e) => e.target.select()}
                               onBlur={() => handleInputBlur(set.id, 'reps')}
                               disabled={isSkipped}
                               className={`w-full bg-gray-700 text-white text-center rounded py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 ${
