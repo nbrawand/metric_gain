@@ -10,11 +10,98 @@ export interface ApiError {
 }
 
 /**
- * Base fetch wrapper with error handling
+ * Parse an error response into an ApiError
+ */
+function parseErrorResponse(response: Response, errorData?: unknown): ApiError {
+  const error: ApiError = {
+    detail: 'An error occurred',
+    status: response.status,
+  };
+
+  if (errorData && typeof errorData === 'object' && 'detail' in errorData) {
+    const data = errorData as { detail: unknown };
+    if (Array.isArray(data.detail)) {
+      error.detail = data.detail
+        .map((e: { loc?: string[]; msg?: string }) => {
+          const field = e.loc?.[e.loc.length - 1];
+          return field ? `${field}: ${e.msg}` : e.msg;
+        })
+        .join('. ');
+    } else if (typeof data.detail === 'string') {
+      error.detail = data.detail;
+    }
+  }
+
+  return error;
+}
+
+/**
+ * Hook for the auth store's setState, registered at app startup via setAuthStoreRef().
+ * Allows the client to update the in-memory Zustand state after a token refresh.
+ */
+type AuthStoreSetter = (token: string) => void;
+type AuthStoreLogout = () => void;
+let _setAccessToken: AuthStoreSetter | null = null;
+let _logout: AuthStoreLogout | null = null;
+
+export function setAuthStoreRef(setToken: AuthStoreSetter, logout: AuthStoreLogout) {
+  _setAccessToken = setToken;
+  _logout = logout;
+}
+
+/**
+ * Try to refresh the access token using the stored refresh token.
+ * Updates both localStorage and Zustand in-memory state.
+ * Returns the new access token, or null if refresh failed.
+ */
+let refreshPromise: Promise<string | null> | null = null;
+
+async function tryRefreshToken(): Promise<string | null> {
+  // Deduplicate concurrent refresh attempts
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    try {
+      const stored = localStorage.getItem('auth-storage');
+      if (!stored) return null;
+      const { state } = JSON.parse(stored);
+      const refreshToken = state?.refreshToken;
+      if (!refreshToken) return null;
+
+      const response = await fetch(`${API_BASE_URL}/v1/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+
+      if (!response.ok) return null;
+
+      const data = await response.json();
+      const newAccessToken: string = data.access_token;
+
+      // Update Zustand in-memory state so components get the fresh token
+      if (_setAccessToken) {
+        _setAccessToken(newAccessToken);
+      }
+
+      return newAccessToken;
+    } catch {
+      return null;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+/**
+ * Base fetch wrapper with error handling and automatic token refresh
  */
 async function fetchApi<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  _isRetry = false,
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
 
@@ -27,29 +114,22 @@ async function fetchApi<T>(
   });
 
   if (!response.ok) {
-    const error: ApiError = {
-      detail: 'An error occurred',
-      status: response.status,
-    };
+    let errorData: unknown;
+    try { errorData = await response.json(); } catch { /* non-JSON */ }
 
-    try {
-      const errorData = await response.json();
-      if (Array.isArray(errorData.detail)) {
-        // FastAPI validation errors: [{loc: [...], msg: "...", type: "..."}]
-        error.detail = errorData.detail
-          .map((e: { loc?: string[]; msg?: string }) => {
-            const field = e.loc?.[e.loc.length - 1];
-            return field ? `${field}: ${e.msg}` : e.msg;
-          })
-          .join('. ');
-      } else {
-        error.detail = errorData.detail || error.detail;
+    // On 401, try refreshing the token once
+    if (response.status === 401 && !_isRetry) {
+      const newToken = await tryRefreshToken();
+      if (newToken) {
+        const retryHeaders = new Headers(options.headers);
+        retryHeaders.set('Authorization', `Bearer ${newToken}`);
+        return fetchApi<T>(endpoint, { ...options, headers: retryHeaders }, true);
       }
-    } catch {
-      // If error response is not JSON, use default message
+      // Refresh failed — session is truly expired, log out
+      if (_logout) _logout();
     }
 
-    throw error;
+    throw parseErrorResponse(response, errorData);
   }
 
   // Handle 204 No Content responses (e.g., from DELETE)

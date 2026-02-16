@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
@@ -8,8 +9,19 @@ import MesocycleDetail from './pages/MesocycleDetail';
 import WorkoutExecution from './pages/WorkoutExecution';
 import HowItWorks from './pages/HowItWorks';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { useAuthStore } from './stores/authStore';
+import { setAuthStoreRef } from './api/client';
 
 function App() {
+  const logout = useAuthStore((s) => s.logout);
+
+  // Wire the API client to the auth store so token refresh updates in-memory state
+  useEffect(() => {
+    setAuthStoreRef(
+      (token) => useAuthStore.setState({ accessToken: token }),
+      logout,
+    );
+  }, [logout]);
   return (
     <BrowserRouter>
       <Routes>
