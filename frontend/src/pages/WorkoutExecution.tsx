@@ -220,12 +220,19 @@ export default function WorkoutExecution() {
       },
     }));
 
-    // Mark set as unlogged since value changed
-    setLoggedSetIds((prev) => {
-      const next = new Set(prev);
-      next.delete(setId);
-      return next;
-    });
+    // If set was logged, mark as unlogged and reset on server
+    if (loggedSetIds.has(setId)) {
+      setLoggedSetIds((prev) => {
+        const next = new Set(prev);
+        next.delete(setId);
+        return next;
+      });
+      // Reset backend data (fire-and-forget) so the set is treated as never logged
+      if (accessToken && session) {
+        updateWorkoutSet(session.id, setId, { weight: 0, reps: 0, skipped: 0 }, accessToken)
+          .catch((err) => console.error('Error resetting set:', err));
+      }
+    }
 
     // Also update local session state for immediate UI feedback
     if (session) {
@@ -293,6 +300,39 @@ export default function WorkoutExecution() {
         next.delete(setId);
         return next;
       });
+    }
+  };
+
+  // Reset a set on the server (unlog it)
+  const handleUnlogSet = async (setId: number) => {
+    if (!accessToken || !session) return;
+
+    // Immediately mark as unlogged in UI
+    setLoggedSetIds((prev) => {
+      const next = new Set(prev);
+      next.delete(setId);
+      return next;
+    });
+
+    // Reset local input values and session state
+    setInputValues((prev) => ({
+      ...prev,
+      [setId]: { weight: '0', reps: '0' },
+    }));
+    setSession((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        workout_sets: prev.workout_sets.map((s) =>
+          s.id === setId ? { ...s, weight: 0, reps: 0 } : s
+        ),
+      };
+    });
+
+    try {
+      await updateWorkoutSet(session.id, setId, { weight: 0, reps: 0, skipped: 0 }, accessToken);
+    } catch (err) {
+      console.error('Error resetting set:', err);
     }
   };
 
@@ -818,7 +858,7 @@ export default function WorkoutExecution() {
                     <div className="col-span-1"></div>
                     <div className="col-span-4 text-center">WEIGHT <button onClick={() => setShowWeightInfo(true)} className="text-gray-400 hover:text-white">ⓘ</button></div>
                     <div className="col-span-4 text-center">REPS <button onClick={() => setShowInfo(true)} className="text-gray-400 hover:text-white">ⓘ</button></div>
-                    <div className="col-span-3 text-center">LOG <button onClick={() => setShowLogInfo(true)} className="text-gray-400 hover:text-white">ⓘ</button></div>
+                    <div className="col-span-3 text-center">SAVE <button onClick={() => setShowLogInfo(true)} className="text-gray-400 hover:text-white">ⓘ</button></div>
                   </div>
 
                   {/* Sets */}
@@ -889,16 +929,20 @@ export default function WorkoutExecution() {
                                 </svg>
                               </div>
                             ) : isLogged ? (
-                              <div className="w-8 h-8 rounded bg-teal-500 border-2 border-teal-500 flex items-center justify-center text-white">
+                              <button
+                                onClick={() => handleUnlogSet(set.id)}
+                                className="w-8 h-8 rounded bg-teal-500 border-2 border-teal-500 flex items-center justify-center text-white hover:bg-teal-600 transition-colors"
+                                title="Unsave this set"
+                              >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                 </svg>
-                              </div>
+                              </button>
                             ) : (
                               <button
                                 onClick={() => handleLogSet(set.id)}
                                 className="w-8 h-8 rounded border-2 border-gray-600 hover:border-gray-500 flex items-center justify-center transition-colors"
-                                title="Tap to save this set"
+                                title="Save this set"
                               >
                               </button>
                             )}
@@ -1156,7 +1200,7 @@ export default function WorkoutExecution() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-white">Logging Sets</h3>
+              <h3 className="text-lg font-semibold text-white">Saving Sets</h3>
               <button
                 onClick={() => setShowLogInfo(false)}
                 className="text-gray-400 hover:text-white text-xl"
