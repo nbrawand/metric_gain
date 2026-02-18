@@ -45,6 +45,17 @@ export default function WorkoutExecution() {
   // Local input state to prevent re-renders while typing
   const [inputValues, setInputValues] = useState<SetInputValues>({});
 
+  // Collapsible exercises
+  const [collapsedExercises, setCollapsedExercises] = useState<Set<number>>(new Set());
+  const toggleExerciseCollapsed = (exerciseId: number) => {
+    setCollapsedExercises((prev) => {
+      const next = new Set(prev);
+      if (next.has(exerciseId)) next.delete(exerciseId);
+      else next.add(exerciseId);
+      return next;
+    });
+  };
+
   // Explicit save tracking
   const [loggedSetIds, setLoggedSetIds] = useState<Set<number>>(new Set());
   const [savingSetIds, setSavingSetIds] = useState<Set<number>>(new Set());
@@ -767,59 +778,29 @@ export default function WorkoutExecution() {
               {Object.entries(exerciseGroups).map(([exerciseName, exerciseSets]) => {
                 const exerciseId = exerciseSets[0]?.exercise_id;
                 return (
-                <div key={exerciseName} className="bg-gray-800 rounded-lg p-4 mb-3">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold">{exerciseName}</h3>
-                      <p className="text-xs text-gray-400">
-                        {exerciseSets[0]?.exercise?.equipment || 'BODYWEIGHT'}
-                      </p>
-                      {/* Exercise Notes */}
-                      {mesocycle && (() => {
-                        const templateExercise = getTemplateExercise(exerciseId);
-                        if (!templateExercise) return null;
-                        const isEditing = editingNotesExerciseId === exerciseId;
-                        const notes = getEffectiveNotes(exerciseId);
-
-                        if (isEditing) {
-                          return (
-                            <input
-                              type="text"
-                              value={draftNotes}
-                              onChange={(e) => setDraftNotes(e.target.value)}
-                              onBlur={() => handleNotesSave(exerciseId)}
-                              onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                              className="mt-1 w-full bg-gray-700 text-gray-300 text-xs rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                              placeholder="Add notes..."
-                              autoFocus
-                            />
-                          );
-                        }
-
-                        if (notes) {
-                          return (
-                            <p
-                              onClick={() => session.status !== 'completed' && handleNotesEdit(exerciseId)}
-                              className={`text-xs text-gray-500 italic mt-1 ${session.status !== 'completed' ? 'cursor-pointer hover:text-gray-300' : ''}`}
-                            >
-                              {notes}
-                            </p>
-                          );
-                        }
-
-                        if (session.status !== 'completed') {
-                          return (
-                            <button
-                              onClick={() => handleNotesEdit(exerciseId)}
-                              className="text-xs text-gray-600 hover:text-gray-400 mt-1"
-                            >
-                              + add note
-                            </button>
-                          );
-                        }
-
-                        return null;
-                      })()}
+                <div key={exerciseName} className="bg-gray-800 rounded-lg mb-3">
+                  <div className="flex items-center justify-between p-4 pb-0">
+                    <div
+                      className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer"
+                      onClick={() => toggleExerciseCollapsed(exerciseId)}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className={`h-4 w-4 text-gray-400 transition-transform flex-shrink-0 ${collapsedExercises.has(exerciseId) ? '' : 'rotate-180'}`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                      <div>
+                        <h3 className="font-semibold">{exerciseName}</h3>
+                        <p className="text-xs text-gray-400">
+                          {exerciseSets[0]?.exercise?.equipment || 'BODYWEIGHT'}
+                          {collapsedExercises.has(exerciseId) && ` -- ${exerciseSets.length} ${exerciseSets.length === 1 ? 'set' : 'sets'}`}
+                        </p>
+                      </div>
                     </div>
                     {session.status !== 'completed' && (
                       <div className="relative">
@@ -853,6 +834,57 @@ export default function WorkoutExecution() {
                     )}
                   </div>
 
+                  {/* Exercise Notes (always visible) */}
+                  <div className="px-4 pb-2">
+                    {mesocycle && (() => {
+                      const templateExercise = getTemplateExercise(exerciseId);
+                      if (!templateExercise) return null;
+                      const isEditing = editingNotesExerciseId === exerciseId;
+                      const notes = getEffectiveNotes(exerciseId);
+
+                      if (isEditing) {
+                        return (
+                          <input
+                            type="text"
+                            value={draftNotes}
+                            onChange={(e) => setDraftNotes(e.target.value)}
+                            onBlur={() => handleNotesSave(exerciseId)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                            className="mt-1 w-full bg-gray-700 text-gray-300 text-xs rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                            placeholder="Add notes..."
+                            autoFocus
+                          />
+                        );
+                      }
+
+                      if (notes) {
+                        return (
+                          <p
+                            onClick={() => session.status !== 'completed' && handleNotesEdit(exerciseId)}
+                            className={`text-xs text-gray-500 italic mt-1 ${session.status !== 'completed' ? 'cursor-pointer hover:text-gray-300' : ''}`}
+                          >
+                            {notes}
+                          </p>
+                        );
+                      }
+
+                      if (session.status !== 'completed') {
+                        return (
+                          <button
+                            onClick={() => handleNotesEdit(exerciseId)}
+                            className="text-xs text-gray-600 hover:text-gray-400 mt-1"
+                          >
+                            + add note
+                          </button>
+                        );
+                      }
+
+                      return null;
+                    })()}
+                  </div>
+
+                  {/* Collapsible content */}
+                  {!collapsedExercises.has(exerciseId) && (<div className="px-4 pb-4">
                   {/* Column Headers */}
                   <div className="grid grid-cols-12 gap-1 sm:gap-2 text-xs text-gray-400 mb-2">
                     <div className="col-span-1"></div>
@@ -975,6 +1007,7 @@ export default function WorkoutExecution() {
                       </button>
                     </div>
                   )}
+                  </div>)}
                 </div>
               );
               })}
