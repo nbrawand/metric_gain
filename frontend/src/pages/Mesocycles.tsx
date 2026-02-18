@@ -318,6 +318,18 @@ export default function Mesocycles() {
     setWorkoutTemplates(updated);
   };
 
+  const moveExercise = (workoutIndex: number, exerciseIndex: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? exerciseIndex - 1 : exerciseIndex + 1;
+    const updated = [...workoutTemplates];
+    const exercises = [...updated[workoutIndex].exercises];
+    if (targetIndex < 0 || targetIndex >= exercises.length) return;
+    [exercises[exerciseIndex], exercises[targetIndex]] = [exercises[targetIndex], exercises[exerciseIndex]];
+    // Update order_index to match new positions
+    exercises.forEach((ex, i) => { ex.order_index = i; });
+    updated[workoutIndex].exercises = exercises;
+    setWorkoutTemplates(updated);
+  };
+
   // Check if there's already an active instance
   const hasActiveInstance = instances.some(i => i.status === 'active');
 
@@ -776,13 +788,39 @@ export default function Mesocycles() {
                                     <span className="text-sm font-medium text-gray-300">
                                       Exercise {exerciseIndex + 1}
                                     </span>
-                                    <button
-                                      type="button"
-                                      onClick={() => removeExercise(dayIndex, exerciseIndex)}
-                                      className="text-red-400 hover:text-red-300 text-xs font-medium transition-colors"
-                                    >
-                                      Remove
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                      {workout.exercises.length > 1 && (
+                                        <div className="flex flex-col">
+                                          <button
+                                            type="button"
+                                            onClick={() => moveExercise(dayIndex, exerciseIndex, 'up')}
+                                            disabled={exerciseIndex === 0}
+                                            className={`p-0.5 ${exerciseIndex === 0 ? 'text-gray-700' : 'text-gray-400 hover:text-white'}`}
+                                          >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                                            </svg>
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => moveExercise(dayIndex, exerciseIndex, 'down')}
+                                            disabled={exerciseIndex === workout.exercises.length - 1}
+                                            className={`p-0.5 ${exerciseIndex === workout.exercises.length - 1 ? 'text-gray-700' : 'text-gray-400 hover:text-white'}`}
+                                          >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                          </button>
+                                        </div>
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={() => removeExercise(dayIndex, exerciseIndex)}
+                                        className="text-red-400 hover:text-red-300 text-xs font-medium transition-colors"
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
                                   </div>
 
                                   <div className="space-y-3 text-sm">
