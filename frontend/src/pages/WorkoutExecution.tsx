@@ -612,6 +612,64 @@ export default function WorkoutExecution() {
     }
   };
 
+  // Reorder an exercise within its muscle group
+  const handleMoveExercise = async (exerciseId: number, direction: 'up' | 'down') => {
+    if (!accessToken || !session) return;
+
+    // Find the muscle group for this exercise
+    const exerciseSet = session.workout_sets.find(s => s.exercise_id === exerciseId);
+    if (!exerciseSet) return;
+    const muscleGroup = exerciseSet.exercise?.muscle_group || 'Other';
+
+    // Get unique exercises in this muscle group, sorted by order_index
+    const muscleGroupSets = session.workout_sets.filter(
+      s => (s.exercise?.muscle_group || 'Other') === muscleGroup
+    );
+    const seen = new Set<number>();
+    const exercises: { id: number; orderIndex: number }[] = [];
+    muscleGroupSets.forEach(s => {
+      if (!seen.has(s.exercise_id)) {
+        seen.add(s.exercise_id);
+        exercises.push({ id: s.exercise_id, orderIndex: s.order_index });
+      }
+    });
+    exercises.sort((a, b) => a.orderIndex - b.orderIndex);
+
+    const currentIdx = exercises.findIndex(e => e.id === exerciseId);
+    const targetIdx = direction === 'up' ? currentIdx - 1 : currentIdx + 1;
+    if (targetIdx < 0 || targetIdx >= exercises.length) return;
+
+    const currentOrderIndex = exercises[currentIdx].orderIndex;
+    const targetOrderIndex = exercises[targetIdx].orderIndex;
+    const targetExerciseId = exercises[targetIdx].id;
+
+    // Swap order_index in local state immediately
+    setSession(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        workout_sets: prev.workout_sets.map(s => {
+          if (s.exercise_id === exerciseId) return { ...s, order_index: targetOrderIndex };
+          if (s.exercise_id === targetExerciseId) return { ...s, order_index: currentOrderIndex };
+          return s;
+        }),
+      };
+    });
+
+    // Update backend for all affected sets
+    const setsToUpdate = session.workout_sets.filter(
+      s => s.exercise_id === exerciseId || s.exercise_id === targetExerciseId
+    );
+    try {
+      await Promise.all(setsToUpdate.map(s => {
+        const newOrderIndex = s.exercise_id === exerciseId ? targetOrderIndex : currentOrderIndex;
+        return updateWorkoutSet(session.id, s.id, { order_index: newOrderIndex }, accessToken);
+      }));
+    } catch (err) {
+      console.error('Error reordering exercises:', err);
+    }
+  };
+
   // Group exercises by muscle group
   const groupedExercises = session?.workout_sets.reduce((acc, set) => {
     const muscleGroup = set.exercise?.muscle_group || 'Other';
@@ -775,8 +833,12 @@ export default function WorkoutExecution() {
               </div>
 
               {/* Exercise Cards */}
-              {Object.entries(exerciseGroups).map(([exerciseName, exerciseSets]) => {
+              {Object.entries(exerciseGroups)
+                .sort((a, b) => (a[1][0]?.order_index ?? 0) - (b[1][0]?.order_index ?? 0))
+                .map(([exerciseName, exerciseSets], exIdx, exArr) => {
                 const exerciseId = exerciseSets[0]?.exercise_id;
+                const isFirstInGroup = exIdx === 0;
+                const isLastInGroup = exIdx === exArr.length - 1;
                 return (
                 <div key={exerciseName} className="bg-gray-800 rounded-lg mb-3">
                   <div className="flex items-center justify-between p-4 pb-0">
@@ -803,7 +865,32 @@ export default function WorkoutExecution() {
                       </div>
                     </div>
                     {session.status !== 'completed' && (
-                      <div className="relative">
+                      <div className="flex items-center gap-1">
+                        {/* Reorder arrows */}
+                        {!isFirstInGroup || !isLastInGroup ? (
+                          <div className="flex flex-col">
+                            <button
+                              onClick={() => handleMoveExercise(exerciseId, 'up')}
+                              disabled={isFirstInGroup}
+                              className={`p-0.5 ${isFirstInGroup ? 'text-gray-700' : 'text-gray-400 hover:text-white'}`}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleMoveExercise(exerciseId, 'down')}
+                              disabled={isLastInGroup}
+                              className={`p-0.5 ${isLastInGroup ? 'text-gray-700' : 'text-gray-400 hover:text-white'}`}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+                          </div>
+                        ) : null}
+                        {/* Three-dot menu */}
+                        <div className="relative">
                         <button
                           onClick={() => setShowExerciseMenu(showExerciseMenu === exerciseId ? null : exerciseId)}
                           className="text-gray-400 hover:text-white p-1"
@@ -830,6 +917,7 @@ export default function WorkoutExecution() {
                             </button>
                           </div>
                         )}
+                      </div>
                       </div>
                     )}
                   </div>
