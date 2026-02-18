@@ -45,21 +45,38 @@ export default function WorkoutExecution() {
   // Local input state to prevent re-renders while typing
   const [inputValues, setInputValues] = useState<SetInputValues>({});
 
+  // Explicit save tracking
+  const [loggedSetIds, setLoggedSetIds] = useState<Set<number>>(new Set());
+  const [savingSetIds, setSavingSetIds] = useState<Set<number>>(new Set());
+  const [completingWorkout, setCompletingWorkout] = useState(false);
+
   useEffect(() => {
     loadWorkoutSession();
   }, [sessionId]);
 
-  // Initialize input values when session data loads
+  // Initialize input values when session data loads (merge, don't overwrite edits)
   useEffect(() => {
     if (session) {
-      const initialValues: SetInputValues = {};
-      session.workout_sets.forEach((set) => {
-        initialValues[set.id] = {
-          weight: set.weight.toString(),
-          reps: set.reps.toString(),
-        };
+      setInputValues((prev) => {
+        const currentSetIds = new Set(session.workout_sets.map(s => s.id));
+        const next: SetInputValues = {};
+        // Keep existing edits for sets that still exist
+        for (const id of Object.keys(prev).map(Number)) {
+          if (currentSetIds.has(id)) {
+            next[id] = prev[id];
+          }
+        }
+        // Add entries for new sets only
+        session.workout_sets.forEach((set) => {
+          if (!(set.id in next)) {
+            next[set.id] = {
+              weight: set.weight.toString(),
+              reps: set.reps.toString(),
+            };
+          }
+        });
+        return next;
       });
-      setInputValues(initialValues);
     }
   }, [session]);
 
@@ -88,6 +105,13 @@ export default function WorkoutExecution() {
     if (!confirm('Remove this exercise from the workout?')) return;
     try {
       const updated = await removeExercise(session.id, exerciseId, accessToken);
+      // Clean up stale IDs for removed sets
+      const updatedSetIds = new Set(updated.workout_sets.map(s => s.id));
+      setLoggedSetIds(prev => {
+        const next = new Set<number>();
+        prev.forEach(id => { if (updatedSetIds.has(id)) next.add(id); });
+        return next;
+      });
       setSession(updated);
       setShowExerciseMenu(null);
     } catch (err) {
@@ -121,6 +145,13 @@ export default function WorkoutExecution() {
     if (!accessToken || !session) return;
     try {
       const updated = await removeSetFromExercise(session.id, exerciseId, accessToken);
+      // Clean up stale IDs for removed sets
+      const updatedSetIds = new Set(updated.workout_sets.map(s => s.id));
+      setLoggedSetIds(prev => {
+        const next = new Set<number>();
+        prev.forEach(id => { if (updatedSetIds.has(id)) next.add(id); });
+        return next;
+      });
       setSession(updated);
     } catch (err) {
       console.error('Error removing set:', err);
@@ -154,6 +185,7 @@ export default function WorkoutExecution() {
       setLoading(true);
       const sessionData = await getWorkoutSession(parseInt(sessionId), accessToken);
       setSession(sessionData);
+      setLoggedSetIds(new Set(sessionData.workout_sets.filter(s => s.skipped || s.weight > 0 || s.reps > 0).map(s => s.id)));
 
       // Load mesocycle instance data
       const instanceData = await getMesocycleInstance(sessionData.mesocycle_instance_id, accessToken);
@@ -188,7 +220,14 @@ export default function WorkoutExecution() {
       },
     }));
 
-    // Also update local session state for immediate UI feedback (checkmark, etc.)
+    // Mark set as unlogged since value changed
+    setLoggedSetIds((prev) => {
+      const next = new Set(prev);
+      next.delete(setId);
+      return next;
+    });
+
+    // Also update local session state for immediate UI feedback
     if (session) {
       setSession((prev) => {
         if (!prev) return prev;
@@ -204,10 +243,8 @@ export default function WorkoutExecution() {
     }
   };
 
-  // Save to server on blur
-  const handleInputBlur = useCallback(async (setId: number, field: 'weight' | 'reps') => {
-    if (!accessToken || !session) return;
-
+  // Clean up display value on blur (no server call)
+  const handleInputBlur = useCallback((setId: number, field: 'weight' | 'reps') => {
     const rawValue = inputValues[setId]?.[field];
     if (rawValue === undefined) return;
 
@@ -222,18 +259,7 @@ export default function WorkoutExecution() {
         [setId]: { ...prev[setId], [field]: displayValue },
       }));
     }
-
-    try {
-      await updateWorkoutSet(
-        session.id,
-        setId,
-        { [field]: numValue },
-        accessToken
-      );
-    } catch (err) {
-      console.error('Error updating set:', err);
-    }
-  }, [accessToken, session, inputValues]);
+  }, [inputValues]);
 
   // Get the display value for an input (prefer local state, fall back to session data)
   const getInputValue = (setId: number, field: 'weight' | 'reps'): string => {
@@ -244,58 +270,28 @@ export default function WorkoutExecution() {
     return set ? set[field].toString() : '0';
   };
 
-  // Toggle skipped state for a set
-  const handleToggleSkipped = async (setId: number) => {
+  // Save a single set to the server
+  const handleLogSet = async (setId: number) => {
     if (!accessToken || !session) return;
+    if (savingSetIds.has(setId)) return;
 
-    const set = session.workout_sets.find((s) => s.id === setId);
-    if (!set) return;
+    setSavingSetIds((prev) => new Set(prev).add(setId));
 
-    const newSkipped = !set.skipped;
+    const weight = Math.max(0, parseFloat(inputValues[setId]?.weight || '0') || 0);
+    const reps = Math.floor(Math.max(0, parseFloat(inputValues[setId]?.reps || '0') || 0));
 
-    // Update local state immediately for responsive UI
-    setSession((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        workout_sets: prev.workout_sets.map((s) =>
-          s.id === setId
-            ? { ...s, skipped: newSkipped, weight: newSkipped ? 0 : s.weight, reps: newSkipped ? 0 : s.reps }
-            : s
-        ),
-      };
-    });
-
-    // If marking as skipped, also clear the input values
-    if (newSkipped) {
-      setInputValues((prev) => ({
-        ...prev,
-        [setId]: { weight: '0', reps: '0' },
-      }));
-    }
-
-    // Save to server
     try {
-      await updateWorkoutSet(
-        session.id,
-        setId,
-        {
-          skipped: newSkipped,
-          ...(newSkipped ? { weight: 0, reps: 0 } : {})
-        },
-        accessToken
-      );
-    } catch (err) {
-      console.error('Error toggling skipped:', err);
-      // Revert on error
-      setSession((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          workout_sets: prev.workout_sets.map((s) =>
-            s.id === setId ? { ...s, skipped: !newSkipped } : s
-          ),
-        };
+      await updateWorkoutSet(session.id, setId, { weight, reps, skipped: (weight === 0 && reps === 0) ? 1 : 0 }, accessToken);
+      setLoggedSetIds((prev) => new Set(prev).add(setId));
+    } catch (err: any) {
+      console.error('Error logging set:', err);
+      const resp = err?.response;
+      setError(`Save failed: ${err?.message} | status: ${resp?.status} | data: ${JSON.stringify(resp?.data)}`);
+    } finally {
+      setSavingSetIds((prev) => {
+        const next = new Set(prev);
+        next.delete(setId);
+        return next;
       });
     }
   };
@@ -307,8 +303,43 @@ export default function WorkoutExecution() {
     return () => clearTimeout(timer);
   }, [completionBanner]);
 
-  const handleCompleteWorkoutClick = () => {
-    if (!session) return;
+  const handleCompleteWorkoutClick = async () => {
+    if (!session || !accessToken) return;
+
+    // Find all unlogged sets
+    const unloggedSetIds = session.workout_sets
+      .filter(s => !loggedSetIds.has(s.id))
+      .map(s => s.id);
+
+    if (unloggedSetIds.length > 0) {
+      setCompletingWorkout(true);
+      setSavingSetIds(new Set(unloggedSetIds));
+
+      try {
+        await Promise.all(
+          unloggedSetIds.map(async (setId) => {
+            const weight = Math.max(0, parseFloat(inputValues[setId]?.weight || '0') || 0);
+            const reps = Math.floor(Math.max(0, parseFloat(inputValues[setId]?.reps || '0') || 0));
+            await updateWorkoutSet(session.id, setId, { weight, reps, skipped: (weight === 0 && reps === 0) ? 1 : 0 }, accessToken);
+          })
+        );
+        setLoggedSetIds(prev => {
+          const next = new Set(prev);
+          unloggedSetIds.forEach(id => next.add(id));
+          return next;
+        });
+      } catch (err) {
+        console.error('Error saving sets:', err);
+        setCompletingWorkout(false);
+        setSavingSetIds(new Set());
+        setError('Failed to save some sets. Please retry individual sets and try again.');
+        return;
+      } finally {
+        setSavingSetIds(new Set());
+      }
+      setCompletingWorkout(false);
+    }
+
     // Initialize feedback for each muscle group in this workout
     const muscleGroups = Object.keys(groupedExercises);
     const initial: Record<string, string> = {};
@@ -793,11 +824,12 @@ export default function WorkoutExecution() {
                   {/* Sets */}
                   {exerciseSets.sort((a, b) => a.set_number - b.set_number).map((set) => {
                     const recommendation = getWeightRecommendation(set);
-                    const isSkipped = set.skipped;
+                    const isSaving = savingSetIds.has(set.id);
+                    const isLogged = loggedSetIds.has(set.id);
                     return (
-                      <div key={set.id} className={`mb-3 ${isSkipped ? 'opacity-50' : ''}`}>
+                      <div key={set.id} className="mb-3">
                         <div className="grid grid-cols-12 gap-1 sm:gap-2 items-start">
-                          <div className="col-span-1 text-gray-500 pt-2">⋮</div>
+                          <div className="col-span-1 text-gray-500 pt-2">&#8942;</div>
 
                           <div className="col-span-4">
                             <input
@@ -807,13 +839,10 @@ export default function WorkoutExecution() {
                               onChange={(e) => handleInputChange(set.id, 'weight', e.target.value)}
                               onFocus={(e) => e.target.select()}
                               onBlur={() => handleInputBlur(set.id, 'weight')}
-                              disabled={isSkipped}
-                              className={`w-full bg-gray-700 text-white text-center rounded py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-                                isSkipped ? 'cursor-not-allowed line-through' : ''
-                              }`}
+                              className="w-full bg-gray-700 text-white text-center rounded py-3 focus:outline-none focus:ring-2 focus:ring-teal-500"
                               placeholder={set.target_weight ? set.target_weight.toString() : "0"}
                             />
-                            {recommendation && !isSkipped && (
+                            {recommendation && (
                               <div className="text-xs text-teal-400 text-center mt-1">
                                 {recommendation}
                               </div>
@@ -828,13 +857,10 @@ export default function WorkoutExecution() {
                               onChange={(e) => handleInputChange(set.id, 'reps', e.target.value)}
                               onFocus={(e) => e.target.select()}
                               onBlur={() => handleInputBlur(set.id, 'reps')}
-                              disabled={isSkipped}
-                              className={`w-full bg-gray-700 text-white text-center rounded py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-                                isSkipped ? 'cursor-not-allowed line-through' : ''
-                              }`}
+                              className="w-full bg-gray-700 text-white text-center rounded py-3 focus:outline-none focus:ring-2 focus:ring-teal-500"
                               placeholder={set.target_reps ? set.target_reps.toString() : "0"}
                             />
-                            {set.reps === 0 && !isSkipped && (() => {
+                            {set.reps === 0 && (() => {
                               const trainingWeeks = mesocycle.weeks - 1;
                               const isDeload = session.week_number === mesocycle.weeks;
                               const weekRir = isDeload
@@ -855,19 +881,27 @@ export default function WorkoutExecution() {
                           </div>
 
                           <div className="col-span-3 flex justify-center pt-1">
-                            <button
-                              onClick={() => handleToggleSkipped(set.id)}
-                              className={`w-8 h-8 rounded border-2 flex items-center justify-center transition-colors ${
-                                set.skipped
-                                  ? 'bg-gray-600 border-gray-500 text-gray-400'
-                                  : set.weight > 0 && set.reps > 0
-                                  ? 'bg-teal-500 border-teal-500 text-white'
-                                  : 'border-gray-600 hover:border-gray-500'
-                              }`}
-                              title={set.skipped ? 'Click to unskip' : 'Click to skip this set'}
-                            >
-                              {set.skipped ? '✕' : set.weight > 0 && set.reps > 0 ? '✓' : ''}
-                            </button>
+                            {isSaving ? (
+                              <div className="w-8 h-8 flex items-center justify-center">
+                                <svg className="animate-spin h-5 w-5 text-teal-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                              </div>
+                            ) : isLogged ? (
+                              <div className="w-8 h-8 rounded bg-teal-500 border-2 border-teal-500 flex items-center justify-center text-white">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleLogSet(set.id)}
+                                className="w-8 h-8 rounded border-2 border-gray-600 hover:border-gray-500 flex items-center justify-center transition-colors"
+                                title="Tap to save this set"
+                              >
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1131,7 +1165,11 @@ export default function WorkoutExecution() {
               </button>
             </div>
 
-            <p className="text-sm text-gray-300">Sets left empty are logged as skipped. Enter a weight and reps to log a set, or leave both blank to skip it.</p>
+            <div className="space-y-3 text-sm text-gray-300">
+              <p>Tap the square to save your weight and reps to the server.</p>
+              <p>A teal checkmark means the set is saved. Editing weight or reps clears the checkmark so you can re-save.</p>
+              <p>Pressing "Complete Workout" auto-saves any remaining unsaved sets before finishing.</p>
+            </div>
 
             <button
               onClick={() => setShowLogInfo(false)}
@@ -1147,9 +1185,20 @@ export default function WorkoutExecution() {
       <div className="fixed bottom-0 left-0 right-0 bg-gray-800 p-4 shadow-lg">
         <button
           onClick={handleCompleteWorkoutClick}
-          className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-lg"
+          disabled={completingWorkout}
+          className={`w-full text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 ${
+            completingWorkout
+              ? 'bg-gray-600 cursor-not-allowed'
+              : 'bg-teal-600 hover:bg-teal-700'
+          }`}
         >
-          Complete Workout
+          {completingWorkout && (
+            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          )}
+          {completingWorkout ? 'Saving Sets...' : 'Complete Workout'}
         </button>
       </div>
     </div>
