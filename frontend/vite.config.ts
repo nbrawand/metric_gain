@@ -10,9 +10,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Metric Gain',
-        short_name: 'Metric Gain',
-        description: 'Track your workouts and progressive overload',
+        name: 'Strength Guider',
+        short_name: 'Strength Guider',
+        description: 'The evidence-based strength guide that adapts to you',
         theme_color: '#111827',
         background_color: '#111827',
         display: 'standalone',

@@ -95,8 +95,8 @@ export function Register() {
     <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4 py-12">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Metric Gain</h1>
-          <p className="text-gray-400">Create your account</p>
+          <h1 className="text-4xl font-bold text-white mb-2">Strength Guider</h1>
+          <p className="text-gray-400 text-sm italic">The evidence-based strength guide that adapts to you</p>
         </div>
 
         <div className="bg-gray-800 rounded-lg shadow-xl p-8">

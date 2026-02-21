@@ -31,8 +31,8 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(
-    title="Metric Gain API",
-    description="Progressive Web App for Workout Tracking with Auto-Regulation",
+    title="Strength Guider API",
+    description="The evidence-based strength guide that adapts to you",
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -53,7 +53,7 @@ app.add_middleware(
 async def root():
     """Root endpoint - API information."""
     return {
-        "name": "Metric Gain API",
+        "name": "Strength Guider API",
         "version": "0.1.0",
         "status": "running",
         "docs": "/docs",

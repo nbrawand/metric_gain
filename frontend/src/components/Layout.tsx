@@ -120,7 +120,7 @@ export default function Layout() {
       {/* Top Bar */}
       <div className="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between sticky top-0 z-40">
         <Link to={isAuthenticated ? '/' : '/login'} className="text-xl font-bold text-white hover:text-teal-400 transition-colors">
-          Metric Gain
+          Strength Guider
         </Link>
         <button
           onClick={() => setMenuOpen(true)}

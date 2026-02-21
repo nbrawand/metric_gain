@@ -12,12 +12,12 @@ export default function HowItWorks() {
       {/* Hero */}
       <div className="text-center mb-4">
         <h1 className="text-3xl font-bold text-white mb-2">How It Works</h1>
-        <p className="text-gray-400">The science-backed approach behind Metric Gain</p>
+        <p className="text-gray-400">The evidence-based strength guide that adapts to you</p>
       </div>
 
       {/* How to Use the App */}
       <section className="bg-gray-800 rounded-lg p-6">
-        <h2 className="text-xl font-semibold text-teal-400 mb-3">Using Metric Gain</h2>
+        <h2 className="text-xl font-semibold text-teal-400 mb-3">Using Strength Guider</h2>
 
         <div className="space-y-5">
           {/* Step 1 */}
@@ -73,10 +73,10 @@ export default function HowItWorks() {
           Progressive overload is the foundational principle of strength training. It involves gradually increasing the demands placed on your muscles over time so they continue to adapt and grow. Without progressive overload, your body has no reason to get stronger.
         </p>
         <p className="text-gray-300 leading-relaxed mb-3">
-          This can be achieved by increasing the weight you lift, performing more reps at the same weight, or adding more sets. Metric Gain tracks all three and suggests small, incremental increases each week so progress remains consistent and sustainable.
+          This can be achieved by increasing the weight you lift, performing more reps at the same weight, or adding more sets. Strength Guider tracks all three and suggests small, incremental increases each week so progress remains consistent and sustainable.
         </p>
         <p className="text-gray-300 leading-relaxed">
-          In Metric Gain, progressive overload is implemented through mesocycles, which are structured training blocks that systematically increase demands week over week.
+          In Strength Guider, progressive overload is implemented through mesocycles, which are structured training blocks that systematically increase demands week over week.
         </p>
       </section>
 
@@ -119,7 +119,7 @@ export default function HowItWorks() {
           <p><span className="text-teal-400 font-medium">0 RIR</span> -You could not have completed another rep. This is failure.</p>
         </div>
         <p className="text-gray-300 leading-relaxed mt-3">
-          Metric Gain uses RIR to manage training intensity across each mesocycle. Early weeks use higher RIR targets to allow volume accumulation, while the RIR decreases each week to increase intensity as the block progresses. The deload week uses a very high RIR target of 8 to allow full recovery.
+          Strength Guider uses RIR to manage training intensity across each mesocycle. Early weeks use higher RIR targets to allow volume accumulation, while the RIR decreases each week to increase intensity as the block progresses. The deload week uses a very high RIR target of 8 to allow full recovery.
         </p>
       </section>
 

@@ -1,1 +1,1 @@
-"""Tests for Metric Gain API."""
+"""Tests for Strength Guider API."""
