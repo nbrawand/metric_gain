@@ -9,6 +9,11 @@ from sqlalchemy import func
 
 import math
 
+def round_to_nearest_5(value: float) -> float:
+    """Round a weight to the nearest 5 (e.g. 0, 5, 10, 15, ...)."""
+    return round(value / 5) * 5
+
+
 from app.database import get_db
 from app.models.workout_session import WorkoutSession, WorkoutSet, WorkoutFeedback
 from app.models.exercise import Exercise
@@ -148,14 +153,18 @@ def create_workout_session(
                 fallback_set = prev_set or prev_exercise_sets[-1]
 
                 target_weight = None
-                if prev_set and prev_set.weight > 0:
-                    increase = max(prev_set.weight * 0.025, 2.5)
-                    target_weight = round(prev_set.weight + increase, 1)
-
-                # Use actual reps performed in previous week, fall back to previous target
                 target_reps = fallback_set.target_reps
                 if prev_set and prev_set.reps > 0:
                     target_reps = prev_set.reps
+
+                if prev_set and prev_set.weight > 0:
+                    increase = max(prev_set.weight * 0.025, 2.5)
+                    target_weight = round_to_nearest_5(prev_set.weight + increase)
+                    # If rounding brought it back to the same weight, bump target reps instead
+                    if target_weight <= prev_set.weight:
+                        target_weight = prev_set.weight
+                        if target_reps is not None:
+                            target_reps = target_reps + 1
 
                 workout_set = WorkoutSet(
                     workout_session_id=workout_session.id,
@@ -338,7 +347,15 @@ def get_workout_session(
                     ws.target_reps = prev_set.reps
                     dirty = True
                 if prev_set.weight > 0:
-                    new_target = round(prev_set.weight + max(prev_set.weight * 0.025, 2.5), 1)
+                    new_target = round_to_nearest_5(prev_set.weight + max(prev_set.weight * 0.025, 2.5))
+                    # If rounding brought it back to the same weight, bump target reps instead
+                    if new_target <= prev_set.weight:
+                        new_target = prev_set.weight
+                        if ws.target_reps is not None:
+                            new_reps = (prev_set.reps if prev_set.reps > 0 else ws.target_reps or 0) + 1
+                            if ws.target_reps != new_reps:
+                                ws.target_reps = new_reps
+                                dirty = True
                     if ws.target_weight != new_target:
                         ws.target_weight = new_target
                         dirty = True

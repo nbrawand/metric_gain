@@ -48,26 +48,23 @@ export function Home() {
 
     const daysPerWeek = meso.workout_templates?.length || meso.days_per_week;
 
-    // 1. If there's an in_progress session, go straight to it
-    const inProgress = workoutSessions.find(s => s.status === 'in_progress');
-    if (inProgress) {
-      navigate(`/workout/${inProgress.id}`);
+    // 1. Find the last (most recent) unfinished workout session
+    const unfinished = workoutSessions
+      .filter(s => s.status !== 'completed')
+      .sort((a, b) => a.week_number - b.week_number || a.day_number - b.day_number);
+
+    if (unfinished.length > 0) {
+      navigate(`/workout/${unfinished[0].id}`);
       return;
     }
 
-    // 2. Walk week-by-week, day-by-day to find the first slot without a completed session
+    // 2. All existing sessions are completed — find the next slot and create a new session
     for (let week = 1; week <= meso.weeks; week++) {
       for (let day = 1; day <= daysPerWeek; day++) {
         const existing = workoutSessions.find(
           s => s.week_number === week && s.day_number === day
         );
-        if (existing && existing.status === 'completed') continue;
-
-        // Found the next slot — use existing session or create one
-        if (existing) {
-          navigate(`/workout/${existing.id}`);
-          return;
-        }
+        if (existing) continue;
 
         const templateIndex = day - 1;
         const template = meso.workout_templates?.[templateIndex];

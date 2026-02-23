@@ -551,7 +551,7 @@ export default function WorkoutExecution() {
     if (set.weight > 0) return '';
 
     if (set.target_weight && set.target_weight > 0) {
-      return `target: ${set.target_weight} lbs`;
+      return `target: ${Math.round(set.target_weight / 5) * 5} lbs`;
     }
 
     return '';
