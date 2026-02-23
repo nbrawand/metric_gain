@@ -392,13 +392,13 @@ export default function Mesocycles() {
             {mesocycles.map((mesocycle) => (
               <div
                 key={mesocycle.id}
-                className="bg-gray-800 rounded-lg shadow hover:shadow-lg transition cursor-pointer border border-gray-700"
+                className="bg-gray-800 rounded-lg shadow hover:shadow-lg transition cursor-pointer border border-gray-700 overflow-hidden"
                 onClick={() => navigate(`/mesocycles/${mesocycle.id}`)}
               >
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-xl font-semibold text-white">{mesocycle.name}</h3>
-                    <div className="flex gap-2">
+                <div className="p-6 min-w-0">
+                  <div className="flex justify-between items-start gap-2 mb-3">
+                    <h3 className="text-xl font-semibold text-white min-w-0 break-words">{mesocycle.name}</h3>
+                    <div className="flex gap-2 shrink-0">
                       {mesocycle.is_stock && (
                         <span className="px-2 py-1 rounded text-xs font-medium bg-teal-900/50 text-teal-300">
                           Stock
