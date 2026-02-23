@@ -585,6 +585,12 @@ DEFAULT_EXERCISES = [
         "equipment": "Cable Machine",
     },
     {
+        "name": "Glute Machine Kickback",
+        "description": "Glute isolation using a kickback machine",
+        "muscle_group": "Glutes",
+        "equipment": "Machine",
+    },
+    {
         "name": "Sumo Deadlift",
         "description": "Wide-stance deadlift emphasizing glutes and inner thighs",
         "muscle_group": "Glutes",

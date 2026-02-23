@@ -670,6 +670,80 @@ export default function WorkoutExecution() {
     }
   };
 
+  // Reorder a muscle group (with all its exercises) up or down
+  const handleMoveMuscleGroup = async (muscleGroup: string, direction: 'up' | 'down') => {
+    if (!accessToken || !session) return;
+
+    // Build sorted list of muscle groups by their minimum order_index
+    const mgMap: Record<string, WorkoutSet[]> = {};
+    session.workout_sets.forEach(s => {
+      const mg = s.exercise?.muscle_group || 'Other';
+      if (!mgMap[mg]) mgMap[mg] = [];
+      mgMap[mg].push(s);
+    });
+    const sortedGroups = Object.entries(mgMap)
+      .map(([mg, sets]) => ({ mg, minOrder: Math.min(...sets.map(s => s.order_index)), sets }))
+      .sort((a, b) => a.minOrder - b.minOrder);
+
+    const currentIdx = sortedGroups.findIndex(g => g.mg === muscleGroup);
+    const targetIdx = direction === 'up' ? currentIdx - 1 : currentIdx + 1;
+    if (targetIdx < 0 || targetIdx >= sortedGroups.length) return;
+
+    // Assign new order_index values: swap positions and reassign sequential indices
+    const allGroups = [...sortedGroups];
+    [allGroups[currentIdx], allGroups[targetIdx]] = [allGroups[targetIdx], allGroups[currentIdx]];
+
+    // Reassign order_index: group 0 starts at 0, each exercise gets sequential indices
+    const updates: { setId: number; newOrderIndex: number }[] = [];
+    let nextOrder = 0;
+    allGroups.forEach(group => {
+      // Get unique exercises sorted by current order_index
+      const seen = new Set<number>();
+      const exercises: { id: number; orderIndex: number }[] = [];
+      group.sets.forEach(s => {
+        if (!seen.has(s.exercise_id)) {
+          seen.add(s.exercise_id);
+          exercises.push({ id: s.exercise_id, orderIndex: s.order_index });
+        }
+      });
+      exercises.sort((a, b) => a.orderIndex - b.orderIndex);
+
+      exercises.forEach(ex => {
+        const exSets = group.sets.filter(s => s.exercise_id === ex.id);
+        exSets.forEach(s => {
+          updates.push({ setId: s.id, newOrderIndex: nextOrder });
+        });
+        nextOrder += 100;
+      });
+    });
+
+    // Update local state immediately
+    setSession(prev => {
+      if (!prev) return prev;
+      const updateMap = new Map(updates.map(u => [u.setId, u.newOrderIndex]));
+      return {
+        ...prev,
+        workout_sets: prev.workout_sets.map(s => {
+          const newIdx = updateMap.get(s.id);
+          return newIdx !== undefined ? { ...s, order_index: newIdx } : s;
+        }),
+      };
+    });
+
+    // Persist to backend - only update sets whose order_index actually changed
+    const changedSets = updates.filter(u => {
+      const original = session.workout_sets.find(s => s.id === u.setId);
+      return original && original.order_index !== u.newOrderIndex;
+    });
+    try {
+      await Promise.all(changedSets.map(u =>
+        updateWorkoutSet(session.id, u.setId, { order_index: u.newOrderIndex }, accessToken)
+      ));
+    } catch (err) {
+      console.error('Error reordering muscle groups:', err);
+    }
+  };
+
   // Group exercises by muscle group
   const groupedExercises = session?.workout_sets.reduce((acc, set) => {
     const muscleGroup = set.exercise?.muscle_group || 'Other';
@@ -814,7 +888,13 @@ export default function WorkoutExecution() {
 
       {/* Exercises grouped by muscle group */}
       <div className="p-4 space-y-4">
-        {Object.entries(groupedExercises).map(([muscleGroup, sets]) => {
+        {Object.entries(groupedExercises)
+          .sort((a, b) => {
+            const minA = Math.min(...a[1].map(s => s.order_index));
+            const minB = Math.min(...b[1].map(s => s.order_index));
+            return minA - minB;
+          })
+          .map(([muscleGroup, sets], mgIdx, mgArr) => {
           // Group sets by exercise
           const exerciseGroups = sets.reduce((acc, set) => {
             const exerciseName = set.exercise?.name || 'Unknown';
@@ -825,11 +905,38 @@ export default function WorkoutExecution() {
             return acc;
           }, {} as Record<string, WorkoutSet[]>);
 
+          const isFirstMg = mgIdx === 0;
+          const isLastMg = mgIdx === mgArr.length - 1;
+
           return (
             <div key={muscleGroup}>
-              {/* Muscle Group Badge */}
-              <div className="inline-block bg-teal-600 text-white text-xs font-bold px-3 py-1 rounded mb-2">
-                {muscleGroup.toUpperCase()}
+              {/* Muscle Group Badge with Reorder */}
+              <div className="flex items-center gap-1 mb-2">
+                <div className="inline-block bg-teal-600 text-white text-xs font-bold px-3 py-1 rounded">
+                  {muscleGroup.toUpperCase()}
+                </div>
+                {session.status !== 'completed' && mgArr.length > 1 && (
+                  <div className="flex gap-0.5">
+                    <button
+                      onClick={() => handleMoveMuscleGroup(muscleGroup, 'up')}
+                      disabled={isFirstMg}
+                      className={`p-0.5 ${isFirstMg ? 'text-gray-700' : 'text-gray-400 hover:text-white'}`}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleMoveMuscleGroup(muscleGroup, 'down')}
+                      disabled={isLastMg}
+                      className={`p-0.5 ${isLastMg ? 'text-gray-700' : 'text-gray-400 hover:text-white'}`}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Exercise Cards */}
@@ -856,7 +963,7 @@ export default function WorkoutExecution() {
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                       </svg>
-                      <div>
+                      <div className="min-w-0">
                         <h3 className="font-semibold">{exerciseName}</h3>
                         <p className="text-xs text-gray-400">
                           {exerciseSets[0]?.exercise?.equipment || 'BODYWEIGHT'}
@@ -864,6 +971,17 @@ export default function WorkoutExecution() {
                         </p>
                       </div>
                     </div>
+                    {/* Progress indicator */}
+                    {(() => {
+                      const loggedCount = exerciseSets.filter(s => loggedSetIds.has(s.id)).length;
+                      const totalSets = exerciseSets.length;
+                      const allDone = loggedCount === totalSets;
+                      return (
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${allDone ? 'bg-teal-600 text-white' : 'bg-gray-700 text-gray-300'}`}>
+                          {allDone ? '✓' : `${loggedCount}/${totalSets}`}
+                        </span>
+                      );
+                    })()}
                     {session.status !== 'completed' && (
                       <div className="flex items-center gap-1">
                         {/* Reorder arrows */}
@@ -999,7 +1117,7 @@ export default function WorkoutExecution() {
                               onChange={(e) => handleInputChange(set.id, 'weight', e.target.value)}
                               onFocus={(e) => e.target.select()}
                               onBlur={() => handleInputBlur(set.id, 'weight')}
-                              className="w-full bg-gray-700 text-white text-center rounded py-3 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                              className="w-full bg-gray-700 text-white text-center rounded py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
                               placeholder={set.target_weight ? set.target_weight.toString() : "0"}
                             />
                             {recommendation && (
@@ -1017,7 +1135,7 @@ export default function WorkoutExecution() {
                               onChange={(e) => handleInputChange(set.id, 'reps', e.target.value)}
                               onFocus={(e) => e.target.select()}
                               onBlur={() => handleInputBlur(set.id, 'reps')}
-                              className="w-full bg-gray-700 text-white text-center rounded py-3 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                              className="w-full bg-gray-700 text-white text-center rounded py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
                               placeholder={set.target_reps ? set.target_reps.toString() : "0"}
                             />
                             {set.reps === 0 && (() => {
