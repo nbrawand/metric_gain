@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   listMesocycles,
   createMesocycle,
+  createMesocycleFromInstance,
   deleteMesocycle,
   getMesocycle,
   listMesocycleInstances,
@@ -101,6 +102,18 @@ export default function Mesocycles() {
       console.error('Error loading data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateFromInstance = async (instanceId: number) => {
+    if (!accessToken) return;
+    try {
+      const newMeso = await createMesocycleFromInstance(instanceId, accessToken);
+      await loadData();
+      navigate(`/mesocycles/${newMeso.id}`);
+    } catch (err: any) {
+      alert(err?.detail || 'Failed to create template from instance');
+      console.error('Error creating template from instance:', err);
     }
   };
 
@@ -500,6 +513,12 @@ export default function Mesocycles() {
                         </div>
                       )}
                     </div>
+                    <button
+                      onClick={() => handleCreateFromInstance(inst.id)}
+                      className="mt-4 w-full bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium py-2 px-4 rounded transition-colors"
+                    >
+                      Create Template from This
+                    </button>
                   </div>
                 ))}
             </div>

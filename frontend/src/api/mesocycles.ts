@@ -41,6 +41,13 @@ export async function createMesocycle(data: MesocycleCreate, accessToken: string
 }
 
 /**
+ * Create a new mesocycle template from a completed instance
+ */
+export async function createMesocycleFromInstance(instanceId: number, accessToken: string): Promise<Mesocycle> {
+  return post<Mesocycle>(`${MESOCYCLES_ENDPOINT}/from-instance/${instanceId}`, {}, accessToken);
+}
+
+/**
  * Update mesocycle details (not including workouts/exercises)
  */
 export async function updateMesocycle(id: number, data: MesocycleUpdate, accessToken: string): Promise<Mesocycle> {

@@ -1,12 +1,15 @@
 """Mesocycle template endpoints for creating and managing training block templates."""
 
 from typing import List
+from collections import OrderedDict
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
 
 from app.database import get_db
 from app.models.mesocycle import Mesocycle, MesocycleInstance, WorkoutTemplate, WorkoutExercise
+from app.models.workout_session import WorkoutSession, WorkoutSet
 from app.models.user import User
 from app.models.exercise import Exercise
 from app.schemas.mesocycle import (
@@ -190,6 +193,148 @@ async def create_mesocycle(
             exercise = (
                 db.query(Exercise).filter(Exercise.id == workout_exercise.exercise_id).first()
             )
+            if exercise:
+                workout_exercise.exercise = exercise
+
+    return mesocycle
+
+
+@router.post("/from-instance/{instance_id}", response_model=MesocycleResponse, status_code=status.HTTP_201_CREATED)
+async def create_mesocycle_from_instance(
+    instance_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Create a new mesocycle template from a completed instance.
+
+    Uses the last week's workout sessions to capture any exercise swaps made during the instance.
+    Falls back to the original template for exercise parameters (sets, reps, RIR).
+    """
+    instance = db.query(MesocycleInstance).filter(
+        MesocycleInstance.id == instance_id,
+        MesocycleInstance.user_id == current_user.id,
+    ).first()
+
+    if not instance:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found")
+
+    if instance.status != "completed":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Instance must be completed")
+
+    # Get the original template for exercise parameters (sets, reps, RIR)
+    original_template = None
+    template_exercise_map: dict[int, dict] = {}  # exercise_id -> {target_sets, reps_min, reps_max, ...}
+    if instance.mesocycle_template_id:
+        original_template = db.query(Mesocycle).options(
+            joinedload(Mesocycle.workout_templates).joinedload(WorkoutTemplate.exercises)
+        ).filter(Mesocycle.id == instance.mesocycle_template_id).first()
+
+        if original_template:
+            for wt in original_template.workout_templates:
+                for we in wt.exercises:
+                    template_exercise_map[we.exercise_id] = {
+                        "target_sets": we.target_sets,
+                        "target_reps_min": we.target_reps_min,
+                        "target_reps_max": we.target_reps_max,
+                        "starting_rir": we.starting_rir,
+                        "ending_rir": we.ending_rir,
+                        "notes": we.notes,
+                    }
+
+    # Get workout sessions grouped by day_number, pick the latest week for each day
+    sessions = db.query(WorkoutSession).filter(
+        WorkoutSession.mesocycle_instance_id == instance_id,
+        WorkoutSession.user_id == current_user.id,
+    ).order_by(WorkoutSession.day_number, WorkoutSession.week_number.desc()).all()
+
+    # For each day_number, get the session with the highest week_number
+    latest_sessions: dict[int, WorkoutSession] = {}
+    for s in sessions:
+        if s.day_number not in latest_sessions:
+            latest_sessions[s.day_number] = s
+
+    if not latest_sessions:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No workout sessions found for this instance",
+        )
+
+    # Build the new template
+    template_name = f"{instance.template_name or 'Mesocycle'} (Copy)"
+    weeks = instance.template_weeks or 6
+    days_per_week = instance.template_days_per_week or len(latest_sessions)
+
+    new_mesocycle = Mesocycle(
+        user_id=current_user.id,
+        name=template_name,
+        weeks=weeks,
+        days_per_week=days_per_week,
+    )
+    db.add(new_mesocycle)
+    db.flush()
+
+    # Get original template workout names if available
+    original_workout_names: dict[int, str] = {}
+    if original_template:
+        for wt in sorted(original_template.workout_templates, key=lambda w: w.order_index):
+            original_workout_names[wt.order_index + 1] = wt.name  # order_index is 0-based, day_number is 1-based
+
+    for day_number in sorted(latest_sessions.keys()):
+        session = latest_sessions[day_number]
+
+        # Get sets for this session, ordered by order_index
+        sets = db.query(WorkoutSet).filter(
+            WorkoutSet.workout_session_id == session.id
+        ).order_by(WorkoutSet.order_index, WorkoutSet.set_number).all()
+
+        # Group by exercise, preserving order
+        exercise_groups: OrderedDict[int, list] = OrderedDict()
+        for ws in sets:
+            exercise_groups.setdefault(ws.exercise_id, []).append(ws)
+
+        workout_name = original_workout_names.get(day_number, f"Day {day_number}")
+        workout_template = WorkoutTemplate(
+            mesocycle_id=new_mesocycle.id,
+            name=workout_name,
+            order_index=day_number - 1,
+        )
+        db.add(workout_template)
+        db.flush()
+
+        for order_idx, (exercise_id, exercise_sets) in enumerate(exercise_groups.items()):
+            # Use original template params if available, otherwise defaults
+            params = template_exercise_map.get(exercise_id, {})
+
+            workout_exercise = WorkoutExercise(
+                workout_template_id=workout_template.id,
+                exercise_id=exercise_id,
+                order_index=order_idx,
+                target_sets=params.get("target_sets", 2),
+                target_reps_min=params.get("target_reps_min", 8),
+                target_reps_max=params.get("target_reps_max", 12),
+                starting_rir=params.get("starting_rir", 3),
+                ending_rir=params.get("ending_rir", 0),
+                notes=params.get("notes"),
+            )
+            db.add(workout_exercise)
+
+    db.commit()
+    db.refresh(new_mesocycle)
+
+    # Load full mesocycle with relationships
+    mesocycle = (
+        db.query(Mesocycle)
+        .filter(Mesocycle.id == new_mesocycle.id)
+        .options(
+            joinedload(Mesocycle.workout_templates).joinedload(WorkoutTemplate.exercises)
+        )
+        .first()
+    )
+
+    for workout in mesocycle.workout_templates:
+        for workout_exercise in workout.exercises:
+            exercise = db.query(Exercise).filter(Exercise.id == workout_exercise.exercise_id).first()
             if exercise:
                 workout_exercise.exercise = exercise
 

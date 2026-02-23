@@ -180,7 +180,212 @@ def _create_stock_mesocycle(db: Session, template: dict) -> None:
     print(f"  Created stock mesocycle: {template['name']}")
 
 
-STOCK_TEMPLATES = [PUSH_PULL_LEGS_TEMPLATE]
+TWO_DAY_FULL_BODY_TEMPLATE = {
+    "name": "2-Day Full Body",
+    "description": "Minimalist 2-day full body program. Hits every major muscle group twice per week with compound movements. Ideal for beginners or those with limited training time.",
+    "weeks": 5,
+    "days_per_week": 2,
+    "workouts": [
+        {
+            "name": "Full Body A",
+            "description": "Quad, lateral delt, back, hamstring, chest, and bicep focus",
+            "exercises": [
+                {"name": "Barbell Squat", "sets": 2, "reps_min": 5, "reps_max": 10},
+                {"name": "Cable Lateral Raise", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Lat Pulldown", "sets": 2, "reps_min": 8, "reps_max": 12},
+                {"name": "Seated Leg Curl", "sets": 2, "reps_min": 12, "reps_max": 15},
+                {"name": "Dumbbell Bench Press", "sets": 2, "reps_min": 12, "reps_max": 15},
+                {"name": "Cable Curl", "sets": 2, "reps_min": 10, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Full Body B",
+            "description": "Back, chest, tricep, hamstring, quad, and calf focus",
+            "exercises": [
+                {"name": "Seated Cable Row", "sets": 2, "reps_min": 5, "reps_max": 10},
+                {"name": "Incline Barbell Bench Press", "sets": 2, "reps_min": 5, "reps_max": 10},
+                {"name": "Cable Overhead Tricep Extension (Rope)", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Romanian Deadlift", "sets": 2, "reps_min": 5, "reps_max": 10},
+                {"name": "Leg Extension", "sets": 2, "reps_min": 12, "reps_max": 15},
+                {"name": "Standing Calf Raise", "sets": 2, "reps_min": 8, "reps_max": 12},
+            ],
+        },
+    ],
+}
+
+THREE_DAY_FULL_BODY_TEMPLATE = {
+    "name": "3-Day Full Body",
+    "description": "Balanced 3-day full body program. Each session trains the entire body with varied exercises. Great for beginners and intermediates seeking efficient training.",
+    "weeks": 5,
+    "days_per_week": 3,
+    "workouts": [
+        {
+            "name": "Full Body A",
+            "description": "Chest, quads, back, hamstrings, shoulders, and abs",
+            "exercises": [
+                {"name": "Incline Barbell Bench Press", "sets": 3, "reps_min": 5, "reps_max": 10},
+                {"name": "Barbell Squat", "sets": 3, "reps_min": 5, "reps_max": 10},
+                {"name": "Pull-ups", "sets": 3, "reps_min": 5, "reps_max": 10},
+                {"name": "Lying Leg Curl", "sets": 3, "reps_min": 12, "reps_max": 15},
+                {"name": "Cable Lateral Raise", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Decline Sit-ups", "sets": 3, "reps_min": 10, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Full Body B",
+            "description": "Back, shoulders, biceps, triceps, calves, and abs",
+            "exercises": [
+                {"name": "Seated Cable Row", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Dumbbell Shoulder Press", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Cable Curl", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Cable Overhead Tricep Extension (Rope)", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Standing Calf Raise", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Hanging Leg Raise", "sets": 3, "reps_min": 8, "reps_max": 12},
+            ],
+        },
+        {
+            "name": "Full Body C",
+            "description": "Hamstrings, quads, calves, back, chest, and shoulders",
+            "exercises": [
+                {"name": "Romanian Deadlift", "sets": 3, "reps_min": 5, "reps_max": 10},
+                {"name": "Leg Extension", "sets": 3, "reps_min": 12, "reps_max": 15},
+                {"name": "Leg Press Calf Raise", "sets": 3, "reps_min": 12, "reps_max": 15},
+                {"name": "Lat Pulldown", "sets": 3, "reps_min": 12, "reps_max": 15},
+                {"name": "Machine Chest Press", "sets": 3, "reps_min": 12, "reps_max": 15},
+                {"name": "Lateral Raise", "sets": 3, "reps_min": 12, "reps_max": 15},
+            ],
+        },
+    ],
+}
+
+FOUR_DAY_UPPER_LOWER_TEMPLATE = {
+    "name": "4-Day Upper Lower",
+    "description": "Classic 4-day upper/lower split. Two upper and two lower sessions per week with complementary exercise selection. Excellent balance of volume and recovery for intermediates.",
+    "weeks": 5,
+    "days_per_week": 4,
+    "workouts": [
+        {
+            "name": "Upper A",
+            "description": "Chest, triceps, back, and biceps (strength focus)",
+            "exercises": [
+                {"name": "Barbell Bench Press", "sets": 3, "reps_min": 3, "reps_max": 5},
+                {"name": "Incline Cable Fly", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Cable Overhead Tricep Extension (Rope)", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Machine Row", "sets": 4, "reps_min": 10, "reps_max": 15},
+                {"name": "Lat Pulldown", "sets": 5, "reps_min": 10, "reps_max": 15},
+                {"name": "Cable Curl", "sets": 6, "reps_min": 15, "reps_max": 20},
+            ],
+        },
+        {
+            "name": "Lower A",
+            "description": "Quads, hamstrings, calves, shoulders, and abs",
+            "exercises": [
+                {"name": "Barbell Squat", "sets": 2, "reps_min": 5, "reps_max": 10},
+                {"name": "Lying Leg Curl", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Leg Press Calf Raise", "sets": 2, "reps_min": 8, "reps_max": 12},
+                {"name": "Cable Lateral Raise", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Cable Crunch", "sets": 2, "reps_min": 10, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Upper B",
+            "description": "Back, biceps, chest, and triceps (hypertrophy focus)",
+            "exercises": [
+                {"name": "Pull-ups", "sets": 1, "reps_min": 5, "reps_max": 10},
+                {"name": "Seated Cable Row", "sets": 2, "reps_min": 5, "reps_max": 10},
+                {"name": "Preacher Curl", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Incline Barbell Bench Press", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Cable Fly", "sets": 1, "reps_min": 15, "reps_max": 20},
+                {"name": "Tricep Pushdown (Rope)", "sets": 2, "reps_min": 15, "reps_max": 20},
+            ],
+        },
+        {
+            "name": "Lower B",
+            "description": "Hamstrings, quads, calves, shoulders, and abs",
+            "exercises": [
+                {"name": "Romanian Deadlift", "sets": 1, "reps_min": 5, "reps_max": 10},
+                {"name": "Bulgarian Split Squat", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Leg Extension", "sets": 2, "reps_min": 15, "reps_max": 20},
+                {"name": "Standing Calf Raise", "sets": 2, "reps_min": 15, "reps_max": 20},
+                {"name": "Lateral Raise", "sets": 2, "reps_min": 15, "reps_max": 20},
+                {"name": "Hanging Leg Raise", "sets": 2, "reps_min": 8, "reps_max": 12},
+            ],
+        },
+    ],
+}
+
+FIVE_DAY_LPPLU_TEMPLATE = {
+    "name": "5-Day Legs/Push/Pull/Lower/Upper",
+    "description": "5-day hybrid split combining push/pull/legs with upper/lower. Each muscle group is hit twice per week with varied rep ranges. Great for intermediate to advanced lifters.",
+    "weeks": 5,
+    "days_per_week": 5,
+    "workouts": [
+        {
+            "name": "Legs",
+            "description": "Quads, hamstrings, calves, and glutes",
+            "exercises": [
+                {"name": "Barbell Squat", "sets": 3, "reps_min": 5, "reps_max": 10},
+                {"name": "Leg Press", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Leg Press Calf Raise", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Lying Leg Curl", "sets": 3, "reps_min": 12, "reps_max": 15},
+                {"name": "Cable Pull-Through", "sets": 3, "reps_min": 10, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Push",
+            "description": "Chest, shoulders, triceps, and abs",
+            "exercises": [
+                {"name": "Barbell Bench Press", "sets": 3, "reps_min": 5, "reps_max": 10},
+                {"name": "Incline Cable Fly", "sets": 3, "reps_min": 12, "reps_max": 15},
+                {"name": "Dumbbell Shoulder Press", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Cable Overhead Tricep Extension (Rope)", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Hanging Leg Raise", "sets": 3, "reps_min": 8, "reps_max": 12},
+            ],
+        },
+        {
+            "name": "Pull",
+            "description": "Back, biceps, and lateral delts",
+            "exercises": [
+                {"name": "Pull-ups", "sets": 3, "reps_min": 5, "reps_max": 10},
+                {"name": "Seated Cable Row", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Face Pulls", "sets": 3, "reps_min": 12, "reps_max": 15},
+                {"name": "Cable Curl", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Cable Lateral Raise", "sets": 3, "reps_min": 10, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Lower",
+            "description": "Hamstrings, glutes, quads, calves, and abs",
+            "exercises": [
+                {"name": "Romanian Deadlift", "sets": 3, "reps_min": 5, "reps_max": 10},
+                {"name": "Hip Thrust", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Standing Calf Raise", "sets": 3, "reps_min": 12, "reps_max": 15},
+                {"name": "Leg Extension", "sets": 3, "reps_min": 12, "reps_max": 15},
+                {"name": "Cable Crunch", "sets": 3, "reps_min": 12, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Upper",
+            "description": "Chest, back, shoulders, triceps, and biceps",
+            "exercises": [
+                {"name": "Incline Barbell Bench Press", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Machine Row", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Lat Pulldown", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Lateral Raise", "sets": 3, "reps_min": 15, "reps_max": 20},
+                {"name": "Tricep Pushdown (Rope)", "sets": 3, "reps_min": 12, "reps_max": 17},
+                {"name": "Preacher Curl", "sets": 3, "reps_min": 12, "reps_max": 17},
+            ],
+        },
+    ],
+}
+
+STOCK_TEMPLATES = [
+    PUSH_PULL_LEGS_TEMPLATE,
+    TWO_DAY_FULL_BODY_TEMPLATE,
+    THREE_DAY_FULL_BODY_TEMPLATE,
+    FOUR_DAY_UPPER_LOWER_TEMPLATE,
+    FIVE_DAY_LPPLU_TEMPLATE,
+]
 
 
 def seed_mesocycles(db: Session) -> None:
