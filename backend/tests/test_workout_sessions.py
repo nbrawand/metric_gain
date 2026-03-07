@@ -113,7 +113,11 @@ def test_create_workout_session(client, auth_headers, sample_mesocycle_with_work
     assert data["day_number"] == 1
     assert data["status"] == "in_progress"
     assert "workout_sets" in data
-    assert len(data["workout_sets"]) == 3  # target_sets from template
+    # Volume prescription: first seeded exercise is Ab Wheel Rollout (Core)
+    # Core: MEV=6, MRV=16, accum_weeks=3, F=2 (in both Day 1 and Day 2)
+    # Week 1 starts at MEV: 6 + (1-1)*10/(3-1) = 6 weekly
+    # allocate_to_session(6, day 1): 6/2 = 3 sets
+    assert len(data["workout_sets"]) == 3
 
 
 def test_create_workout_session_auto_generates_sets(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
@@ -140,7 +144,8 @@ def test_create_workout_session_auto_generates_sets(client, auth_headers, sample
     sets = data["workout_sets"]
     exercise_template = template["exercises"][0]
 
-    assert len(sets) == exercise_template["target_sets"]
+    # Volume prescription: same config as above -> 3 sets for day 1 (Core MEV=6, week 1)
+    assert len(sets) == 3
 
     for i, workout_set in enumerate(sets, 1):
         assert workout_set["set_number"] == i
