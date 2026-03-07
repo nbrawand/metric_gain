@@ -8,28 +8,13 @@ export default function About() {
         <h1 className="text-3xl font-bold text-white mb-2">About</h1>
       </div>
 
-      {/* Why We Built This */}
       <section className="bg-gray-800 rounded-lg p-6">
-        <h2 className="text-xl font-semibold text-teal-400 mb-3">Why We Built This</h2>
+        <h2 className="text-xl font-semibold text-teal-400 mb-3">About Strength Guider</h2>
         <p className="text-gray-300 leading-relaxed mb-3">
-          There's a lot of bad workout advice out there. We believe evidence-based exercise science can genuinely improve people's lives, so we built an app around it.
-        </p>
-        <p className="text-gray-300 leading-relaxed mb-3">
-          Our goal is to help you understand the principles that actually drive results: progressive overload, structured mesocycles, fatigue management, and recovery. No gimmicks. No guesswork. Just concepts backed by research, built into a tool that guides you through them.
+          Strength Guider is a training tool built on principles from exercise science research. It helps organize your training into structured blocks, track your progress, and provide recommendations based on your performance history.
         </p>
         <p className="text-gray-300 leading-relaxed">
-          We want this app to be two things: <span className="text-white font-medium">informative</span> and <span className="text-white font-medium">affordable</span>. You shouldn't need a degree in exercise science or an expensive coach to train effectively.
-        </p>
-      </section>
-
-      {/* Your Data Is Yours */}
-      <section className="bg-gray-800 rounded-lg p-6">
-        <h2 className="text-xl font-semibold text-teal-400 mb-3">Your Data Is Yours</h2>
-        <p className="text-gray-300 leading-relaxed mb-3">
-          We will never sell your data to advertisers. Period.
-        </p>
-        <p className="text-gray-300 leading-relaxed">
-          Your workout data is used for one purpose only: science. It helps us build better mathematical models so that you and everyone using the app receive more effective training recommendations. Not too much volume. Not too little. Just the right amount to keep you progressing.
+          The app is built around progressive overload, mesocycle periodization, fatigue management, and planned recovery. These are well-established concepts in the strength training literature, and Strength Guider aims to make them accessible and easy to follow.
         </p>
       </section>
 
