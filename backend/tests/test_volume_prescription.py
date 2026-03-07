@@ -112,41 +112,56 @@ class TestComputeTargetRIR:
 class TestComputeWeeklyVolumeTarget:
     def test_week_1_chest(self):
         config = _make_config(total_weeks=4)
-        # Chest: MEV=6, MRV=22, accum_weeks=3
-        # Week 1 starts exactly at MEV: 6 + (1-1)*16/(3-1) = 6
+        # Chest: starting_mav=8, MRV=22
+        # Week 1: 8 + (1-1)*2 = 8
         result = compute_weekly_volume_target("Chest", 1, config)
-        assert result == 6
+        assert result == 8
 
-    def test_final_accumulation_week_equals_mrv(self):
+    def test_week_2_chest(self):
         config = _make_config(total_weeks=4)
-        # week 3 (final accum): 6 + (3-1)*16/(3-1) = 6 + 16 = 22
+        # Week 2: 8 + (2-1)*2 = 10
+        result = compute_weekly_volume_target("Chest", 2, config)
+        assert result == 10
+
+    def test_week_3_chest(self):
+        config = _make_config(total_weeks=4)
+        # Week 3: 8 + (3-1)*2 = 12
         result = compute_weekly_volume_target("Chest", 3, config)
-        assert result == 22
+        assert result == 12
 
     def test_never_exceeds_mrv(self):
         config = _make_config(total_weeks=4)
-        # Even with a very high week, should clamp to MRV
+        # Even with a very high week, should clamp to MRV (22)
         result = compute_weekly_volume_target("Chest", 10, config)
         assert result <= MUSCLE_GROUP_PROFILES["Chest"].mrv
 
-    def test_never_below_mev(self):
+    def test_never_below_starting_mav(self):
         config = _make_config(total_weeks=4)
         result = compute_weekly_volume_target("Chest", 0, config)
-        assert result >= MUSCLE_GROUP_PROFILES["Chest"].mev
+        assert result >= MUSCLE_GROUP_PROFILES["Chest"].starting_mav
 
     def test_unknown_muscle_group_uses_fallback(self):
         config = _make_config(total_weeks=4)
-        # Week 1 starts at MEV for unknown group (default profile MEV=4)
+        # Week 1 starts at starting_mav for unknown group (default profile starting_mav=5)
         result = compute_weekly_volume_target("Unknown", 1, config)
-        assert result == DEFAULT_PROFILE.mev
+        assert result == DEFAULT_PROFILE.starting_mav
 
     def test_quads_week_progression(self):
         config = _make_config(total_weeks=6)
-        # accum_weeks = 5, MEV=6, MRV=20
+        # starting_mav=8, MRV=20, +2/week: 8, 10, 12, 14, 16
         results = [compute_weekly_volume_target("Quadriceps", w, config) for w in range(1, 6)]
+        assert results == [8, 10, 12, 14, 16]
         # Should be monotonically non-decreasing
         for i in range(1, len(results)):
             assert results[i] >= results[i - 1]
+
+    def test_mrv_cap_reached(self):
+        config = _make_config(total_weeks=10)
+        # Quadriceps: starting_mav=8, MRV=20
+        # Week 7: 8 + 6*2 = 20 (hits MRV)
+        # Week 8: 8 + 7*2 = 22 -> capped at 20
+        assert compute_weekly_volume_target("Quadriceps", 7, config) == 20
+        assert compute_weekly_volume_target("Quadriceps", 8, config) == 20
 
 
 # ---------------------------------------------------------------------------
@@ -278,22 +293,22 @@ class TestAutoregulateSets:
         # round(10 * 0.70) = 7
         assert result == 7
 
-    def test_floor_at_mev_over_frequency(self):
+    def test_floor_at_starting_mav_over_frequency(self):
         config = _make_config(
             total_weeks=4,
             frequency={"Chest": 2},
             day_indices={"Chest": [1, 3]},
         )
-        # Chest MEV=6, freq=2 -> min = ceil(6/2) = 3
+        # Chest starting_mav=8, freq=2 -> min = ceil(8/2) = 4
         # With heavy adjustments on small planned_sets
         state = UserState(
             completed_sessions_count=5,
             recent_avg_rir=0.5,
             e1rm_trend=-0.05,
         )
-        # round(4 * 0.70) = round(2.8) = 3, floor = 3
-        result = autoregulate_sets(4, "Chest", 1, state, config)
-        assert result == 3
+        # round(5 * 0.70) = round(3.5) = 4, floor = 4
+        result = autoregulate_sets(5, "Chest", 1, state, config)
+        assert result == 4
 
 
 # ---------------------------------------------------------------------------
@@ -306,30 +321,30 @@ class TestDeloadSets:
             frequency={"Chest": 2},
             day_indices={"Chest": [1, 3]},
         )
-        # Chest MEV=6 -> weekly = max(6-2, 6//2) = max(4, 3) = 4
-        # per session = ceil(4/2) = 2
+        # Chest starting_mav=8 -> weekly = max(8-2, 8//2) = max(6, 4) = 6
+        # per session = ceil(6/2) = 3
         result = _deload_sets("Chest", config)
-        assert result == 2
+        assert result == 3
 
-    def test_low_mev_muscle_group(self):
+    def test_low_starting_mav_muscle_group(self):
         config = _make_config(
             frequency={"Core": 2},
             day_indices={"Core": [1, 3]},
         )
-        # Core MEV=6 -> weekly = max(6-2, 6//2) = max(4, 3) = 4
-        # per session = ceil(4/2) = 2
+        # Core starting_mav=8 -> weekly = max(8-2, 8//2) = max(6, 4) = 6
+        # per session = ceil(6/2) = 3
         result = _deload_sets("Core", config)
-        assert result == 2
+        assert result == 3
 
     def test_single_frequency(self):
         config = _make_config(
             frequency={"Biceps": 1},
             day_indices={"Biceps": [2]},
         )
-        # Biceps MEV=8 -> weekly = max(8-2, 8//2) = max(6, 4) = 6
-        # per session = ceil(6/1) = 6
+        # Biceps starting_mav=9 -> weekly = max(9-2, 9//2) = max(7, 4) = 7
+        # per session = ceil(7/1) = 7
         result = _deload_sets("Biceps", config)
-        assert result == 6
+        assert result == 7
 
 
 # ---------------------------------------------------------------------------

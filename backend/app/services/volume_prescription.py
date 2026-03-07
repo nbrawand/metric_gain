@@ -2,7 +2,7 @@
 
 Three-layer system for prescribing how many sets of each muscle group to do
 on a given training day during a mesocycle's accumulation phase:
-  Layer 1 - Weekly volume target (MEV -> MRV linear ramp)
+  Layer 1 - Weekly volume target (+2 sets/week from starting MAV, capped at MRV)
   Layer 2 - Session allocation with remainder distribution
   Layer 3 - Real-time autoregulation (RIR deviation + e1RM trend)
 """
@@ -23,9 +23,8 @@ logger = logging.getLogger("app.services.volume_prescription")
 
 @dataclass
 class MuscleGroupProfile:
-    mev: int          # Minimum Effective Volume (sets/week)
-    mav: int          # Maximum Adaptive Volume
-    mrv: int          # Maximum Recoverable Volume
+    starting_mav: int  # Starting Maximum Adaptive Volume (week 1 post-deload)
+    mrv: int           # Maximum Recoverable Volume
     recovery_hours: int
     max_sets_per_session: int
 
@@ -33,21 +32,21 @@ class MuscleGroupProfile:
 # Keyed by the 12 muscle groups that exist in the app's exercise seed data.
 # Spec groups merged: Back (width+thickness) -> Back, Side/Rear/Front Delts -> Shoulders.
 MUSCLE_GROUP_PROFILES: dict[str, MuscleGroupProfile] = {
-    "Quadriceps":  MuscleGroupProfile(mev=6,  mav=14, mrv=20, recovery_hours=72, max_sets_per_session=100),
-    "Hamstrings":  MuscleGroupProfile(mev=6,  mav=10, mrv=16, recovery_hours=72, max_sets_per_session=100),
-    "Chest":       MuscleGroupProfile(mev=6,  mav=14, mrv=22, recovery_hours=48, max_sets_per_session=100),
-    "Back":        MuscleGroupProfile(mev=6,  mav=14, mrv=22, recovery_hours=48, max_sets_per_session=100),
-    "Shoulders":   MuscleGroupProfile(mev=8,  mav=16, mrv=26, recovery_hours=36, max_sets_per_session=100),
-    "Biceps":      MuscleGroupProfile(mev=8,  mav=14, mrv=20, recovery_hours=36, max_sets_per_session=100),
-    "Triceps":     MuscleGroupProfile(mev=8,  mav=14, mrv=20, recovery_hours=36, max_sets_per_session=100),
-    "Glutes":      MuscleGroupProfile(mev=6,  mav=10, mrv=16, recovery_hours=72, max_sets_per_session=100),
-    "Calves":      MuscleGroupProfile(mev=8,  mav=14, mrv=20, recovery_hours=36, max_sets_per_session=100),
-    "Core":        MuscleGroupProfile(mev=6,  mav=12, mrv=18, recovery_hours=36, max_sets_per_session=100),
-    "Traps":       MuscleGroupProfile(mev=6,  mav=10, mrv=16, recovery_hours=36, max_sets_per_session=100),
-    "Forearms":    MuscleGroupProfile(mev=8,  mav=12, mrv=18, recovery_hours=36, max_sets_per_session=100),
+    "Quadriceps":  MuscleGroupProfile(starting_mav=8,  mrv=20, recovery_hours=72, max_sets_per_session=100),
+    "Hamstrings":  MuscleGroupProfile(starting_mav=8,  mrv=16, recovery_hours=72, max_sets_per_session=100),
+    "Chest":       MuscleGroupProfile(starting_mav=8,  mrv=22, recovery_hours=48, max_sets_per_session=100),
+    "Back":        MuscleGroupProfile(starting_mav=8,  mrv=22, recovery_hours=48, max_sets_per_session=100),
+    "Shoulders":   MuscleGroupProfile(starting_mav=9,  mrv=26, recovery_hours=36, max_sets_per_session=100),
+    "Biceps":      MuscleGroupProfile(starting_mav=9,  mrv=20, recovery_hours=36, max_sets_per_session=100),
+    "Triceps":     MuscleGroupProfile(starting_mav=9,  mrv=20, recovery_hours=36, max_sets_per_session=100),
+    "Glutes":      MuscleGroupProfile(starting_mav=8,  mrv=16, recovery_hours=72, max_sets_per_session=100),
+    "Calves":      MuscleGroupProfile(starting_mav=9,  mrv=20, recovery_hours=36, max_sets_per_session=100),
+    "Core":        MuscleGroupProfile(starting_mav=8,  mrv=18, recovery_hours=36, max_sets_per_session=100),
+    "Traps":       MuscleGroupProfile(starting_mav=8,  mrv=16, recovery_hours=36, max_sets_per_session=100),
+    "Forearms":    MuscleGroupProfile(starting_mav=9,  mrv=18, recovery_hours=36, max_sets_per_session=100),
 }
 
-DEFAULT_PROFILE = MuscleGroupProfile(mev=4, mav=10, mrv=16, recovery_hours=48, max_sets_per_session=8)
+DEFAULT_PROFILE = MuscleGroupProfile(starting_mav=5, mrv=16, recovery_hours=48, max_sets_per_session=8)
 
 
 @dataclass
@@ -94,19 +93,15 @@ def compute_target_rir(week: int, accumulation_weeks: int) -> int:
 
 
 def compute_weekly_volume_target(muscle_group: str, week: int, config: MesocycleConfig) -> int:
-    """Layer 1: linear ramp from MEV to MRV across accumulation weeks.
+    """Layer 1: +2 sets/week ramp from starting MAV, capped at MRV.
 
-    Week 1 starts exactly at MEV; final accumulation week reaches MRV.
-    S_weekly(m, week) = round(MEV + (week-1) * (MRV - MEV) / (accum_weeks - 1))
-    Clamped to [MEV, MRV].
+    Week 1 starts at starting_mav; each subsequent week adds 2 sets.
+    S_weekly(m, week) = starting_mav + (week - 1) * 2
+    Clamped to [starting_mav, MRV].
     """
     profile = _get_profile(muscle_group)
-    accum = config.accumulation_weeks
-    if accum <= 1:
-        return profile.mev
-
-    target = profile.mev + (week - 1) * (profile.mrv - profile.mev) / (accum - 1)
-    target = max(profile.mev, min(round(target), profile.mrv))
+    target = profile.starting_mav + (week - 1) * 2
+    target = max(profile.starting_mav, min(round(target), profile.mrv))
     return target
 
 
@@ -167,7 +162,7 @@ def autoregulate_sets(
     Signals:
       - RIR deviation: if actual avg RIR is lower than target, user is more fatigued
       - e1RM trend: if estimated 1RM is declining, user exceeds recoverable volume
-    Floor: ceil(MEV / F)
+    Floor: ceil(starting_mav / F)
     """
     if user_state.completed_sessions_count < 2:
         logger.info("Cold start for %s: skipping autoregulation (%d sessions).",
@@ -202,7 +197,7 @@ def autoregulate_sets(
 
     profile = _get_profile(muscle_group)
     freq = config.muscle_group_frequency.get(muscle_group, 1)
-    min_sets = math.ceil(profile.mev / freq) if freq > 0 else 1
+    min_sets = math.ceil(profile.starting_mav / freq) if freq > 0 else 1
     min_sets = max(min_sets, 1)
 
     adjusted = max(round(planned_sets * adjustment), min_sets)
@@ -210,10 +205,10 @@ def autoregulate_sets(
 
 
 def _deload_sets(muscle_group: str, config: MesocycleConfig) -> int:
-    """Deload volume: max(MEV - 2, MEV // 2) weekly, divided by frequency, min 1."""
+    """Deload volume: max(starting_mav - 2, starting_mav // 2) weekly, divided by frequency, min 1."""
     profile = _get_profile(muscle_group)
-    weekly = max(profile.mev - 2, profile.mev // 2)
-    # For zero-MEV groups (e.g. Core), give at least 1 set/week
+    weekly = max(profile.starting_mav - 2, profile.starting_mav // 2)
+    # For zero starting_mav groups, give at least 1 set/week
     weekly = max(weekly, 1)
     freq = config.muscle_group_frequency.get(muscle_group, 1)
     freq = max(freq, 1)
@@ -383,7 +378,7 @@ def build_user_state(
 
     # Current estimated MEV (use population default for now)
     profile = _get_profile(muscle_group)
-    state.current_estimated_mev = profile.mev
+    state.current_estimated_mev = profile.starting_mav
 
     return state
 
