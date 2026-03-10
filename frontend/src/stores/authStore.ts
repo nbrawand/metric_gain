@@ -22,6 +22,7 @@ interface AuthState {
   logout: () => void;
   refreshAccessToken: () => Promise<void>;
   fetchCurrentUser: () => Promise<void>;
+  updatePreferences: (prefs: Record<string, unknown>) => Promise<void>;
   clearError: () => void;
 }
 
@@ -160,6 +161,21 @@ export const useAuthStore = create<AuthState>()(
           }
           throw err;
         }
+      },
+
+      updatePreferences: async (prefs: Record<string, unknown>) => {
+        const { accessToken, user } = get();
+        if (!accessToken || !user) return;
+
+        const existing = user.preferences ? JSON.parse(user.preferences) : {};
+        const merged = { ...existing, ...prefs };
+        const preferencesStr = JSON.stringify(merged);
+
+        const updated = await authApi.updateCurrentUser(
+          { preferences: preferencesStr },
+          accessToken
+        );
+        set({ user: updated });
       },
 
       clearError: () => {

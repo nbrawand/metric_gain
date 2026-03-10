@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.user import UserCreate, UserLogin, UserResponse, AuthResponse
+from app.schemas.user import UserCreate, UserLogin, UserUpdate, UserResponse, AuthResponse
 from app.utils.auth import (
     hash_password,
     create_access_token,
@@ -170,4 +170,18 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
     Returns:
         User data
     """
+    return UserResponse.from_orm(current_user)
+
+
+@router.patch("/users/me", response_model=UserResponse)
+async def update_current_user(
+    updates: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update current authenticated user's profile fields."""
+    for field, value in updates.model_dump(exclude_unset=True).items():
+        setattr(current_user, field, value)
+    db.commit()
+    db.refresh(current_user)
     return UserResponse.from_orm(current_user)

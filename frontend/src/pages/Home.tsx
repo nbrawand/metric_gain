@@ -9,12 +9,22 @@ import { getActiveMesocycleInstance } from '../api/mesocycles';
 import { listWorkoutSessions, createWorkoutSession } from '../api/workoutSessions';
 import { MesocycleInstance } from '../types/mesocycle';
 import { WorkoutSessionListItem } from '../types/workout_session';
+import OnboardingWizard from '../components/OnboardingWizard';
 
 export function Home() {
   const navigate = useNavigate();
-  const { user, accessToken } = useAuthStore();
+  const { user, accessToken, updatePreferences } = useAuthStore();
   const [activeInstance, setActiveInstance] = useState<MesocycleInstance | null>(null);
   const [workoutSessions, setWorkoutSessions] = useState<WorkoutSessionListItem[]>([]);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (!user?.preferences) return true;
+    try {
+      const prefs = JSON.parse(user.preferences);
+      return !prefs.onboarding_completed;
+    } catch {
+      return true;
+    }
+  });
 
   useEffect(() => {
     loadActiveInstance();
@@ -89,8 +99,18 @@ export function Home() {
 
   const mesocycle = activeInstance?.mesocycle_template;
 
+  const handleOnboardingComplete = async () => {
+    setShowOnboarding(false);
+    try {
+      await updatePreferences({ onboarding_completed: true });
+    } catch (err) {
+      console.error('Error saving onboarding preference:', err);
+    }
+  };
+
   return (
     <>
+      {showOnboarding && <OnboardingWizard onComplete={handleOnboardingComplete} />}
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {/* Active Mesocycle Card */}

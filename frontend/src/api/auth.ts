@@ -2,7 +2,7 @@
  * Authentication API client
  */
 
-import { get, post } from './client';
+import { get, patch, post } from './client';
 import type {
   AuthResponse,
   LoginRequest,
@@ -43,4 +43,14 @@ export async function refreshToken(
  */
 export async function getCurrentUser(accessToken: string): Promise<User> {
   return get<User>(`${AUTH_BASE}/users/me`, accessToken);
+}
+
+/**
+ * Update current authenticated user's profile
+ */
+export async function updateCurrentUser(
+  data: Partial<Pick<User, 'full_name' | 'timezone' | 'preferences'>>,
+  accessToken: string
+): Promise<User> {
+  return patch<User>(`${AUTH_BASE}/users/me`, data, accessToken);
 }
