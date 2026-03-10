@@ -453,6 +453,15 @@ export default function Mesocycles() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        navigate(`/mesocycles/${mesocycle.id}`);
+                      }}
+                      className="px-4 py-2 rounded text-sm font-medium transition border border-gray-600 hover:bg-gray-700 text-gray-300"
+                    >
+                      Details
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
                         handleCopyMesocycle(mesocycle.id);
                       }}
                       className="px-4 py-2 rounded text-sm font-medium transition bg-teal-600 hover:bg-teal-700 text-white ml-auto"

@@ -703,27 +703,6 @@ export default function MesocycleDetail() {
                                 </div>
                               </div>
 
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                                <div>
-                                  <span className="text-gray-500">Sets</span>
-                                  <p className="font-medium text-gray-200">{exercise.target_sets}</p>
-                                </div>
-                                <div>
-                                  <span className="text-gray-500">Reps</span>
-                                  <p className="font-medium text-gray-200">
-                                    {exercise.target_reps_min}-{exercise.target_reps_max}
-                                  </p>
-                                </div>
-                                <div>
-                                  <span className="text-gray-500">Starting RIR</span>
-                                  <p className="font-medium text-gray-200">{exercise.starting_rir}</p>
-                                </div>
-                                <div>
-                                  <span className="text-gray-500">Ending RIR</span>
-                                  <p className="font-medium text-gray-200">{exercise.ending_rir}</p>
-                                </div>
-                              </div>
-
                               {exercise.notes && (
                                 <div className="mt-3 pt-3 border-t border-gray-700">
                                   <span className="text-sm text-gray-500">Notes:</span>
