@@ -350,8 +350,17 @@ def create_workout_session(
                             current_day=session_data.day_number,
                         )
                         if hist_w is not None:
-                            target_weight = hist_w
-                        if hist_r is not None and target_reps is None:
+                            increase = max(hist_w * 0.025, 2.5)
+                            target_weight = round_to_nearest_5(hist_w + increase)
+                            if target_weight <= hist_w:
+                                target_weight = hist_w
+                                if hist_r is not None:
+                                    target_reps = hist_r + 1
+                                elif target_reps is not None:
+                                    target_reps = target_reps + 1
+                            elif hist_r is not None:
+                                target_reps = hist_r
+                        elif hist_r is not None and target_reps is None:
                             target_reps = hist_r
 
                     workout_set = WorkoutSet(

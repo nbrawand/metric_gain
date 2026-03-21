@@ -372,8 +372,17 @@ def _generate_sets_from_source(
                     current_day=day_number,
                 )
                 if prev_weight is not None:
-                    target_weight = prev_weight
-                if prev_reps is not None and target_reps is None:
+                    increase = max(prev_weight * 0.025, 2.5)
+                    target_weight = round_to_nearest_5(prev_weight + increase)
+                    if target_weight <= prev_weight:
+                        target_weight = prev_weight
+                        if prev_reps is not None:
+                            target_reps = prev_reps + 1
+                        elif target_reps is not None:
+                            target_reps = target_reps + 1
+                    elif prev_reps is not None:
+                        target_reps = prev_reps
+                elif prev_reps is not None and target_reps is None:
                     target_reps = prev_reps
 
             workout_set = WorkoutSet(
