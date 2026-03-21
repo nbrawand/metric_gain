@@ -225,7 +225,7 @@ export default function Landing() {
       {/* Bottom CTA */}
       <section className="py-16 px-4 text-center">
         <h2 className="text-2xl font-bold text-white mb-3">Ready to Start?</h2>
-        <p className="text-gray-400 mb-8">Create your free account and build your first mesocycle in minutes.</p>
+        <p className="text-gray-400 mb-8">Create your free account and build your first mesocycle.</p>
         <Link
           to="/register"
           className="bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 px-8 rounded-lg transition-colors text-lg"
