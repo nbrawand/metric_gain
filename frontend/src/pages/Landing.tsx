@@ -11,33 +11,44 @@ export default function Landing() {
   return (
     <main className="bg-gray-900">
       {/* Hero */}
-      <section className="bg-gradient-to-br from-teal-700 via-teal-800 to-gray-900 py-20 px-4 text-center">
-        <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4">
-          Train Smarter. Grow Stronger.
-        </h1>
-        <p className="text-lg sm:text-xl text-teal-100 max-w-2xl mx-auto mb-8">
-          Science-backed volume prescription that adapts to you. Get the optimal number of sets per muscle group each week, personalized, progressive, and periodized.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link
-            to="/register"
-            className="bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 px-8 rounded-lg transition-colors text-lg"
-          >
-            Get Started
-          </Link>
-          <button
-            onClick={goToHowItWorks}
-            className="border border-teal-400 text-teal-300 hover:bg-teal-900 font-bold py-3 px-8 rounded-lg transition-colors text-lg"
-          >
-            Learn More
-          </button>
+      <section className="bg-gradient-to-br from-teal-700 via-teal-800 to-gray-900 py-16 sm:py-20 px-4">
+        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-10">
+          <div className="flex-1 text-center md:text-left">
+            <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4">
+              Train Smarter. Grow Stronger.
+            </h1>
+            <p className="text-lg sm:text-xl text-teal-100 max-w-2xl mb-8">
+              Science-backed volume prescription that adapts to you. Get the optimal number of sets per muscle group each week, personalized, progressive, and periodized.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
+              <Link
+                to="/register"
+                className="bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 px-8 rounded-lg transition-colors text-lg"
+              >
+                Get Started
+              </Link>
+              <button
+                onClick={goToHowItWorks}
+                className="border border-teal-400 text-teal-300 hover:bg-teal-900 font-bold py-3 px-8 rounded-lg transition-colors text-lg"
+              >
+                Learn More
+              </button>
+            </div>
+            <p className="text-teal-200 mt-4 text-sm">
+              Already have an account?{' '}
+              <Link to="/login" className="text-white hover:text-teal-300 underline transition-colors">
+                Log in
+              </Link>
+            </p>
+          </div>
+          <div className="flex-shrink-0">
+            <img
+              src="/workout_page.png"
+              alt="Strength Guider workout tracking screen"
+              className="w-56 sm:w-64 rounded-2xl shadow-2xl"
+            />
+          </div>
         </div>
-        <p className="text-teal-200 mt-4 text-sm">
-          Already have an account?{' '}
-          <Link to="/login" className="text-white hover:text-teal-300 underline transition-colors">
-            Log in
-          </Link>
-        </p>
       </section>
 
       {/* Feature Cards */}
