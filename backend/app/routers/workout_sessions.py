@@ -9,11 +9,6 @@ from sqlalchemy import func
 
 import logging
 
-def round_to_nearest_5(value: float) -> float:
-    """Round a weight to the nearest 5 (e.g. 0, 5, 10, 15, ...)."""
-    return round(value / 5) * 5
-
-
 from app.database import get_db
 from app.models.workout_session import WorkoutSession, WorkoutSet, WorkoutFeedback
 from app.models.exercise import Exercise
@@ -23,6 +18,8 @@ from app.services.volume_prescription import (
     get_prescribed_sets,
     build_mesocycle_config,
     compute_target_rir,
+    find_previous_performance,
+    round_to_nearest_5,
 )
 
 logger = logging.getLogger(__name__)
@@ -102,6 +99,30 @@ def _generate_sets_from_template(
 
         target_rir = mg_target_rir[muscle_group]
 
+        # Look up previous performance for target_weight/target_reps
+        hist_target_weight = None
+        hist_target_reps = template_exercise.target_reps_max
+        if user_id is not None:
+            prev_weight, prev_reps = find_previous_performance(
+                db, user_id, template_exercise.exercise_id,
+                mesocycle_instance_id=mesocycle_instance_id,
+                current_week=week_number,
+                current_day=day_number,
+            )
+            if prev_weight is not None:
+                increase = max(prev_weight * 0.025, 2.5)
+                hist_target_weight = round_to_nearest_5(prev_weight + increase)
+                if hist_target_weight <= prev_weight:
+                    hist_target_weight = prev_weight
+                    if prev_reps is not None:
+                        hist_target_reps = prev_reps + 1
+                    elif hist_target_reps is not None:
+                        hist_target_reps = hist_target_reps + 1
+                elif prev_reps is not None:
+                    hist_target_reps = prev_reps
+            elif prev_reps is not None:
+                hist_target_reps = prev_reps
+
         for set_num in range(1, num_sets + 1):
             workout_set = WorkoutSet(
                 workout_session_id=workout_session.id,
@@ -110,8 +131,8 @@ def _generate_sets_from_template(
                 order_index=template_exercise.order_index * 100 + set_num,
                 weight=0,
                 reps=0,
-                target_weight=None,
-                target_reps=template_exercise.target_reps_max,
+                target_weight=hist_target_weight,
+                target_reps=hist_target_reps,
                 target_rir=target_rir,
             )
             db.add(workout_set)
@@ -228,6 +249,28 @@ def create_workout_session(
                         if target_reps is not None:
                             target_reps = target_reps + 1
 
+                # Cascading fallback if no weight from prev session
+                if target_weight is None:
+                    hist_w, hist_r = find_previous_performance(
+                        db, current_user.id, exercise_id,
+                        mesocycle_instance_id=session_data.mesocycle_instance_id,
+                        current_week=session_data.week_number,
+                        current_day=session_data.day_number,
+                    )
+                    if hist_w is not None:
+                        increase = max(hist_w * 0.025, 2.5)
+                        target_weight = round_to_nearest_5(hist_w + increase)
+                        if target_weight <= hist_w:
+                            target_weight = hist_w
+                            if hist_r is not None:
+                                target_reps = hist_r + 1
+                            elif target_reps is not None:
+                                target_reps = target_reps + 1
+                        elif hist_r is not None:
+                            target_reps = hist_r
+                    elif hist_r is not None and target_reps is None:
+                        target_reps = hist_r
+
                 workout_set = WorkoutSet(
                     workout_session_id=workout_session.id,
                     exercise_id=exercise_id,
@@ -297,6 +340,19 @@ def create_workout_session(
                             target_weight = source_set.weight
                         if source_set.reps > 0:
                             target_reps = source_set.reps
+
+                    # Cascading fallback if source has no weight data
+                    if target_weight is None:
+                        hist_w, hist_r = find_previous_performance(
+                            db, current_user.id, exercise_id,
+                            mesocycle_instance_id=session_data.mesocycle_instance_id,
+                            current_week=session_data.week_number,
+                            current_day=session_data.day_number,
+                        )
+                        if hist_w is not None:
+                            target_weight = hist_w
+                        if hist_r is not None and target_reps is None:
+                            target_reps = hist_r
 
                     workout_set = WorkoutSet(
                         workout_session_id=workout_session.id,
@@ -406,54 +462,83 @@ def get_workout_session(
             detail="Workout session not found"
         )
 
-    # Refresh targets from previous week's actual data for in-progress sessions
-    if workout_session.status == "in_progress" and workout_session.week_number > 1:
-        prev_session = db.query(WorkoutSession).filter(
-            WorkoutSession.mesocycle_instance_id == workout_session.mesocycle_instance_id,
-            WorkoutSession.user_id == current_user.id,
-            WorkoutSession.week_number < workout_session.week_number,
-            WorkoutSession.day_number == workout_session.day_number,
-        ).order_by(WorkoutSession.week_number.desc()).first()
+    # Refresh targets from previous data for in-progress sessions
+    if workout_session.status == "in_progress":
+        # Try per-set matching from previous week first (preserves per-set weight differences)
+        prev_map = {}
+        if workout_session.week_number > 1:
+            prev_session = db.query(WorkoutSession).filter(
+                WorkoutSession.mesocycle_instance_id == workout_session.mesocycle_instance_id,
+                WorkoutSession.user_id == current_user.id,
+                WorkoutSession.week_number < workout_session.week_number,
+                WorkoutSession.day_number == workout_session.day_number,
+            ).order_by(WorkoutSession.week_number.desc()).first()
 
-        if prev_session:
-            prev_sets = db.query(WorkoutSet).filter(
-                WorkoutSet.workout_session_id == prev_session.id
-            ).all()
-            prev_map = {}
-            for ps in prev_sets:
-                prev_map.setdefault(ps.exercise_id, []).append(ps)
+            if prev_session:
+                prev_sets = db.query(WorkoutSet).filter(
+                    WorkoutSet.workout_session_id == prev_session.id
+                ).all()
+                for ps in prev_sets:
+                    prev_map.setdefault(ps.exercise_id, []).append(ps)
 
-            dirty = False
-            for ws in workout_session.workout_sets:
-                prev_exercise_sets = prev_map.get(ws.exercise_id)
-                if not prev_exercise_sets:
-                    continue
+        dirty = False
+        for ws in workout_session.workout_sets:
+            prev_exercise_sets = prev_map.get(ws.exercise_id)
+            prev_set = None
+            if prev_exercise_sets:
                 prev_set = next((s for s in prev_exercise_sets if s.set_number == ws.set_number), None)
-                if not prev_set:
-                    continue
 
-                if prev_set.reps > 0 and ws.target_reps != prev_set.reps:
-                    ws.target_reps = prev_set.reps
+            if prev_set and prev_set.weight > 0:
+                # Per-set progression from previous week
+                new_target = round_to_nearest_5(prev_set.weight + max(prev_set.weight * 0.025, 2.5))
+                new_reps = prev_set.reps if prev_set.reps > 0 else None
+                if new_target <= prev_set.weight:
+                    new_target = prev_set.weight
+                    if new_reps is not None:
+                        new_reps = new_reps + 1
+                    elif ws.target_reps is not None:
+                        new_reps = ws.target_reps + 1
+                if ws.target_weight != new_target:
+                    ws.target_weight = new_target
                     dirty = True
-                if prev_set.weight > 0:
-                    new_target = round_to_nearest_5(prev_set.weight + max(prev_set.weight * 0.025, 2.5))
-                    # If rounding brought it back to the same weight, bump target reps instead
-                    if new_target <= prev_set.weight:
-                        new_target = prev_set.weight
-                        if ws.target_reps is not None:
-                            new_reps = (prev_set.reps if prev_set.reps > 0 else ws.target_reps or 0) + 1
-                            if ws.target_reps != new_reps:
-                                ws.target_reps = new_reps
-                                dirty = True
+                if prev_set.reps > 0 and ws.target_reps != (new_reps if new_reps is not None else prev_set.reps):
+                    ws.target_reps = new_reps if new_reps is not None else prev_set.reps
+                    dirty = True
+            elif ws.target_weight is None:
+                # Cascading fallback when no per-set match
+                hist_w, hist_r = find_previous_performance(
+                    db, current_user.id, ws.exercise_id,
+                    mesocycle_instance_id=workout_session.mesocycle_instance_id,
+                    current_week=workout_session.week_number,
+                    current_day=workout_session.day_number,
+                )
+                if hist_w is not None:
+                    new_target = round_to_nearest_5(hist_w + max(hist_w * 0.025, 2.5))
+                    if new_target <= hist_w:
+                        new_target = hist_w
+                        if hist_r is not None:
+                            new_reps = hist_r + 1
+                        elif ws.target_reps is not None:
+                            new_reps = ws.target_reps + 1
+                        else:
+                            new_reps = None
+                    else:
+                        new_reps = hist_r
                     if ws.target_weight != new_target:
                         ws.target_weight = new_target
                         dirty = True
+                    if new_reps is not None and ws.target_reps != new_reps:
+                        ws.target_reps = new_reps
+                        dirty = True
+                elif hist_r is not None and ws.target_reps != hist_r:
+                    ws.target_reps = hist_r
+                    dirty = True
 
-            if dirty:
-                db.commit()
-                workout_session = db.query(WorkoutSession).options(
-                    joinedload(WorkoutSession.workout_sets).joinedload(WorkoutSet.exercise)
-                ).filter(WorkoutSession.id == session_id).first()
+        if dirty:
+            db.commit()
+            workout_session = db.query(WorkoutSession).options(
+                joinedload(WorkoutSession.workout_sets).joinedload(WorkoutSet.exercise)
+            ).filter(WorkoutSession.id == session_id).first()
 
     return workout_session
 

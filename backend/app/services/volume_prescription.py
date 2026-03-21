@@ -18,6 +18,11 @@ from sqlalchemy.orm import Session
 logger = logging.getLogger("app.services.volume_prescription")
 
 
+def round_to_nearest_5(value: float) -> float:
+    """Round a weight to the nearest 5 (e.g. 0, 5, 10, 15, ...)."""
+    return round(value / 5) * 5
+
+
 # ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------
@@ -119,6 +124,95 @@ def _deload_sets(muscle_group: str, config: MesocycleConfig) -> int:
     freq = max(freq, 1)
     per_session = max(math.ceil(weekly / freq), 1)
     return per_session
+
+
+# ---------------------------------------------------------------------------
+# Cascading previous performance lookup
+# ---------------------------------------------------------------------------
+
+def find_previous_performance(
+    db: Session,
+    user_id: int,
+    exercise_id: int,
+    mesocycle_instance_id: int | None = None,
+    current_week: int | None = None,
+    current_day: int | None = None,
+) -> tuple[float | None, int | None]:
+    """Find the last completed non-zero weight/reps for an exercise.
+
+    Search priority:
+      1. Previous week, same day, same meso instance
+      2. Any completed session in the same meso instance
+      3. Any completed session across all meso instances
+
+    Returns (weight, reps) or (None, None).
+    """
+    from app.models.workout_session import WorkoutSession, WorkoutSet
+
+    # Tier 1: Previous week, same day, same meso instance
+    if mesocycle_instance_id and current_week and current_week > 1 and current_day:
+        result = (
+            db.query(WorkoutSet)
+            .join(WorkoutSession, WorkoutSession.id == WorkoutSet.workout_session_id)
+            .filter(
+                WorkoutSession.user_id == user_id,
+                WorkoutSession.mesocycle_instance_id == mesocycle_instance_id,
+                WorkoutSession.status == "completed",
+                WorkoutSession.week_number < current_week,
+                WorkoutSession.day_number == current_day,
+                WorkoutSet.exercise_id == exercise_id,
+                WorkoutSet.weight > 0,
+            )
+            .order_by(
+                WorkoutSession.week_number.desc(),
+                WorkoutSet.set_number.asc(),
+            )
+            .first()
+        )
+        if result:
+            return (result.weight, result.reps if result.reps > 0 else None)
+
+    # Tier 2: Any completed session in the same meso instance
+    if mesocycle_instance_id:
+        result = (
+            db.query(WorkoutSet)
+            .join(WorkoutSession, WorkoutSession.id == WorkoutSet.workout_session_id)
+            .filter(
+                WorkoutSession.user_id == user_id,
+                WorkoutSession.mesocycle_instance_id == mesocycle_instance_id,
+                WorkoutSession.status == "completed",
+                WorkoutSet.exercise_id == exercise_id,
+                WorkoutSet.weight > 0,
+            )
+            .order_by(
+                WorkoutSession.week_number.desc(),
+                WorkoutSet.set_number.asc(),
+            )
+            .first()
+        )
+        if result:
+            return (result.weight, result.reps if result.reps > 0 else None)
+
+    # Tier 3: Any completed session across all meso instances
+    result = (
+        db.query(WorkoutSet)
+        .join(WorkoutSession, WorkoutSession.id == WorkoutSet.workout_session_id)
+        .filter(
+            WorkoutSession.user_id == user_id,
+            WorkoutSession.status == "completed",
+            WorkoutSet.exercise_id == exercise_id,
+            WorkoutSet.weight > 0,
+        )
+        .order_by(
+            WorkoutSession.completed_at.desc(),
+            WorkoutSet.set_number.asc(),
+        )
+        .first()
+    )
+    if result:
+        return (result.weight, result.reps if result.reps > 0 else None)
+
+    return (None, None)
 
 
 # ---------------------------------------------------------------------------
@@ -427,6 +521,29 @@ def reoptimize_instance_volumes(
             if desired > current_count:
                 # Add sets
                 last_set = sets[-1]
+                # Look up previous performance for target_weight
+                prev_weight, prev_reps = find_previous_performance(
+                    db, instance.user_id, exercise_id,
+                    mesocycle_instance_id=instance.id,
+                    current_week=session.week_number,
+                    current_day=session.day_number,
+                )
+                hist_target_weight = None
+                hist_target_reps = last_set.target_reps
+                if prev_weight is not None:
+                    increase = max(prev_weight * 0.025, 2.5)
+                    hist_target_weight = round_to_nearest_5(prev_weight + increase)
+                    if hist_target_weight <= prev_weight:
+                        hist_target_weight = prev_weight
+                        if prev_reps is not None:
+                            hist_target_reps = prev_reps + 1
+                        elif hist_target_reps is not None:
+                            hist_target_reps = hist_target_reps + 1
+                    elif prev_reps is not None:
+                        hist_target_reps = prev_reps
+                elif prev_reps is not None:
+                    hist_target_reps = prev_reps
+
                 for set_num in range(current_count + 1, desired + 1):
                     new_set = WorkoutSet(
                         workout_session_id=session.id,
@@ -435,8 +552,8 @@ def reoptimize_instance_volumes(
                         order_index=last_set.order_index,
                         weight=0,
                         reps=0,
-                        target_weight=None,
-                        target_reps=last_set.target_reps,
+                        target_weight=hist_target_weight,
+                        target_reps=hist_target_reps,
                         target_rir=target_rir,
                     )
                     db.add(new_set)

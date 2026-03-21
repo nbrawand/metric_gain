@@ -26,6 +26,8 @@ from app.services.volume_prescription import (
     build_mesocycle_config,
     get_prescribed_sets,
     compute_target_rir,
+    find_previous_performance,
+    round_to_nearest_5,
 )
 from app.services.volume_optimizer import create_mesocycle_volume, ensure_user_muscle_params, create_mesocycle_volume_for_params
 
@@ -264,6 +266,29 @@ def _generate_sets_for_session(
 
         target_rir = mg_target_rir[muscle_group]
 
+        # Look up previous performance for target_weight/target_reps
+        prev_weight, prev_reps = find_previous_performance(
+            db, user_id, template_exercise.exercise_id,
+            mesocycle_instance_id=mesocycle_instance_id,
+            current_week=week_number,
+            current_day=day_number,
+        )
+        hist_target_weight = None
+        hist_target_reps = template_exercise.target_reps_max
+        if prev_weight is not None:
+            increase = max(prev_weight * 0.025, 2.5)
+            hist_target_weight = round_to_nearest_5(prev_weight + increase)
+            if hist_target_weight <= prev_weight:
+                hist_target_weight = prev_weight
+                if prev_reps is not None:
+                    hist_target_reps = prev_reps + 1
+                elif hist_target_reps is not None:
+                    hist_target_reps = hist_target_reps + 1
+            elif prev_reps is not None:
+                hist_target_reps = prev_reps
+        elif prev_reps is not None:
+            hist_target_reps = prev_reps
+
         for set_num in range(1, num_sets + 1):
             workout_set = WorkoutSet(
                 workout_session_id=workout_session.id,
@@ -272,8 +297,8 @@ def _generate_sets_for_session(
                 order_index=template_exercise.order_index * 100 + set_num,
                 weight=0,
                 reps=0,
-                target_weight=None,
-                target_reps=template_exercise.target_reps_max,
+                target_weight=hist_target_weight,
+                target_reps=hist_target_reps,
                 target_rir=target_rir,
             )
             db.add(workout_set)
@@ -337,6 +362,19 @@ def _generate_sets_from_source(
                     target_weight = source_set.weight
                 if source_set.reps > 0:
                     target_reps = source_set.reps
+
+            # Fallback to cascading lookup if source has no weight data
+            if target_weight is None:
+                prev_weight, prev_reps = find_previous_performance(
+                    db, user_id, exercise_id,
+                    mesocycle_instance_id=mesocycle_instance_id,
+                    current_week=week_number,
+                    current_day=day_number,
+                )
+                if prev_weight is not None:
+                    target_weight = prev_weight
+                if prev_reps is not None and target_reps is None:
+                    target_reps = prev_reps
 
             workout_set = WorkoutSet(
                 workout_session_id=workout_session.id,
