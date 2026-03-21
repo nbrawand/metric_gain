@@ -25,6 +25,9 @@ class User(Base):
     # Account status
     is_active = Column(Boolean, default=True, nullable=False)
 
+    # Training profile
+    experience_level = Column(String(20), default="intermediate", nullable=False)  # beginner, intermediate, advanced
+
     # Future features
     timezone = Column(String(50), default="UTC", nullable=False)
     preferences = Column(String, default="{}", nullable=False)  # JSON stored as string for SQLite compatibility

@@ -50,6 +50,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
         password_hash=hashed_password,
         full_name=user_data.full_name,
         is_active=True,
+        experience_level=user_data.experience_level or "intermediate",
         timezone="UTC",
         preferences="{}"
     )

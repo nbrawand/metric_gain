@@ -8,6 +8,7 @@ export interface User {
   full_name: string | null;
   created_at: string;
   is_active: boolean;
+  experience_level: string;
   timezone: string;
   preferences: string;
 }
@@ -16,6 +17,7 @@ export interface RegisterRequest {
   email: string;
   password: string;
   full_name?: string;
+  experience_level?: string;
 }
 
 export interface LoginRequest {

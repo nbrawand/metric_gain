@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { getActiveMesocycleInstance } from '../api/mesocycles';
-import { listWorkoutSessions, createWorkoutSession } from '../api/workoutSessions';
+import { listWorkoutSessions } from '../api/workoutSessions';
 import { MesocycleInstance } from '../types/mesocycle';
 import { WorkoutSessionListItem } from '../types/workout_session';
 import OnboardingWizard from '../components/OnboardingWizard';
@@ -53,58 +53,42 @@ export function Home() {
 
   const handleContinueMesocycle = async () => {
     if (!activeInstance || !accessToken) return;
-    const meso = activeInstance.mesocycle_template;
-    if (!meso) return;
 
-    const daysPerWeek = meso.workout_templates?.length || meso.days_per_week;
-
-    // 1. Find the last (most recent) unfinished workout session
+    // All sessions are created upfront — find the first uncompleted one
     const unfinished = workoutSessions
       .filter(s => s.status !== 'completed')
       .sort((a, b) => a.week_number - b.week_number || a.day_number - b.day_number);
 
     if (unfinished.length > 0) {
       navigate(`/workout/${unfinished[0].id}`);
-      return;
-    }
-
-    // 2. All existing sessions are completed — find the next slot and create a new session
-    for (let week = 1; week <= meso.weeks; week++) {
-      for (let day = 1; day <= daysPerWeek; day++) {
-        const existing = workoutSessions.find(
-          s => s.week_number === week && s.day_number === day
-        );
-        if (existing) continue;
-
-        const templateIndex = day - 1;
-        const template = meso.workout_templates?.[templateIndex];
-        if (!template) continue;
-
-        try {
-          const newSession = await createWorkoutSession({
-            mesocycle_instance_id: activeInstance.id,
-            workout_template_id: template.id,
-            workout_date: new Date().toISOString().split('T')[0],
-            week_number: week,
-            day_number: day,
-          }, accessToken);
-          navigate(`/workout/${newSession.id}`);
-        } catch (err) {
-          console.error('Error creating workout session:', err);
-        }
-        return;
-      }
+    } else {
+      // All done — shouldn't normally reach here with an active instance
+      navigate('/mesocycles');
     }
   };
 
   const mesocycle = activeInstance?.mesocycle_template;
 
-  const handleOnboardingComplete = async () => {
+  const handleOnboardingComplete = async (experienceLevel?: string) => {
     setShowOnboarding(false);
     try {
       await updatePreferences({ onboarding_completed: true });
+      if (experienceLevel) {
+        await updateExperienceLevel(experienceLevel);
+      }
     } catch (err) {
       console.error('Error saving onboarding preference:', err);
+    }
+  };
+
+  const updateExperienceLevel = async (level: string) => {
+    if (!accessToken) return;
+    try {
+      const { updateCurrentUser } = await import('../api/auth');
+      const updated = await updateCurrentUser({ experience_level: level }, accessToken);
+      useAuthStore.setState({ user: updated });
+    } catch (err) {
+      console.error('Error updating experience level:', err);
     }
   };
 
@@ -160,6 +144,20 @@ export function Home() {
                 <div className="flex justify-between text-sm">
                   <dt className="text-gray-400">Email:</dt>
                   <dd className="text-gray-200">{user?.email}</dd>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <dt className="text-gray-400">Experience Level:</dt>
+                  <dd>
+                    <select
+                      value={user?.experience_level || 'intermediate'}
+                      onChange={(e) => updateExperienceLevel(e.target.value)}
+                      className="bg-gray-600 text-gray-200 text-sm rounded px-2 py-0.5 border border-gray-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                    >
+                      <option value="beginner">Beginner</option>
+                      <option value="intermediate">Intermediate</option>
+                      <option value="advanced">Advanced</option>
+                    </select>
+                  </dd>
                 </div>
                 <div className="flex justify-between text-sm">
                   <dt className="text-gray-400">Account Status:</dt>

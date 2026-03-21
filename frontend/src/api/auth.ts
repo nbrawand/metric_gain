@@ -49,7 +49,7 @@ export async function getCurrentUser(accessToken: string): Promise<User> {
  * Update current authenticated user's profile
  */
 export async function updateCurrentUser(
-  data: Partial<Pick<User, 'full_name' | 'timezone' | 'preferences'>>,
+  data: Partial<Pick<User, 'full_name' | 'timezone' | 'preferences' | 'experience_level'>>,
   accessToken: string
 ): Promise<User> {
   return patch<User>(`${AUTH_BASE}/users/me`, data, accessToken);

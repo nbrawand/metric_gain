@@ -81,9 +81,7 @@ def _generate_sets_from_template(
             )
             rir = compute_target_rir(week_number, mesocycle_config.accumulation_weeks)
         else:
-            from app.services.volume_prescription import _get_profile
-            profile = _get_profile(mg)
-            total = max(profile.mev // 2, 1)
+            total = 3  # sensible fallback
             rir = 3
         mg_total_sets[mg] = max(total, count)  # at least 1 per exercise
         mg_target_rir[mg] = rir
@@ -146,6 +144,7 @@ def create_workout_session(
     if template and template.mesocycle:
         mesocycle_config = build_mesocycle_config(
             db, template.mesocycle.id, total_weeks, template.mesocycle.days_per_week,
+            experience_level=current_user.experience_level,
         )
 
     def _prescribe_sets(muscle_group, week, day):
@@ -155,8 +154,7 @@ def create_workout_session(
                 db, muscle_group, week, day,
                 current_user.id, session_data.mesocycle_instance_id, mesocycle_config,
             )
-        from app.services.volume_prescription import _get_profile
-        return max(_get_profile(muscle_group).mev // 2, 1)
+        return 3  # sensible fallback
 
     def _target_rir(week):
         """Get target RIR for this week."""
@@ -482,10 +480,23 @@ def update_workout_session(
     for field, value in update_data.items():
         setattr(workout_session, field, value)
 
-    # If marking as completed, set completed_at timestamp
+    # If marking as completed, set completed_at timestamp and re-optimize
     if update_data.get("status") == "completed" and not workout_session.completed_at:
         from datetime import datetime
+        from app.models.mesocycle import MesocycleInstance
+        from app.services.volume_prescription import reoptimize_instance_volumes
+
         workout_session.completed_at = datetime.now()
+
+        # Re-run optimizer and update uncompleted sessions
+        instance = db.query(MesocycleInstance).filter(
+            MesocycleInstance.id == workout_session.mesocycle_instance_id
+        ).first()
+        if instance:
+            try:
+                reoptimize_instance_volumes(db, instance, current_user)
+            except Exception as e:
+                logger.warning("Re-optimization failed: %s", e)
 
     db.commit()
     db.refresh(workout_session)
@@ -797,6 +808,7 @@ def add_exercise(
     if template and template.mesocycle:
         meso_config = build_mesocycle_config(
             db, template.mesocycle.id, total_weeks, template.mesocycle.days_per_week,
+            experience_level=current_user.experience_level,
         )
         # For ad-hoc exercise additions, ensure the muscle group is in the config
         mg = exercise.muscle_group

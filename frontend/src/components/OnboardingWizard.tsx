@@ -1,115 +1,163 @@
 import { useState } from 'react';
 
 interface OnboardingWizardProps {
-  onComplete: () => void;
+  onComplete: (experienceLevel?: string) => void;
 }
 
-const steps = [
+const experienceLevels = [
   {
-    title: 'Welcome to Strength Guider',
-    content: (
-      <>
-        <p className="text-gray-300 leading-relaxed mb-3">
-          Strength Guider is an evidence-based hypertrophy training app that helps
-          you build muscle more effectively by managing your training volume,
-          intensity, and progression.
-        </p>
-        <p className="text-gray-300 leading-relaxed">
-          This quick walkthrough will explain the core concepts so you can get
-          started right away.
-        </p>
-      </>
-    ),
+    value: 'beginner',
+    label: 'Beginner',
+    description: 'Less than 1 year of consistent training',
   },
   {
-    title: 'Mesocycles',
-    content: (
-      <>
-        <p className="text-gray-300 leading-relaxed mb-3">
-          A <span className="text-teal-400 font-medium">mesocycle</span> is a
-          structured training block, typically 3-7 weeks long, where each week
-          builds on the previous one through gradual increases in volume and
-          intensity.
-        </p>
-        <p className="text-gray-300 leading-relaxed mb-3">
-          Training in structured blocks helps balance stimulus with recovery,
-          reducing the risk of doing too little to see progress or too much to
-          recover from.
-        </p>
-        <p className="text-gray-300 leading-relaxed">
-          The final week of each mesocycle is a <span className="text-teal-400 font-medium">deload</span> —
-          volume and intensity are reduced so your body can recover before the
-          next block.
-        </p>
-      </>
-    ),
+    value: 'intermediate',
+    label: 'Intermediate',
+    description: '1-3 years of consistent training',
   },
   {
-    title: 'Volume & RIR',
-    content: (
-      <>
-        <p className="text-gray-300 leading-relaxed mb-3">
-          The app auto-prescribes <span className="text-teal-400 font-medium">how many sets</span> you
-          should perform per muscle group each session, increasing volume week
-          over week across the mesocycle.
-        </p>
-        <p className="text-gray-300 leading-relaxed mb-3">
-          Intensity is managed through{' '}
-          <span className="text-teal-400 font-medium">RIR (Reps In Reserve)</span> —
-          the number of reps you could have done before failure. Week 1 targets
-          3 RIR (moderate effort), decreasing each week until 0 RIR (failure)
-          in the final training week.
-        </p>
-        <p className="text-gray-300 leading-relaxed">
-          After each session, you rate how each muscle group felt. This
-          feedback, combined with your logged performance, informs future
-          adjustments.
-        </p>
-      </>
-    ),
-  },
-  {
-    title: 'Get Started',
-    content: (
-      <>
-        <div className="space-y-4">
-          <div className="flex gap-3">
-            <div className="flex-shrink-0 w-7 h-7 rounded-full bg-teal-600 flex items-center justify-center text-white font-bold text-xs">
-              1
-            </div>
-            <p className="text-gray-300 text-sm leading-relaxed">
-              Go to <span className="text-teal-400 font-medium">Mesocycles</span> and
-              create a template — choose your training days, weeks, and exercises.
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <div className="flex-shrink-0 w-7 h-7 rounded-full bg-teal-600 flex items-center justify-center text-white font-bold text-xs">
-              2
-            </div>
-            <p className="text-gray-300 text-sm leading-relaxed">
-              Click <span className="text-teal-400 font-medium">Start Instance</span> to
-              begin your training block. The app will generate your schedule with
-              prescribed sets.
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <div className="flex-shrink-0 w-7 h-7 rounded-full bg-teal-600 flex items-center justify-center text-white font-bold text-xs">
-              3
-            </div>
-            <p className="text-gray-300 text-sm leading-relaxed">
-              Return to the Home page and click{' '}
-              <span className="text-teal-400 font-medium">Continue Mesocycle</span> to
-              log each workout session.
-            </p>
-          </div>
-        </div>
-      </>
-    ),
+    value: 'advanced',
+    label: 'Advanced',
+    description: '3+ years of consistent training',
   },
 ];
 
 export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const [step, setStep] = useState(0);
+  const [selectedLevel, setSelectedLevel] = useState('intermediate');
+
+  const steps = [
+    {
+      title: 'Welcome to Strength Guider',
+      content: (
+        <>
+          <p className="text-gray-300 leading-relaxed mb-3">
+            Strength Guider is an evidence-based hypertrophy training app that helps
+            you build muscle more effectively by managing your training volume,
+            intensity, and progression.
+          </p>
+          <p className="text-gray-300 leading-relaxed">
+            This quick walkthrough will explain the core concepts so you can get
+            started right away.
+          </p>
+        </>
+      ),
+    },
+    {
+      title: 'Mesocycles',
+      content: (
+        <>
+          <p className="text-gray-300 leading-relaxed mb-3">
+            A <span className="text-teal-400 font-medium">mesocycle</span> is a
+            structured training block, typically 3-7 weeks long, where each week
+            builds on the previous one through gradual increases in volume and
+            intensity.
+          </p>
+          <p className="text-gray-300 leading-relaxed mb-3">
+            Training in structured blocks helps balance stimulus with recovery,
+            reducing the risk of doing too little to see progress or too much to
+            recover from.
+          </p>
+          <p className="text-gray-300 leading-relaxed">
+            The final week of each mesocycle is a <span className="text-teal-400 font-medium">deload</span> —
+            volume and intensity are reduced so your body can recover before the
+            next block.
+          </p>
+        </>
+      ),
+    },
+    {
+      title: 'Volume & RIR',
+      content: (
+        <>
+          <p className="text-gray-300 leading-relaxed mb-3">
+            The app auto-prescribes <span className="text-teal-400 font-medium">how many sets</span> you
+            should perform per muscle group each session, increasing volume week
+            over week across the mesocycle.
+          </p>
+          <p className="text-gray-300 leading-relaxed mb-3">
+            Intensity is managed through{' '}
+            <span className="text-teal-400 font-medium">RIR (Reps In Reserve)</span> —
+            the number of reps you could have done before failure. Week 1 targets
+            3 RIR (moderate effort), decreasing each week until 0 RIR (failure)
+            in the final training week.
+          </p>
+          <p className="text-gray-300 leading-relaxed">
+            After each session, you rate how each muscle group felt. This
+            feedback, combined with your logged performance, informs future
+            adjustments.
+          </p>
+        </>
+      ),
+    },
+    {
+      title: 'Your Experience Level',
+      content: (
+        <>
+          <p className="text-gray-300 leading-relaxed mb-4">
+            Your training experience determines how the algorithm prescribes
+            volume. You can change this later from the home page.
+          </p>
+          <div className="space-y-3">
+            {experienceLevels.map((level) => (
+              <button
+                key={level.value}
+                type="button"
+                onClick={() => setSelectedLevel(level.value)}
+                className={`w-full text-left p-4 rounded-lg border-2 transition-colors ${
+                  selectedLevel === level.value
+                    ? 'border-teal-500 bg-teal-900/30'
+                    : 'border-gray-600 bg-gray-700 hover:border-gray-500'
+                }`}
+              >
+                <div className="font-medium text-white">{level.label}</div>
+                <div className="text-sm text-gray-400 mt-1">{level.description}</div>
+              </button>
+            ))}
+          </div>
+        </>
+      ),
+    },
+    {
+      title: 'Get Started',
+      content: (
+        <>
+          <div className="space-y-4">
+            <div className="flex gap-3">
+              <div className="flex-shrink-0 w-7 h-7 rounded-full bg-teal-600 flex items-center justify-center text-white font-bold text-xs">
+                1
+              </div>
+              <p className="text-gray-300 text-sm leading-relaxed">
+                Go to <span className="text-teal-400 font-medium">Mesocycles</span> and
+                create a template — choose your training days, weeks, and exercises.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <div className="flex-shrink-0 w-7 h-7 rounded-full bg-teal-600 flex items-center justify-center text-white font-bold text-xs">
+                2
+              </div>
+              <p className="text-gray-300 text-sm leading-relaxed">
+                Click <span className="text-teal-400 font-medium">Start Instance</span> to
+                begin your training block. The app will generate your schedule with
+                prescribed sets.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <div className="flex-shrink-0 w-7 h-7 rounded-full bg-teal-600 flex items-center justify-center text-white font-bold text-xs">
+                3
+              </div>
+              <p className="text-gray-300 text-sm leading-relaxed">
+                Return to the Home page and click{' '}
+                <span className="text-teal-400 font-medium">Continue Mesocycle</span> to
+                log each workout session.
+              </p>
+            </div>
+          </div>
+        </>
+      ),
+    },
+  ];
+
   const isLast = step === steps.length - 1;
   const isFirst = step === 0;
 
@@ -140,7 +188,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
         <div className="flex justify-between">
           {isFirst ? (
             <button
-              onClick={onComplete}
+              onClick={() => onComplete()}
               className="text-gray-400 hover:text-gray-200 text-sm transition-colors"
             >
               Skip
@@ -155,7 +203,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
           )}
 
           <button
-            onClick={() => (isLast ? onComplete() : setStep(step + 1))}
+            onClick={() => (isLast ? onComplete(selectedLevel) : setStep(step + 1))}
             className="bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
           >
             {isLast ? 'Finish' : 'Next'}

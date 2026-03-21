@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Link, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { getActiveMesocycleInstance, updateMesocycleInstance } from '../api/mesocycles';
-import { listWorkoutSessions, createWorkoutSession } from '../api/workoutSessions';
+import { listWorkoutSessions } from '../api/workoutSessions';
 import { MesocycleInstance } from '../types/mesocycle';
 import { WorkoutSessionListItem } from '../types/workout_session';
 
@@ -78,24 +78,6 @@ export default function Layout() {
     if (sessId) {
       navigate(`/workout/${sessId}`);
       setShowCalendar(false);
-    } else if (activeInstance && accessToken && mesocycle) {
-      const templateIndex = dayNum - 1;
-      const template = mesocycle.workout_templates?.[templateIndex];
-      if (!template) return;
-
-      try {
-        const newSession = await createWorkoutSession({
-          mesocycle_instance_id: activeInstance.id,
-          workout_template_id: template.id,
-          workout_date: new Date().toISOString().split('T')[0],
-          week_number: weekNum,
-          day_number: dayNum,
-        }, accessToken);
-        navigate(`/workout/${newSession.id}`);
-        setShowCalendar(false);
-      } catch (err) {
-        console.error('Error creating workout session:', err);
-      }
     }
   };
 

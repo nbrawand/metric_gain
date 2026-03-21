@@ -1,14 +1,15 @@
 """Hypertrophy set volume prescription algorithm.
 
-Three-layer system for prescribing how many sets of each muscle group to do
-on a given training day during a mesocycle's accumulation phase:
-  Layer 1 - Weekly volume target (+2 sets/week from starting MAV, capped at MRV)
+Two-layer system for prescribing how many sets of each muscle group to do
+on a given training day during a mesocycle:
+  Layer 1 - Weekly volume target from the volume optimizer
   Layer 2 - Session allocation with remainder distribution
-  Layer 3 - Real-time autoregulation (RIR deviation + e1RM trend)
 """
 
+import json
 import logging
 import math
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -22,65 +23,18 @@ logger = logging.getLogger("app.services.volume_prescription")
 # ---------------------------------------------------------------------------
 
 @dataclass
-class MuscleGroupProfile:
-    starting_mav: int  # Starting Maximum Adaptive Volume (week 1 post-deload)
-    mrv: int           # Maximum Recoverable Volume
-    recovery_hours: int
-    max_sets_per_session: int
-
-
-# Keyed by the 12 muscle groups that exist in the app's exercise seed data.
-# Spec groups merged: Back (width+thickness) -> Back, Side/Rear/Front Delts -> Shoulders.
-MUSCLE_GROUP_PROFILES: dict[str, MuscleGroupProfile] = {
-    "Quadriceps":  MuscleGroupProfile(starting_mav=8,  mrv=20, recovery_hours=72, max_sets_per_session=100),
-    "Hamstrings":  MuscleGroupProfile(starting_mav=8,  mrv=16, recovery_hours=72, max_sets_per_session=100),
-    "Chest":       MuscleGroupProfile(starting_mav=8,  mrv=22, recovery_hours=48, max_sets_per_session=100),
-    "Back":        MuscleGroupProfile(starting_mav=8,  mrv=22, recovery_hours=48, max_sets_per_session=100),
-    "Shoulders":   MuscleGroupProfile(starting_mav=9,  mrv=26, recovery_hours=36, max_sets_per_session=100),
-    "Biceps":      MuscleGroupProfile(starting_mav=9,  mrv=20, recovery_hours=36, max_sets_per_session=100),
-    "Triceps":     MuscleGroupProfile(starting_mav=9,  mrv=20, recovery_hours=36, max_sets_per_session=100),
-    "Glutes":      MuscleGroupProfile(starting_mav=8,  mrv=16, recovery_hours=72, max_sets_per_session=100),
-    "Calves":      MuscleGroupProfile(starting_mav=9,  mrv=20, recovery_hours=36, max_sets_per_session=100),
-    "Core":        MuscleGroupProfile(starting_mav=8,  mrv=18, recovery_hours=36, max_sets_per_session=100),
-    "Traps":       MuscleGroupProfile(starting_mav=8,  mrv=16, recovery_hours=36, max_sets_per_session=100),
-    "Forearms":    MuscleGroupProfile(starting_mav=9,  mrv=18, recovery_hours=36, max_sets_per_session=100),
-}
-
-DEFAULT_PROFILE = MuscleGroupProfile(starting_mav=5, mrv=16, recovery_hours=48, max_sets_per_session=8)
-
-
-@dataclass
 class MesocycleConfig:
     total_weeks: int
     accumulation_weeks: int                          # total_weeks - 1 (last week = deload)
     days_per_week: int
     muscle_group_frequency: dict[str, int] = field(default_factory=dict)   # muscle -> sessions/week
     muscle_group_day_indices: dict[str, list[int]] = field(default_factory=dict)  # muscle -> [day_numbers]
-
-
-@dataclass
-class UserState:
-    recent_avg_rir: Optional[float] = None
-    e1rm_trend: Optional[float] = None
-    completed_sessions_count: int = 0
-    current_estimated_mev: Optional[int] = None
+    volume_profile: list[float] = field(default_factory=list)  # optimizer output: sets/week per body part
 
 
 # ---------------------------------------------------------------------------
 # Pure algorithm functions (no DB)
 # ---------------------------------------------------------------------------
-
-def _get_profile(muscle_group: str) -> MuscleGroupProfile:
-    return MUSCLE_GROUP_PROFILES.get(muscle_group, DEFAULT_PROFILE)
-
-
-def estimate_1rm(weight: float, reps: int, rir: Optional[int] = None) -> float:
-    """Epley formula extended for RIR: e1RM = weight * (1 + (reps + rir) / 30)."""
-    if weight <= 0:
-        return 0.0
-    effective_rir = rir if rir is not None else 0
-    return weight * (1 + (reps + effective_rir) / 30)
-
 
 def compute_target_rir(week: int, accumulation_weeks: int) -> int:
     """Target RIR ramps from 3 (week 1) down to 0 (final accumulation week).
@@ -93,16 +47,13 @@ def compute_target_rir(week: int, accumulation_weeks: int) -> int:
 
 
 def compute_weekly_volume_target(muscle_group: str, week: int, config: MesocycleConfig) -> int:
-    """Layer 1: +2 sets/week ramp from starting MAV, capped at MRV.
+    """Layer 1: weekly volume target per muscle group from the optimizer profile."""
+    if config.volume_profile and 0 < week <= len(config.volume_profile):
+        target = config.volume_profile[week - 1]  # 1-indexed week
+        return max(1, round(target))
 
-    Week 1 starts at starting_mav; each subsequent week adds 2 sets.
-    S_weekly(m, week) = starting_mav + (week - 1) * 2
-    Clamped to [starting_mav, MRV].
-    """
-    profile = _get_profile(muscle_group)
-    target = profile.starting_mav + (week - 1) * 2
-    target = max(profile.starting_mav, min(round(target), profile.mrv))
-    return target
+    # Fallback if no profile (shouldn't happen in normal flow)
+    return max(1, 4 + (week - 1) * 2)
 
 
 def allocate_to_session(
@@ -115,7 +66,6 @@ def allocate_to_session(
 
     - Even split: base = weekly_target // F
     - Remainder distributed to earlier sessions in the week
-    - Capped at max_sets_per_session; warning logged if cap drops volume
     - Returns 0 if day_number is not in this muscle group's template days
     """
     day_indices = config.muscle_group_day_indices.get(muscle_group, [])
@@ -136,80 +86,20 @@ def allocate_to_session(
     sets = base + (1 if day_position < remainder else 0)
     sets = max(sets, 1)  # Never prescribe 0 for a day that includes this muscle group
 
-    profile = _get_profile(muscle_group)
-    cap = profile.max_sets_per_session
-    if sets > cap:
-        logger.warning(
-            "Session cap hit for %s on day %d: prescribed %d but cap is %d. "
-            "Weekly target %d may not be achievable in %d sessions.",
-            muscle_group, day_number, sets, cap, weekly_target, freq,
-        )
-        sets = cap
-
     return sets
 
 
-def autoregulate_sets(
-    planned_sets: int,
-    muscle_group: str,
-    week: int,
-    user_state: UserState,
-    config: MesocycleConfig,
-) -> int:
-    """Layer 3: adjust planned sets based on actual user performance signals.
-
-    Skips adjustment if fewer than 2 completed sessions exist (cold start).
-    Signals:
-      - RIR deviation: if actual avg RIR is lower than target, user is more fatigued
-      - e1RM trend: if estimated 1RM is declining, user exceeds recoverable volume
-    Floor: ceil(starting_mav / F)
-    """
-    if user_state.completed_sessions_count < 2:
-        logger.info("Cold start for %s: skipping autoregulation (%d sessions).",
-                     muscle_group, user_state.completed_sessions_count)
-        return planned_sets
-
-    adjustment = 1.0
-    target_rir = compute_target_rir(week, config.accumulation_weeks)
-
-    # Signal 1: RIR deviation
-    if user_state.recent_avg_rir is not None:
-        rir_deviation = target_rir - user_state.recent_avg_rir
-        if rir_deviation > 1.5:
-            adjustment -= 0.15
-            logger.info("Autoregulation %s: RIR deviation %.2f > 1.5 -> -15%%",
-                        muscle_group, rir_deviation)
-        elif rir_deviation > 0.75:
-            adjustment -= 0.08
-            logger.info("Autoregulation %s: RIR deviation %.2f > 0.75 -> -8%%",
-                        muscle_group, rir_deviation)
-
-    # Signal 2: e1RM trend
-    if user_state.e1rm_trend is not None:
-        if user_state.e1rm_trend < -0.03:
-            adjustment -= 0.15
-            logger.info("Autoregulation %s: e1RM trend %.3f < -3%% -> -15%%",
-                        muscle_group, user_state.e1rm_trend)
-        elif user_state.e1rm_trend < -0.01:
-            adjustment -= 0.08
-            logger.info("Autoregulation %s: e1RM trend %.3f < -1%% -> -8%%",
-                        muscle_group, user_state.e1rm_trend)
-
-    profile = _get_profile(muscle_group)
-    freq = config.muscle_group_frequency.get(muscle_group, 1)
-    min_sets = math.ceil(profile.starting_mav / freq) if freq > 0 else 1
-    min_sets = max(min_sets, 1)
-
-    adjusted = max(round(planned_sets * adjustment), min_sets)
-    return adjusted
-
-
 def _deload_sets(muscle_group: str, config: MesocycleConfig) -> int:
-    """Deload volume: max(starting_mav - 2, starting_mav // 2) weekly, divided by frequency, min 1."""
-    profile = _get_profile(muscle_group)
-    weekly = max(profile.starting_mav - 2, profile.starting_mav // 2)
-    # For zero starting_mav groups, give at least 1 set/week
-    weekly = max(weekly, 1)
+    """Deload volume from the optimizer profile (last week), divided by frequency, min 1."""
+    # The optimizer already computes deload volume (typically 0)
+    if config.volume_profile and len(config.volume_profile) >= config.total_weeks:
+        weekly = round(config.volume_profile[config.total_weeks - 1])
+    else:
+        weekly = 2  # fallback
+
+    if weekly <= 0:
+        return 0
+
     freq = config.muscle_group_frequency.get(muscle_group, 1)
     freq = max(freq, 1)
     per_session = max(math.ceil(weekly / freq), 1)
@@ -225,17 +115,33 @@ def build_mesocycle_config(
     mesocycle_template_id: int,
     total_weeks: int,
     days_per_week: int,
+    experience_level: str = "intermediate",
+    volume_profile: list[float] | None = None,
 ) -> MesocycleConfig:
     """Scan WorkoutTemplate -> WorkoutExercise -> Exercise to compute
     muscle group frequency and day indices.
+
+    If volume_profile is provided, uses it directly. Otherwise computes
+    the optimal volume profile using the user's experience level.
     """
     from app.models.mesocycle import WorkoutTemplate, WorkoutExercise
     from app.models.exercise import Exercise
+    from app.services.volume_optimizer import create_mesocycle_volume
+
+    # Use provided profile or compute one
+    if volume_profile is None:
+        volume_profile = []
+        try:
+            result = create_mesocycle_volume(experience_level, total_weeks)
+            volume_profile = [w["sets"] for w in result["weeks"]]
+        except Exception as e:
+            logger.warning("Volume optimizer failed, falling back to fixed ramp: %s", e)
 
     config = MesocycleConfig(
         total_weeks=total_weeks,
         accumulation_weeks=max(total_weeks - 1, 1),
         days_per_week=days_per_week,
+        volume_profile=volume_profile,
     )
 
     templates = (
@@ -264,125 +170,6 @@ def build_mesocycle_config(
     return config
 
 
-def _compute_e1rm_trend_from_sets(
-    sets_with_dates: list[tuple[float, int, Optional[int], "date"]],
-) -> Optional[float]:
-    """Compute e1RM percent change between the last two weeks of data.
-
-    Args:
-        sets_with_dates: list of (weight, reps, rir, workout_date) tuples.
-
-    Returns:
-        Percent change as a decimal (e.g. -0.05 = 5% decline), or None
-        if insufficient data.
-    """
-    if not sets_with_dates:
-        return None
-
-    from datetime import timedelta
-
-    # Find the most recent date
-    dates = [d for _, _, _, d in sets_with_dates]
-    max_date = max(dates)
-
-    # Split into two weeks: recent (last 7 days) and prior (8-14 days)
-    recent_e1rms = []
-    prior_e1rms = []
-    for weight, reps, rir, d in sets_with_dates:
-        if weight <= 0 or reps <= 0:
-            continue
-        e1rm = estimate_1rm(weight, reps, rir)
-        days_ago = (max_date - d).days
-        if days_ago < 7:
-            recent_e1rms.append(e1rm)
-        elif days_ago < 14:
-            prior_e1rms.append(e1rm)
-
-    if not recent_e1rms or not prior_e1rms:
-        return None
-
-    avg_recent = sum(recent_e1rms) / len(recent_e1rms)
-    avg_prior = sum(prior_e1rms) / len(prior_e1rms)
-
-    if avg_prior == 0:
-        return None
-
-    return (avg_recent - avg_prior) / avg_prior
-
-
-def build_user_state(
-    db: Session,
-    user_id: int,
-    muscle_group: str,
-    mesocycle_instance_id: int,
-) -> UserState:
-    """Query completed sessions' WorkoutSets for recent avg RIR and e1RM trend."""
-    from app.models.workout_session import WorkoutSession, WorkoutSet
-    from app.models.exercise import Exercise
-
-    state = UserState()
-
-    # Get all completed sessions for this mesocycle instance
-    sessions = (
-        db.query(WorkoutSession)
-        .filter(
-            WorkoutSession.mesocycle_instance_id == mesocycle_instance_id,
-            WorkoutSession.user_id == user_id,
-            WorkoutSession.status == "completed",
-        )
-        .order_by(WorkoutSession.workout_date.desc())
-        .all()
-    )
-
-    state.completed_sessions_count = len(sessions)
-    if not sessions:
-        return state
-
-    # Get exercise IDs for this muscle group
-    exercise_ids = [
-        eid for (eid,) in
-        db.query(Exercise.id).filter(Exercise.muscle_group == muscle_group).all()
-    ]
-    if not exercise_ids:
-        return state
-
-    # Collect sets across completed sessions for this muscle group
-    session_ids = [s.id for s in sessions]
-    sets = (
-        db.query(WorkoutSet)
-        .filter(
-            WorkoutSet.workout_session_id.in_(session_ids),
-            WorkoutSet.exercise_id.in_(exercise_ids),
-            WorkoutSet.skipped == 0,
-        )
-        .all()
-    )
-
-    if not sets:
-        return state
-
-    # Recent avg RIR (all sets with RIR data)
-    rir_values = [s.rir for s in sets if s.rir is not None]
-    if rir_values:
-        state.recent_avg_rir = sum(rir_values) / len(rir_values)
-
-    # e1RM trend: need dates from sessions
-    session_date_map = {s.id: s.workout_date for s in sessions}
-    sets_with_dates = []
-    for s in sets:
-        d = session_date_map.get(s.workout_session_id)
-        if d and s.weight > 0 and s.reps > 0:
-            sets_with_dates.append((s.weight, s.reps, s.rir, d))
-
-    state.e1rm_trend = _compute_e1rm_trend_from_sets(sets_with_dates)
-
-    # Current estimated MEV (use population default for now)
-    profile = _get_profile(muscle_group)
-    state.current_estimated_mev = profile.starting_mav
-
-    return state
-
-
 # ---------------------------------------------------------------------------
 # Main entry point
 # ---------------------------------------------------------------------------
@@ -398,10 +185,9 @@ def get_prescribed_sets(
 ) -> int:
     """Return the number of sets to prescribe for a muscle group on a given day.
 
-    Orchestrates all 3 layers:
-      1. Weekly volume target
+    Layers:
+      1. Weekly volume target from optimizer
       2. Session allocation
-      3. Autoregulation
     Returns deload volume for the final week.
     """
     # Deload week
@@ -420,14 +206,138 @@ def get_prescribed_sets(
         logger.debug("Muscle group %s not scheduled on day %d", muscle_group, day_number)
         return 0
 
-    # Layer 3
-    user_state = build_user_state(db, user_id, muscle_group, mesocycle_instance_id)
-    prescribed = autoregulate_sets(planned_sets, muscle_group, week, user_state, config)
-
     logger.debug(
-        "Prescribed %d sets for %s (week %d, day %d): "
-        "weekly_target=%d, planned=%d, autoregulated=%d",
-        prescribed, muscle_group, week, day_number,
-        weekly_target, planned_sets, prescribed,
+        "Prescribed %d sets for %s (week %d, day %d): weekly_target=%d",
+        planned_sets, muscle_group, week, day_number, weekly_target,
     )
-    return prescribed
+    return planned_sets
+
+
+# ---------------------------------------------------------------------------
+# Re-optimization on workout completion
+# ---------------------------------------------------------------------------
+
+def reoptimize_instance_volumes(db: Session, instance, user) -> None:
+    """Re-run optimizer and update set counts on all uncompleted sessions.
+
+    Called when a workout is completed. Updates the volume profile on the
+    instance and adjusts sets on future sessions.
+    """
+    from app.models.mesocycle import MesocycleInstance, WorkoutTemplate
+    from app.models.workout_session import WorkoutSession, WorkoutSet
+    from app.models.exercise import Exercise
+    from app.services.volume_optimizer import create_mesocycle_volume
+
+    total_weeks = instance.template_weeks
+    if not total_weeks:
+        return
+
+    # Re-run optimizer
+    volume_profile = []
+    try:
+        result = create_mesocycle_volume(user.experience_level, total_weeks)
+        volume_profile = [w["sets"] for w in result["weeks"]]
+    except Exception as e:
+        logger.warning("Re-optimization failed: %s", e)
+        return
+
+    # Update stored profile
+    instance.volume_profile = json.dumps(volume_profile)
+
+    # Build config with new profile
+    config = build_mesocycle_config(
+        db, instance.mesocycle_template_id, total_weeks,
+        instance.template_days_per_week,
+        experience_level=user.experience_level,
+        volume_profile=volume_profile,
+    )
+
+    # Find all uncompleted sessions
+    uncompleted_sessions = (
+        db.query(WorkoutSession)
+        .filter(
+            WorkoutSession.mesocycle_instance_id == instance.id,
+            WorkoutSession.status != "completed",
+        )
+        .all()
+    )
+
+    for session in uncompleted_sessions:
+        is_deload = (session.week_number == total_weeks)
+
+        # Get current sets grouped by exercise
+        current_sets = (
+            db.query(WorkoutSet)
+            .filter(WorkoutSet.workout_session_id == session.id)
+            .order_by(WorkoutSet.order_index, WorkoutSet.set_number)
+            .all()
+        )
+
+        # Group by exercise_id
+        exercise_groups = OrderedDict()
+        for ws in current_sets:
+            exercise_groups.setdefault(ws.exercise_id, []).append(ws)
+
+        # Resolve muscle groups
+        mg_exercise_ids = OrderedDict()
+        exercise_lookup = {}
+        for exercise_id in exercise_groups:
+            exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
+            exercise_lookup[exercise_id] = exercise
+            mg = exercise.muscle_group if exercise else "Other"
+            mg_exercise_ids.setdefault(mg, []).append(exercise_id)
+
+        if is_deload:
+            # Deload: 1 set per exercise at 8 RIR
+            for exercise_id, sets in exercise_groups.items():
+                if len(sets) > 1:
+                    # Remove excess sets
+                    for s in sets[1:]:
+                        db.delete(s)
+                if sets:
+                    sets[0].target_rir = 8
+            continue
+
+        # Compute new prescribed counts per muscle group
+        exercise_new_counts = {}
+        for mg, ex_ids in mg_exercise_ids.items():
+            total = max(len(ex_ids), get_prescribed_sets(
+                db, mg, session.week_number, session.day_number,
+                instance.user_id, instance.id, config,
+            ))
+            base = total // len(ex_ids)
+            remainder = total % len(ex_ids)
+            for i, eid in enumerate(ex_ids):
+                exercise_new_counts[eid] = max(1, base + (1 if i < remainder else 0))
+
+        target_rir = compute_target_rir(session.week_number, config.accumulation_weeks)
+
+        # Adjust sets for each exercise
+        for exercise_id, sets in exercise_groups.items():
+            desired = exercise_new_counts.get(exercise_id, len(sets))
+            current_count = len(sets)
+
+            if desired > current_count:
+                # Add sets
+                last_set = sets[-1]
+                for set_num in range(current_count + 1, desired + 1):
+                    new_set = WorkoutSet(
+                        workout_session_id=session.id,
+                        exercise_id=exercise_id,
+                        set_number=set_num,
+                        order_index=last_set.order_index,
+                        weight=0,
+                        reps=0,
+                        target_weight=None,
+                        target_reps=last_set.target_reps,
+                        target_rir=target_rir,
+                    )
+                    db.add(new_set)
+            elif desired < current_count:
+                # Remove excess sets from the end
+                for s in sets[desired:]:
+                    db.delete(s)
+
+            # Update target_rir on remaining sets
+            for s in sets[:desired]:
+                s.target_rir = target_rir

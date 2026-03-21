@@ -18,6 +18,7 @@ import type {
 
 const MESOCYCLES_ENDPOINT = '/v1/mesocycles';
 const INSTANCES_ENDPOINT = '/v1/mesocycle-instances';
+const VOLUME_ENDPOINT = '/v1/mesocycle';
 
 /**
  * Get list of user's mesocycles (simplified, without nested templates)
@@ -164,4 +165,42 @@ export async function updateMesocycleInstance(
  */
 export async function deleteMesocycleInstance(id: number, accessToken: string): Promise<void> {
   return del<void>(`${INSTANCES_ENDPOINT}/${id}`, accessToken);
+}
+
+// ============================================
+// Volume Optimization
+// ============================================
+
+export interface OptimizeRequest {
+  experience_level: string;
+  total_weeks: number;
+  w_max?: number;
+}
+
+export interface WeekVolumeData {
+  week: number;
+  sets: number;
+  type: string;
+  performance: number;
+  fitness: number;
+  fatigue: number;
+  kappa: number;
+  alpha: number;
+  effective_volume: number;
+}
+
+export interface OptimizeResponse {
+  weeks: WeekVolumeData[];
+  peak_performance: number;
+  peak_week: number;
+}
+
+/**
+ * Compute optimal weekly volume profile for a mesocycle
+ */
+export async function optimizeVolume(
+  data: OptimizeRequest,
+  accessToken: string,
+): Promise<OptimizeResponse> {
+  return post<OptimizeResponse>(`${VOLUME_ENDPOINT}/optimize`, data, accessToken);
 }

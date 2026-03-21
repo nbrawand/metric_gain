@@ -63,6 +63,9 @@ class MesocycleInstance(Base):
     # Per-exercise note overrides, JSON: {"workout_exercise_id": "notes"}
     exercise_notes = Column(Text, nullable=True)
 
+    # JSON-encoded list of floats: optimizer volume profile, e.g. [6.0, 8.6, ...]
+    volume_profile = Column(Text, nullable=True)
+
     # Status: active, completed, abandoned
     status = Column(String(50), default="active", nullable=False, index=True)
 

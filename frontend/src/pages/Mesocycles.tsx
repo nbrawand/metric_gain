@@ -14,7 +14,7 @@ import {
   startMesocycleInstance,
 } from '../api/mesocycles';
 import { getExercises } from '../api/exercises';
-import { createWorkoutSession } from '../api/workoutSessions';
+import { listWorkoutSessions } from '../api/workoutSessions';
 import { useAuthStore } from '../stores/authStore';
 import {
   MesocycleListItem,
@@ -185,41 +185,34 @@ export default function Mesocycles() {
     }
 
     try {
-      // Create a new mesocycle instance
+      // Create instance — backend now creates all sessions upfront
       const today = new Date().toISOString().split('T')[0];
-      const instance = await startMesocycleInstance({
+      const instanceData: import('../types/mesocycle').MesocycleInstanceCreate = {
         mesocycle_template_id: mesocycle.id,
         start_date: today,
-      }, accessToken);
-
-      // Fetch full mesocycle details to get the first workout template
-      const fullMesocycle = await getMesocycle(mesocycle.id, accessToken);
-
-      if (!fullMesocycle.workout_templates || fullMesocycle.workout_templates.length === 0) {
-        alert('This mesocycle has no workout templates. Please add workouts first.');
-        return;
-      }
-
-      // Create the first workout session (Week 1, Day 1)
-      const firstTemplate = fullMesocycle.workout_templates.find(wt => wt.order_index === 0) || fullMesocycle.workout_templates[0];
-
-      const sessionData: import('../types/workout_session').WorkoutSessionCreate = {
-        mesocycle_instance_id: instance.id,
-        workout_template_id: firstTemplate.id,
-        workout_date: today,
-        week_number: 1,
-        day_number: 1,
       };
 
       if (sourceInstanceId && sourceWeekNumber) {
-        sessionData.source_instance_id = sourceInstanceId;
-        sessionData.source_week_number = sourceWeekNumber;
+        instanceData.source_instance_id = sourceInstanceId;
+        instanceData.source_week_number = sourceWeekNumber;
       }
 
-      const session = await createWorkoutSession(sessionData, accessToken);
+      const instance = await startMesocycleInstance(instanceData, accessToken);
 
-      // Navigate to the workout execution page
-      navigate(`/workout/${session.id}`);
+      // All sessions are already created — find the first one (week 1, day 1)
+      const sessions = await listWorkoutSessions(
+        { mesocycle_instance_id: instance.id },
+        accessToken
+      );
+
+      const firstSession = sessions
+        .sort((a, b) => a.week_number - b.week_number || a.day_number - b.day_number)[0];
+
+      if (firstSession) {
+        navigate(`/workout/${firstSession.id}`);
+      } else {
+        navigate('/');
+      }
     } catch (err: any) {
       if (err?.detail) {
         alert(err.detail);

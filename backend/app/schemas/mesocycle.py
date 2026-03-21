@@ -162,6 +162,8 @@ class MesocycleInstanceCreate(BaseModel):
 
     mesocycle_template_id: int
     start_date: Optional[date] = None  # Defaults to today if not provided
+    source_instance_id: Optional[int] = None  # Previous instance to seed week 1 weights from
+    source_week_number: Optional[int] = None  # Which week in the source instance to copy from
 
 
 class MesocycleInstanceUpdate(BaseModel):
@@ -190,9 +192,19 @@ class MesocycleInstanceResponse(BaseModel):
     # Per-exercise note overrides keyed by workout_exercise_id
     exercise_notes: Optional[dict] = None
 
+    # Volume profile from optimizer
+    volume_profile: Optional[list[float]] = None
+
     @field_validator("exercise_notes", mode="before")
     @classmethod
     def parse_exercise_notes(cls, v):
+        if isinstance(v, str):
+            return json.loads(v)
+        return v
+
+    @field_validator("volume_profile", mode="before")
+    @classmethod
+    def parse_volume_profile(cls, v):
         if isinstance(v, str):
             return json.loads(v)
         return v
