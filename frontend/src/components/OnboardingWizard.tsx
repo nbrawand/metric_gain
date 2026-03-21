@@ -96,7 +96,8 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
         <>
           <p className="text-gray-300 leading-relaxed mb-4">
             Your training experience determines how the algorithm prescribes
-            volume. You can change this later from the home page.
+            volume. You can adjust individual muscle group parameters later
+            from the Lifter Profile page.
           </p>
           <div className="space-y-3">
             {experienceLevels.map((level) => (

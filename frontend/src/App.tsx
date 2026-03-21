@@ -9,6 +9,7 @@ import MesocycleDetail from './pages/MesocycleDetail';
 import WorkoutExecution from './pages/WorkoutExecution';
 import HowItWorks from './pages/HowItWorks';
 import About from './pages/About';
+import LifterProfile from './pages/LifterProfile';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import { useAuthStore } from './stores/authStore';
@@ -54,6 +55,7 @@ function App() {
           <Route path="/mesocycles" element={<ProtectedRoute><Mesocycles /></ProtectedRoute>} />
           <Route path="/mesocycles/:id" element={<ProtectedRoute><MesocycleDetail /></ProtectedRoute>} />
           <Route path="/workout/:sessionId" element={<ProtectedRoute><WorkoutExecution /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><LifterProfile /></ProtectedRoute>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

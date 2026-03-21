@@ -55,11 +55,38 @@ export async function updateCurrentUser(
   return patch<User>(`${AUTH_BASE}/users/me`, data, accessToken);
 }
 
+export interface MuscleParamEntry {
+  muscle_group: string;
+  params: {
+    k1: number;
+    k3: number;
+    kappa0: number;
+    tau1: number;
+    tau2: number;
+    tau3: number;
+    tau_alpha: number;
+    alpha0: number;
+  };
+  volume_profile: number[];
+  updated_at: string | null;
+}
+
 /**
- * Reset per-muscle-group volume parameters to defaults
+ * Get all per-muscle-group optimizer parameters for current user
  */
-export async function resetMuscleParams(
+export async function getMuscleParams(
   accessToken: string
-): Promise<{ deleted: number; message: string }> {
-  return post<{ deleted: number; message: string }>(`${AUTH_BASE}/users/me/reset-muscle-params`, {}, accessToken);
+): Promise<MuscleParamEntry[]> {
+  return get<MuscleParamEntry[]>(`${AUTH_BASE}/users/me/muscle-params`, accessToken);
+}
+
+/**
+ * Reset a single muscle group's parameters to defaults for a given experience level
+ */
+export async function resetSingleMuscleParams(
+  muscleGroup: string,
+  experienceLevel: string,
+  accessToken: string
+): Promise<{ muscle_group: string; experience_level: string; params: Record<string, number> }> {
+  return post(`${AUTH_BASE}/users/me/muscle-params/${encodeURIComponent(muscleGroup)}/reset`, { experience_level: experienceLevel }, accessToken);
 }
