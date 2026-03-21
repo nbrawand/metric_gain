@@ -27,7 +27,7 @@ from app.services.volume_prescription import (
     get_prescribed_sets,
     compute_target_rir,
 )
-from app.services.volume_optimizer import create_mesocycle_volume
+from app.services.volume_optimizer import create_mesocycle_volume, ensure_user_muscle_params, create_mesocycle_volume_for_params
 
 logger = logging.getLogger(__name__)
 
@@ -398,17 +398,10 @@ async def start_mesocycle_instance(
             detail="You can only start instances from your own templates or stock templates"
         )
 
-    # Run optimizer once
     total_weeks = template.weeks
     days_per_week = template.days_per_week
-    volume_profile = []
-    try:
-        result = create_mesocycle_volume(current_user.experience_level, total_weeks)
-        volume_profile = [w["sets"] for w in result["weeks"]]
-    except Exception as e:
-        logger.warning("Volume optimizer failed, falling back to fixed ramp: %s", e)
 
-    # Create instance with snapshot fields and volume profile
+    # Create instance first (need ID for sessions)
     new_instance = MesocycleInstance(
         user_id=current_user.id,
         mesocycle_template_id=instance_data.mesocycle_template_id,
@@ -417,18 +410,20 @@ async def start_mesocycle_instance(
         template_days_per_week=days_per_week,
         status="active",
         start_date=instance_data.start_date or date.today(),
-        volume_profile=json.dumps(volume_profile) if volume_profile else None,
     )
 
     db.add(new_instance)
     db.flush()  # Get the instance ID
 
-    # Build mesocycle config once with the pre-computed volume profile
+    # Build mesocycle config with per-muscle-group optimization
     config = build_mesocycle_config(
         db, template.id, total_weeks, days_per_week,
         experience_level=current_user.experience_level,
-        volume_profile=volume_profile if volume_profile else None,
+        user=current_user,
     )
+
+    # Store the per-muscle volume profile on the instance
+    new_instance.volume_profile = json.dumps(config.volume_profile) if config.volume_profile else None
 
     # Load workout templates sorted by order_index
     workout_templates = (

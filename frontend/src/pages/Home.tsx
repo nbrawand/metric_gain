@@ -92,6 +92,24 @@ export function Home() {
     }
   };
 
+  const [resettingParams, setResettingParams] = useState(false);
+
+  const handleResetMuscleParams = async () => {
+    if (!accessToken) return;
+    if (!confirm('Reset all volume parameters to defaults? This will undo any feedback-driven adjustments.')) return;
+    setResettingParams(true);
+    try {
+      const { resetMuscleParams } = await import('../api/auth');
+      await resetMuscleParams(accessToken);
+      alert('Volume parameters reset to defaults.');
+    } catch (err) {
+      console.error('Error resetting muscle params:', err);
+      alert('Failed to reset volume parameters.');
+    } finally {
+      setResettingParams(false);
+    }
+  };
+
   return (
     <>
       {showOnboarding && <OnboardingWizard onComplete={handleOnboardingComplete} />}
@@ -170,6 +188,13 @@ export function Home() {
                   <dd className="text-gray-200">{user?.timezone}</dd>
                 </div>
               </dl>
+              <button
+                onClick={handleResetMuscleParams}
+                disabled={resettingParams}
+                className="mt-3 w-full text-sm bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 disabled:text-gray-500 text-gray-200 py-2 px-3 rounded transition-colors"
+              >
+                {resettingParams ? 'Resetting...' : 'Reset Volume Parameters'}
+              </button>
             </div>
           </div>
         </div>

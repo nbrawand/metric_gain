@@ -110,7 +110,7 @@ class WorkoutSessionResponse(WorkoutSessionBase):
 class WorkoutFeedbackItem(BaseModel):
     """Single muscle group feedback item."""
     muscle_group: str
-    difficulty: str = Field(..., pattern="^(Easy|Just Right|Difficult|Too Difficult)$")
+    difficulty: str = Field(..., pattern="^(Too Little|Just Right|Too Much|Way Too Much)$")
 
 
 class WorkoutFeedbackCreate(BaseModel):

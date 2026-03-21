@@ -59,7 +59,7 @@ export default function HowItWorks() {
             <div>
               <h3 className="text-white font-medium mb-1">Provide Feedback After Each Workout</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                After completing a session, you will be asked how each muscle group felt: Easy, Just Right, Difficult, or Too Difficult. This feedback, along with your logged performance, helps inform adjustments for future training blocks.
+                After completing a session, you will be asked how the prescribed volume was for each muscle group: Too Little, Just Right, Too Much, or Way Too Much. This feedback adjusts your per-muscle volume parameters so future sessions are better tailored to you.
               </p>
             </div>
           </div>

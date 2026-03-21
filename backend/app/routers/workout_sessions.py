@@ -145,6 +145,7 @@ def create_workout_session(
         mesocycle_config = build_mesocycle_config(
             db, template.mesocycle.id, total_weeks, template.mesocycle.days_per_week,
             experience_level=current_user.experience_level,
+            user=current_user,
         )
 
     def _prescribe_sets(muscle_group, week, day):
@@ -809,6 +810,7 @@ def add_exercise(
         meso_config = build_mesocycle_config(
             db, template.mesocycle.id, total_weeks, template.mesocycle.days_per_week,
             experience_level=current_user.experience_level,
+            user=current_user,
         )
         # For ad-hoc exercise additions, ensure the muscle group is in the config
         mg = exercise.muscle_group
@@ -982,6 +984,46 @@ def submit_workout_feedback(
         )
         db.add(fb)
         created.append(fb)
+
+    db.flush()
+
+    # Adjust k3 based on feedback and re-optimize affected muscle groups
+    from app.models.mesocycle import MesocycleInstance
+    from app.services.volume_optimizer import ensure_user_muscle_params
+    from app.services.volume_prescription import reoptimize_instance_volumes
+
+    K3_ADJUSTMENTS = {
+        "Too Little": 0.90,    # -10% k3 → less fatigue sensitivity → optimizer prescribes more volume
+        "Just Right": 1.0,     # no change
+        "Too Much": 1.05,      # +5% k3 → more fatigue sensitivity → optimizer prescribes less volume
+        "Way Too Much": 1.10,  # +10% k3 → much more fatigue sensitivity → much less volume
+    }
+
+    affected_muscle_groups = []
+    feedback_muscle_groups = [item.muscle_group for item in feedback_data.feedback
+                              if item.difficulty != "Just Right"]
+
+    if feedback_muscle_groups:
+        params_map = ensure_user_muscle_params(db, current_user, feedback_muscle_groups)
+
+        for item in feedback_data.feedback:
+            multiplier = K3_ADJUSTMENTS.get(item.difficulty, 1.0)
+            if multiplier != 1.0 and item.muscle_group in params_map:
+                mp = params_map[item.muscle_group]
+                mp.k3 *= multiplier
+                affected_muscle_groups.append(item.muscle_group)
+
+        # Re-optimize affected muscle groups on the active instance
+        if affected_muscle_groups:
+            instance = db.query(MesocycleInstance).filter(
+                MesocycleInstance.id == workout_session.mesocycle_instance_id
+            ).first()
+            if instance:
+                try:
+                    reoptimize_instance_volumes(db, instance, current_user,
+                                                muscle_groups=affected_muscle_groups)
+                except Exception as e:
+                    logger.warning("Feedback re-optimization failed: %s", e)
 
     db.commit()
     for fb in created:

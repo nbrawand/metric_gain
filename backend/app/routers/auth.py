@@ -186,3 +186,23 @@ async def update_current_user(
     db.commit()
     db.refresh(current_user)
     return UserResponse.from_orm(current_user)
+
+
+@router.post("/users/me/reset-muscle-params")
+async def reset_muscle_params(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Reset all per-muscle-group optimizer parameters to defaults.
+
+    Deletes all UserMuscleParams for the current user. Next time params
+    are needed, ensure_user_muscle_params() will re-seed from defaults
+    based on the user's experience level.
+    """
+    from app.models.user_muscle_params import UserMuscleParams
+
+    deleted = db.query(UserMuscleParams).filter(
+        UserMuscleParams.user_id == current_user.id
+    ).delete()
+    db.commit()
+    return {"deleted": deleted, "message": "Volume parameters reset to defaults"}

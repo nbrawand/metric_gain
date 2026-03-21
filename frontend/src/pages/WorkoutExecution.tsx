@@ -1258,15 +1258,15 @@ export default function WorkoutExecution() {
       {showFeedback && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold text-white mb-1">Workout Report</h3>
-            <p className="text-sm text-gray-400 mb-4">How did each muscle group feel?</p>
+            <h3 className="text-lg font-semibold text-white mb-1">Volume Check</h3>
+            <p className="text-sm text-gray-400 mb-4">How was the prescribed volume?</p>
 
             <div className="space-y-4">
               {Object.keys(muscleFeedback).map((mg) => (
                 <div key={mg}>
                   <p className="text-sm font-medium text-gray-300 mb-2">{mg}</p>
                   <div className="grid grid-cols-4 gap-2">
-                    {['Easy', 'Just Right', 'Difficult', 'Too Difficult'].map((option) => (
+                    {['Too Little', 'Just Right', 'Too Much', 'Way Too Much'].map((option) => (
                       <button
                         key={option}
                         onClick={() => setMuscleFeedback(prev => ({ ...prev, [mg]: option }))}

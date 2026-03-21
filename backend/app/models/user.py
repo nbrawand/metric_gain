@@ -37,6 +37,7 @@ class User(Base):
     mesocycles = relationship("Mesocycle", back_populates="user", cascade="all, delete-orphan")
     mesocycle_instances = relationship("MesocycleInstance", back_populates="user", cascade="all, delete-orphan")
     workout_sessions = relationship("WorkoutSession", back_populates="user", cascade="all, delete-orphan")
+    muscle_params = relationship("UserMuscleParams", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}')>"

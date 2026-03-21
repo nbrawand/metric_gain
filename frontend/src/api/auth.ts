@@ -54,3 +54,12 @@ export async function updateCurrentUser(
 ): Promise<User> {
   return patch<User>(`${AUTH_BASE}/users/me`, data, accessToken);
 }
+
+/**
+ * Reset per-muscle-group volume parameters to defaults
+ */
+export async function resetMuscleParams(
+  accessToken: string
+): Promise<{ deleted: number; message: string }> {
+  return post<{ deleted: number; message: string }>(`${AUTH_BASE}/users/me/reset-muscle-params`, {}, accessToken);
+}

@@ -192,8 +192,8 @@ class MesocycleInstanceResponse(BaseModel):
     # Per-exercise note overrides keyed by workout_exercise_id
     exercise_notes: Optional[dict] = None
 
-    # Volume profile from optimizer
-    volume_profile: Optional[list[float]] = None
+    # Volume profile from optimizer (dict: muscle_group -> weekly sets, or legacy list)
+    volume_profile: Optional[dict[str, list[float]] | list[float]] = None
 
     @field_validator("exercise_notes", mode="before")
     @classmethod
@@ -206,7 +206,10 @@ class MesocycleInstanceResponse(BaseModel):
     @classmethod
     def parse_volume_profile(cls, v):
         if isinstance(v, str):
-            return json.loads(v)
+            try:
+                return json.loads(v)
+            except (json.JSONDecodeError, TypeError):
+                return None
         return v
 
     # Include template details (None if template was deleted)

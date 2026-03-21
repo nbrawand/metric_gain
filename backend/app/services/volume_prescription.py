@@ -29,7 +29,7 @@ class MesocycleConfig:
     days_per_week: int
     muscle_group_frequency: dict[str, int] = field(default_factory=dict)   # muscle -> sessions/week
     muscle_group_day_indices: dict[str, list[int]] = field(default_factory=dict)  # muscle -> [day_numbers]
-    volume_profile: list[float] = field(default_factory=list)  # optimizer output: sets/week per body part
+    volume_profile: dict[str, list[float]] = field(default_factory=dict)  # muscle_group -> weekly sets list
 
 
 # ---------------------------------------------------------------------------
@@ -46,10 +46,25 @@ def compute_target_rir(week: int, accumulation_weeks: int) -> int:
     return round(3 * (accumulation_weeks - week) / (accumulation_weeks - 1))
 
 
+def _get_muscle_profile(muscle_group: str, config: MesocycleConfig) -> list[float]:
+    """Get the volume profile list for a muscle group, with fallback."""
+    if isinstance(config.volume_profile, dict):
+        if muscle_group in config.volume_profile:
+            return config.volume_profile[muscle_group]
+        # Fallback: use any available profile (e.g. for ad-hoc added muscles)
+        if config.volume_profile:
+            return next(iter(config.volume_profile.values()))
+    elif isinstance(config.volume_profile, list):
+        # Backwards compat: old list format (same profile for all muscles)
+        return config.volume_profile
+    return []
+
+
 def compute_weekly_volume_target(muscle_group: str, week: int, config: MesocycleConfig) -> int:
     """Layer 1: weekly volume target per muscle group from the optimizer profile."""
-    if config.volume_profile and 0 < week <= len(config.volume_profile):
-        target = config.volume_profile[week - 1]  # 1-indexed week
+    profile = _get_muscle_profile(muscle_group, config)
+    if profile and 0 < week <= len(profile):
+        target = profile[week - 1]  # 1-indexed week
         return max(1, round(target))
 
     # Fallback if no profile (shouldn't happen in normal flow)
@@ -91,9 +106,9 @@ def allocate_to_session(
 
 def _deload_sets(muscle_group: str, config: MesocycleConfig) -> int:
     """Deload volume from the optimizer profile (last week), divided by frequency, min 1."""
-    # The optimizer already computes deload volume (typically 0)
-    if config.volume_profile and len(config.volume_profile) >= config.total_weeks:
-        weekly = round(config.volume_profile[config.total_weeks - 1])
+    profile = _get_muscle_profile(muscle_group, config)
+    if profile and len(profile) >= config.total_weeks:
+        weekly = round(profile[config.total_weeks - 1])
     else:
         weekly = 2  # fallback
 
@@ -116,34 +131,31 @@ def build_mesocycle_config(
     total_weeks: int,
     days_per_week: int,
     experience_level: str = "intermediate",
-    volume_profile: list[float] | None = None,
+    volume_profile: dict[str, list[float]] | list[float] | None = None,
+    user=None,
 ) -> MesocycleConfig:
     """Scan WorkoutTemplate -> WorkoutExercise -> Exercise to compute
     muscle group frequency and day indices.
 
-    If volume_profile is provided, uses it directly. Otherwise computes
-    the optimal volume profile using the user's experience level.
+    If volume_profile is provided (dict or list), uses it directly. Otherwise
+    computes per-muscle-group profiles using user's muscle params (or falls
+    back to experience level defaults).
     """
     from app.models.mesocycle import WorkoutTemplate, WorkoutExercise
     from app.models.exercise import Exercise
-    from app.services.volume_optimizer import create_mesocycle_volume
-
-    # Use provided profile or compute one
-    if volume_profile is None:
-        volume_profile = []
-        try:
-            result = create_mesocycle_volume(experience_level, total_weeks)
-            volume_profile = [w["sets"] for w in result["weeks"]]
-        except Exception as e:
-            logger.warning("Volume optimizer failed, falling back to fixed ramp: %s", e)
+    from app.services.volume_optimizer import (
+        create_mesocycle_volume,
+        create_mesocycle_volume_for_params,
+        ensure_user_muscle_params,
+    )
 
     config = MesocycleConfig(
         total_weeks=total_weeks,
         accumulation_weeks=max(total_weeks - 1, 1),
         days_per_week=days_per_week,
-        volume_profile=volume_profile,
     )
 
+    # Scan templates to discover muscle groups and day indices
     templates = (
         db.query(WorkoutTemplate)
         .filter(WorkoutTemplate.mesocycle_id == mesocycle_template_id)
@@ -166,6 +178,42 @@ def build_mesocycle_config(
     # Compute frequency from day indices
     for mg, days in config.muscle_group_day_indices.items():
         config.muscle_group_frequency[mg] = len(days)
+
+    # Handle volume profile
+    if volume_profile is not None:
+        if isinstance(volume_profile, dict):
+            config.volume_profile = volume_profile
+        elif isinstance(volume_profile, list):
+            # Backwards compat: old list format -> wrap into dict for all groups
+            for mg in config.muscle_group_day_indices:
+                config.volume_profile[mg] = volume_profile
+        return config
+
+    # No profile provided — compute per muscle group
+    muscle_groups = list(config.muscle_group_day_indices.keys())
+
+    if user and muscle_groups:
+        # Use per-muscle params
+        try:
+            params_map = ensure_user_muscle_params(db, user, muscle_groups)
+            for mg in muscle_groups:
+                mp = params_map.get(mg)
+                if mp:
+                    result = create_mesocycle_volume_for_params(mp.to_params_dict(), total_weeks)
+                    config.volume_profile[mg] = [w["sets"] for w in result["weeks"]]
+        except Exception as e:
+            logger.warning("Per-muscle optimization failed, falling back: %s", e)
+
+    # Fallback: use experience level for any muscle groups that don't have a profile
+    if any(mg not in config.volume_profile for mg in muscle_groups):
+        try:
+            result = create_mesocycle_volume(experience_level, total_weeks)
+            fallback = [w["sets"] for w in result["weeks"]]
+            for mg in muscle_groups:
+                if mg not in config.volume_profile:
+                    config.volume_profile[mg] = fallback
+        except Exception as e:
+            logger.warning("Volume optimizer failed, falling back to fixed ramp: %s", e)
 
     return config
 
@@ -217,40 +265,92 @@ def get_prescribed_sets(
 # Re-optimization on workout completion
 # ---------------------------------------------------------------------------
 
-def reoptimize_instance_volumes(db: Session, instance, user) -> None:
+def reoptimize_instance_volumes(
+    db: Session,
+    instance,
+    user,
+    muscle_groups: list[str] | None = None,
+) -> None:
     """Re-run optimizer and update set counts on all uncompleted sessions.
 
-    Called when a workout is completed. Updates the volume profile on the
-    instance and adjusts sets on future sessions.
+    Called when a workout is completed or feedback adjusts params.
+    If muscle_groups is provided, only re-optimizes those groups.
+    Updates the volume profile on the instance and adjusts sets on future sessions.
     """
     from app.models.mesocycle import MesocycleInstance, WorkoutTemplate
     from app.models.workout_session import WorkoutSession, WorkoutSet
     from app.models.exercise import Exercise
-    from app.services.volume_optimizer import create_mesocycle_volume
+    from app.services.volume_optimizer import (
+        create_mesocycle_volume,
+        create_mesocycle_volume_for_params,
+        ensure_user_muscle_params,
+    )
 
     total_weeks = instance.template_weeks
     if not total_weeks:
         return
 
-    # Re-run optimizer
-    volume_profile = []
-    try:
-        result = create_mesocycle_volume(user.experience_level, total_weeks)
-        volume_profile = [w["sets"] for w in result["weeks"]]
-    except Exception as e:
-        logger.warning("Re-optimization failed: %s", e)
-        return
+    # Load existing volume profile (dict format)
+    existing_profile = {}
+    if instance.volume_profile:
+        try:
+            parsed = json.loads(instance.volume_profile)
+            if isinstance(parsed, dict):
+                existing_profile = parsed
+            elif isinstance(parsed, list):
+                # Old list format — convert to dict for all muscle groups we know about
+                # so partial re-optimization doesn't lose data for unaffected groups
+                from app.models.workout_session import WorkoutSession, WorkoutSet
+                from app.models.exercise import Exercise as ExerciseModel
+                sessions = db.query(WorkoutSession).filter(
+                    WorkoutSession.mesocycle_instance_id == instance.id
+                ).limit(1).all()
+                if sessions:
+                    sets = db.query(WorkoutSet).filter(
+                        WorkoutSet.workout_session_id == sessions[0].id
+                    ).all()
+                    exercise_ids = {s.exercise_id for s in sets}
+                    for eid in exercise_ids:
+                        ex = db.query(ExerciseModel).filter(ExerciseModel.id == eid).first()
+                        if ex:
+                            existing_profile[ex.muscle_group] = parsed
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # Determine which muscle groups to optimize
+    if muscle_groups is None:
+        # Build config to discover all muscle groups
+        config = build_mesocycle_config(
+            db, instance.mesocycle_template_id, total_weeks,
+            instance.template_days_per_week,
+            experience_level=user.experience_level,
+            user=user,
+        )
+        # config.volume_profile is already populated
+        new_profile = config.volume_profile
+    else:
+        # Only re-optimize specified muscle groups
+        params_map = ensure_user_muscle_params(db, user, muscle_groups)
+        new_profile = dict(existing_profile)  # start from existing
+        for mg in muscle_groups:
+            mp = params_map.get(mg)
+            if mp:
+                try:
+                    result = create_mesocycle_volume_for_params(mp.to_params_dict(), total_weeks)
+                    new_profile[mg] = [w["sets"] for w in result["weeks"]]
+                except Exception as e:
+                    logger.warning("Re-optimization failed for %s: %s", mg, e)
+
+        # Build config with the merged profile
+        config = build_mesocycle_config(
+            db, instance.mesocycle_template_id, total_weeks,
+            instance.template_days_per_week,
+            experience_level=user.experience_level,
+            volume_profile=new_profile,
+        )
 
     # Update stored profile
-    instance.volume_profile = json.dumps(volume_profile)
-
-    # Build config with new profile
-    config = build_mesocycle_config(
-        db, instance.mesocycle_template_id, total_weeks,
-        instance.template_days_per_week,
-        experience_level=user.experience_level,
-        volume_profile=volume_profile,
-    )
+    instance.volume_profile = json.dumps(config.volume_profile)
 
     # Find all uncompleted sessions
     uncompleted_sessions = (
@@ -301,6 +401,13 @@ def reoptimize_instance_volumes(db: Session, instance, user) -> None:
         # Compute new prescribed counts per muscle group
         exercise_new_counts = {}
         for mg, ex_ids in mg_exercise_ids.items():
+            # Skip muscle groups not being re-optimized (if filter specified)
+            if muscle_groups and mg not in muscle_groups:
+                # Keep current counts
+                for eid in ex_ids:
+                    exercise_new_counts[eid] = len(exercise_groups[eid])
+                continue
+
             total = max(len(ex_ids), get_prescribed_sets(
                 db, mg, session.week_number, session.day_number,
                 instance.user_id, instance.id, config,

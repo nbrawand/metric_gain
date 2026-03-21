@@ -9,6 +9,10 @@ performance.
 
 import math
 
+# Muscle groups that get higher fatigue multipliers (compound movement fatigue)
+BIG_MUSCLE_GROUPS = {"Chest", "Back", "Quadriceps", "Hamstrings", "Glutes"}
+BIG_MUSCLE_FATIGUE_MULTIPLIER = 1.5  # k3 and kappa0 are 1.5x for big groups
+
 
 DEFAULT_PROFILES = {
     "beginner": {
@@ -223,3 +227,69 @@ def create_mesocycle_volume(
         "peak_performance": result["peak_performance"],
         "peak_week": result["peak_week"],
     }
+
+
+def get_default_muscle_params(experience_level: str, muscle_group: str) -> dict:
+    """Return default params for a muscle group, with big-muscle fatigue scaling."""
+    base = DEFAULT_PROFILES.get(experience_level)
+    if not base:
+        base = DEFAULT_PROFILES["intermediate"]
+    params = base.copy()
+    if muscle_group in BIG_MUSCLE_GROUPS:
+        params["k3"] *= BIG_MUSCLE_FATIGUE_MULTIPLIER
+        params["kappa0"] *= BIG_MUSCLE_FATIGUE_MULTIPLIER
+    return params
+
+
+def create_mesocycle_volume_for_params(params: dict, total_weeks: int, w_max: float = 30.0) -> dict:
+    """Like create_mesocycle_volume but accepts raw params dict instead of experience_level."""
+    result = compute_optimal_profile(params, total_weeks, w_max=w_max)
+    sim = result["simulation"]
+
+    weeks = []
+    for i in range(total_weeks):
+        is_deload = i == total_weeks - 1
+        weeks.append({
+            "week": i + 1,
+            "sets": result["volume_profile"][i],
+            "type": "deload" if is_deload else "training",
+            "performance": sim["p"][i],
+            "fitness": sim["g"][i],
+            "fatigue": sim["h"][i],
+            "kappa": sim["kappa"][i],
+            "alpha": sim["alpha"][i],
+            "effective_volume": sim["eff"][i],
+        })
+
+    return {
+        "weeks": weeks,
+        "peak_performance": result["peak_performance"],
+        "peak_week": result["peak_week"],
+    }
+
+
+def ensure_user_muscle_params(db, user, muscle_groups: list[str]) -> dict:
+    """Load or create UserMuscleParams for the given muscle groups.
+
+    Returns dict of muscle_group -> UserMuscleParams.
+    """
+    from app.models.user_muscle_params import UserMuscleParams
+
+    existing = db.query(UserMuscleParams).filter(
+        UserMuscleParams.user_id == user.id,
+        UserMuscleParams.muscle_group.in_(muscle_groups)
+    ).all()
+    existing_map = {p.muscle_group: p for p in existing}
+
+    created = False
+    for mg in muscle_groups:
+        if mg not in existing_map:
+            defaults = get_default_muscle_params(user.experience_level, mg)
+            param = UserMuscleParams(user_id=user.id, muscle_group=mg, **defaults)
+            db.add(param)
+            existing_map[mg] = param
+            created = True
+
+    if created:
+        db.flush()
+    return existing_map
