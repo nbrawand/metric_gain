@@ -2,10 +2,19 @@
  * How It Works page - explains the theory and usage of Strength Guider
  */
 
-import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function HowItWorks() {
   const navigate = useNavigate();
+  const { hash } = useLocation();
+
+  useEffect(() => {
+    if (hash) {
+      const el = document.querySelector(hash);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [hash]);
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
@@ -121,7 +130,7 @@ export default function HowItWorks() {
       </section>
 
       {/* Volume Prescription Theory */}
-      <section className="bg-gray-800 rounded-lg p-6">
+      <section id="volume-model" className="bg-gray-800 rounded-lg p-6 scroll-mt-16">
         <h2 className="text-xl font-semibold text-teal-400 mb-3">The Volume Prescription Model</h2>
         <p className="text-gray-300 leading-relaxed mb-3">
           Strength Guider uses a mathematical model to prescribe how many sets you should perform per muscle group each week. The model is rooted in exercise science research <span className="text-teal-400">[1, 2]</span> and adapts to your individual response over time.

@@ -101,7 +101,7 @@ export default function Layout() {
     <div className="min-h-screen bg-gray-900">
       {/* Top Bar */}
       <div className="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between sticky top-0 z-40">
-        <Link to={isAuthenticated ? '/' : '/login'} className="text-xl font-bold text-white hover:text-teal-400 transition-colors">
+        <Link to="/" className="text-xl font-bold text-white hover:text-teal-400 transition-colors">
           Strength Guider
         </Link>
         <button
@@ -160,17 +160,14 @@ export default function Layout() {
                   <button onClick={() => handleNav('/how-it-works')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
                     How It Works
                   </button>
-                  <button onClick={() => handleNav('/about')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
-                    About
-                  </button>
                   <button onClick={() => handleNav('/')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
                     Home
                   </button>
                 </>
               ) : (
                 <>
-                  <button onClick={() => handleNav('/about')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
-                    About
+                  <button onClick={() => handleNav('/')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
+                    Home
                   </button>
                   <button onClick={() => handleNav('/how-it-works')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
                     How It Works

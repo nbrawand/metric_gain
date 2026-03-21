@@ -3,12 +3,12 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Home } from './pages/Home';
+import Landing from './pages/Landing';
 import { Exercises } from './pages/Exercises';
 import Mesocycles from './pages/Mesocycles';
 import MesocycleDetail from './pages/MesocycleDetail';
 import WorkoutExecution from './pages/WorkoutExecution';
 import HowItWorks from './pages/HowItWorks';
-import About from './pages/About';
 import LifterProfile from './pages/LifterProfile';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Layout from './components/Layout';
@@ -27,6 +27,11 @@ function ConnectivityBanner() {
       Can't Reach Server
     </div>
   );
+}
+
+function RootPage() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  return isAuthenticated ? <ProtectedRoute><Home /></ProtectedRoute> : <Landing />;
 }
 
 function App() {
@@ -48,9 +53,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
-          <Route path="/about" element={<About />} />
           {/* Protected routes */}
-          <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/" element={<RootPage />} />
           <Route path="/exercises" element={<ProtectedRoute><Exercises /></ProtectedRoute>} />
           <Route path="/mesocycles" element={<ProtectedRoute><Mesocycles /></ProtectedRoute>} />
           <Route path="/mesocycles/:id" element={<ProtectedRoute><MesocycleDetail /></ProtectedRoute>} />
