@@ -25,7 +25,7 @@ export default function HowItWorks() {
       </div>
 
       {/* How to Use the App */}
-      <section className="bg-gray-800 rounded-lg p-6">
+      <section id="getting-started" className="bg-gray-800 rounded-lg p-6 scroll-mt-16">
         <h2 className="text-xl font-semibold text-teal-400 mb-3">Getting Started</h2>
 
         <div className="space-y-5">
@@ -76,7 +76,7 @@ export default function HowItWorks() {
       </section>
 
       {/* Progressive Overload */}
-      <section className="bg-gray-800 rounded-lg p-6">
+      <section id="progressive-overload" className="bg-gray-800 rounded-lg p-6 scroll-mt-16">
         <h2 className="text-xl font-semibold text-teal-400 mb-3">Progressive Overload</h2>
         <p className="text-gray-300 leading-relaxed mb-3">
           Progressive overload is a core principle of strength training. It refers to gradually increasing the demands placed on your muscles over time so that they continue to adapt. This can be done by increasing the weight lifted, performing more repetitions at a given weight, or adding more sets.
