@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
+import { useOfflineSyncStore } from '../stores/offlineSyncStore';
+import { onConnectivityChange, getServerReachable } from '../api/client';
 import { getWorkoutSession, updateWorkoutSet, updateWorkoutSession, listWorkoutSessions, submitWorkoutFeedback, swapExercise, removeExercise, addExercise, addSetToExercise, removeSetFromExercise } from '../api/workoutSessions';
 import { getExercises } from '../api/exercises';
 import { getMesocycleInstance, updateMesocycleInstance, updateInstanceExerciseNotes } from '../api/mesocycles';
@@ -61,9 +63,71 @@ export default function WorkoutExecution() {
   const [savingSetIds, setSavingSetIds] = useState<Set<number>>(new Set());
   const [completingWorkout, setCompletingWorkout] = useState(false);
 
+  // Offline sync
+  const { enqueue, remove, drainQueue, getPendingSetIds, hasPending } = useOfflineSyncStore();
+  const [serverReachable, setServerReachableState] = useState(getServerReachable);
+
   useEffect(() => {
     loadWorkoutSession();
   }, [sessionId]);
+
+  // Offline sync: subscribe to connectivity changes, drain queue when back online
+  const handleOnline = useCallback((reachable: boolean) => {
+    setServerReachableState(reachable);
+    if (reachable && accessToken) {
+      drainQueue(accessToken).then(({ syncedSetIds }) => {
+        if (syncedSetIds.length > 0) {
+          setLoggedSetIds((prev) => {
+            const next = new Set(prev);
+            syncedSetIds.forEach((id) => next.add(id));
+            return next;
+          });
+        }
+      });
+    }
+  }, [accessToken, drainQueue]);
+
+  useEffect(() => {
+    const unsub = onConnectivityChange(handleOnline);
+
+    // Also listen to browser online/offline events as early detection
+    const onBrowserOnline = () => handleOnline(true);
+    const onBrowserOffline = () => setServerReachableState(false);
+    window.addEventListener('online', onBrowserOnline);
+    window.addEventListener('offline', onBrowserOffline);
+
+    return () => {
+      unsub();
+      window.removeEventListener('online', onBrowserOnline);
+      window.removeEventListener('offline', onBrowserOffline);
+    };
+  }, [handleOnline]);
+
+  // On mount, drain any leftover queue from a previous session.
+  // Also poll every 10s while there are pending items, since stopping/starting
+  // the backend doesn't trigger browser online/offline events.
+  useEffect(() => {
+    if (accessToken && hasPending()) {
+      drainQueue(accessToken);
+    }
+
+    const interval = setInterval(() => {
+      if (accessToken && hasPending()) {
+        drainQueue(accessToken).then(({ syncedSetIds }) => {
+          if (syncedSetIds.length > 0) {
+            setServerReachableState(true);
+            setLoggedSetIds((prev) => {
+              const next = new Set(prev);
+              syncedSetIds.forEach((id) => next.add(id));
+              return next;
+            });
+          }
+        });
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [accessToken]);
 
   // Initialize input values when session data loads (merge, don't overwrite edits)
   useEffect(() => {
@@ -298,14 +362,22 @@ export default function WorkoutExecution() {
     const weight = Math.max(0, parseFloat(inputValues[setId]?.weight || '0') || 0);
     const reps = Math.floor(Math.max(0, parseFloat(inputValues[setId]?.reps || '0') || 0));
 
+    const setData = { weight, reps, skipped: (weight === 0 && reps === 0) ? 1 : 0 as 0 | 1 };
+
     try {
-      await updateWorkoutSet(session.id, setId, { weight, reps, skipped: (weight === 0 && reps === 0) ? 1 : 0 }, accessToken);
+      await updateWorkoutSet(session.id, setId, setData, accessToken);
       setLoggedSetIds((prev) => new Set(prev).add(setId));
     } catch (err: any) {
-      console.error('Error logging set:', err);
-      const detail = err?.detail || err?.message || 'Unknown error';
-      const errStatus = err?.status || err?.response?.status || '';
-      setError(`Save failed: ${detail}${errStatus ? ` (${errStatus})` : ''}`);
+      if (err?.status === 0) {
+        // Network error — queue for later sync
+        enqueue(session.id, setId, setData);
+        setLoggedSetIds((prev) => new Set(prev).add(setId));
+      } else {
+        console.error('Error logging set:', err);
+        const detail = err?.detail || err?.message || 'Unknown error';
+        const errStatus = err?.status || err?.response?.status || '';
+        setError(`Save failed: ${detail}${errStatus ? ` (${errStatus})` : ''}`);
+      }
     } finally {
       setSavingSetIds((prev) => {
         const next = new Set(prev);
@@ -319,7 +391,8 @@ export default function WorkoutExecution() {
   const handleUnlogSet = async (setId: number) => {
     if (!accessToken || !session) return;
 
-    // Immediately mark as unlogged in UI
+    // Immediately mark as unlogged in UI and remove from offline queue
+    remove(`${session.id}:${setId}`);
     setLoggedSetIds((prev) => {
       const next = new Set(prev);
       next.delete(setId);
@@ -358,6 +431,18 @@ export default function WorkoutExecution() {
   const handleCompleteWorkoutClick = async () => {
     if (!session || !accessToken) return;
 
+    // Try to drain any pending offline saves first
+    if (hasPending()) {
+      await drainQueue(accessToken);
+      if (hasPending()) {
+        const proceed = window.confirm(
+          'Some sets are saved locally but not yet synced to the server. ' +
+          'They will sync automatically when you reconnect. Continue completing the workout?'
+        );
+        if (!proceed) return;
+      }
+    }
+
     // Find all unlogged sets
     const unloggedSetIds = session.workout_sets
       .filter(s => !loggedSetIds.has(s.id))
@@ -372,7 +457,16 @@ export default function WorkoutExecution() {
           unloggedSetIds.map(async (setId) => {
             const weight = Math.max(0, parseFloat(inputValues[setId]?.weight || '0') || 0);
             const reps = Math.floor(Math.max(0, parseFloat(inputValues[setId]?.reps || '0') || 0));
-            await updateWorkoutSet(session.id, setId, { weight, reps, skipped: (weight === 0 && reps === 0) ? 1 : 0 }, accessToken);
+            const setData = { weight, reps, skipped: (weight === 0 && reps === 0) ? 1 : 0 as 0 | 1 };
+            try {
+              await updateWorkoutSet(session.id, setId, setData, accessToken);
+            } catch (err: any) {
+              if (err?.status === 0) {
+                enqueue(session.id, setId, setData);
+              } else {
+                throw err;
+              }
+            }
           })
         );
         setLoggedSetIds(prev => {
@@ -740,6 +834,13 @@ export default function WorkoutExecution() {
         </div>
       </div>
 
+      {/* Offline Banner */}
+      {!serverReachable && (
+        <div className="bg-amber-600 text-white text-center text-sm py-1 px-4">
+          Offline — sets will sync when reconnected
+        </div>
+      )}
+
       {/* Completion Banner */}
       {completionBanner && (
         <div className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none animate-slide-down">
@@ -1055,6 +1156,7 @@ export default function WorkoutExecution() {
                     const recommendation = getWeightRecommendation(set);
                     const isSaving = savingSetIds.has(set.id);
                     const isLogged = loggedSetIds.has(set.id);
+                    const isPending = session ? getPendingSetIds(session.id).has(set.id) : false;
                     return (
                       <div key={set.id} className="mb-3">
                         <div className="grid grid-cols-12 gap-1 sm:gap-2 items-start">
@@ -1117,6 +1219,16 @@ export default function WorkoutExecution() {
                                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
                               </div>
+                            ) : isLogged && isPending ? (
+                              <button
+                                onClick={() => handleUnlogSet(set.id)}
+                                className="w-8 h-8 rounded bg-amber-500 border-2 border-amber-500 flex items-center justify-center text-white hover:bg-amber-600 transition-colors"
+                                title="Saved locally, syncs when online"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              </button>
                             ) : isLogged ? (
                               <button
                                 onClick={() => handleUnlogSet(set.id)}
