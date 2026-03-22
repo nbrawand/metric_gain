@@ -43,9 +43,12 @@ export default function Landing() {
           </div>
           <div className="flex-shrink-0">
             <img
-              src="/workout_page.png"
+              src="/workout_page.webp"
               alt="Strength Guider workout tracking screen"
               className="w-56 sm:w-64 rounded-2xl shadow-2xl"
+              width={411}
+              height={768}
+              fetchPriority="high"
             />
           </div>
         </div>
