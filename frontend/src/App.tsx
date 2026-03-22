@@ -34,6 +34,50 @@ function ConnectivityBanner() {
   );
 }
 
+function UpdateBanner() {
+  const [updateFn, setUpdateFn] = useState<(() => Promise<void>) | null>(null);
+  const [updating, setUpdating] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      // Wrap in a thunk so React doesn't invoke the function as a state initializer
+      setUpdateFn(() => detail.updateSW);
+    };
+    window.addEventListener('sw-update-available', handler);
+    return () => window.removeEventListener('sw-update-available', handler);
+  }, []);
+
+  if (!updateFn) return null;
+
+  return (
+    <div className="fixed bottom-20 left-0 right-0 z-[100] flex justify-center px-4">
+      <div className="bg-gray-800 border border-teal-500 rounded-lg shadow-lg px-4 py-3 flex items-center gap-3 max-w-sm w-full">
+        <span className="text-white text-sm flex-1">New version available</span>
+        <button
+          onClick={async () => {
+            setUpdating(true);
+            await updateFn();
+          }}
+          disabled={updating}
+          className="bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold px-4 py-1.5 rounded transition-colors disabled:opacity-50"
+        >
+          {updating ? 'Updating...' : 'Update'}
+        </button>
+        <button
+          onClick={() => setUpdateFn(null)}
+          className="text-gray-400 hover:text-white transition-colors"
+          title="Dismiss"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function RootPage() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return isAuthenticated ? <SubscriptionRoute><Home /></SubscriptionRoute> : <Landing />;
@@ -71,6 +115,7 @@ function AppRoutes() {
   return (
     <BrowserRouter>
       <ConnectivityBanner />
+      <UpdateBanner />
       <Routes>
         <Route element={<Layout />}>
           {/* Public routes */}
