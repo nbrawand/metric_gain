@@ -303,8 +303,9 @@ export default function WorkoutExecution() {
       setLoggedSetIds((prev) => new Set(prev).add(setId));
     } catch (err: any) {
       console.error('Error logging set:', err);
-      const resp = err?.response;
-      setError(`Save failed: ${err?.message} | status: ${resp?.status} | data: ${JSON.stringify(resp?.data)}`);
+      const detail = err?.detail || err?.message || 'Unknown error';
+      const errStatus = err?.status || err?.response?.status || '';
+      setError(`Save failed: ${detail}${errStatus ? ` (${errStatus})` : ''}`);
     } finally {
       setSavingSetIds((prev) => {
         const next = new Set(prev);

@@ -1,8 +1,9 @@
 /**
  * API client for workout session management.
+ * Uses the shared client.ts wrapper for automatic token refresh on 401.
  */
 
-import axios from 'axios';
+import { get, post, patch, del } from './client';
 import {
   WorkoutSession,
   WorkoutSessionListItem,
@@ -13,23 +14,12 @@ import {
   WorkoutSetUpdate,
 } from '../types/workout_session';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
 // Workout Session endpoints
 export const createWorkoutSession = async (
   sessionData: WorkoutSessionCreate,
   accessToken: string
 ): Promise<WorkoutSession> => {
-  const response = await axios.post(
-    `${API_BASE_URL}/v1/workout-sessions/`,
-    sessionData,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  );
-  return response.data;
+  return post<WorkoutSession>('/v1/workout-sessions/', sessionData, accessToken);
 };
 
 export const listWorkoutSessions = async (
@@ -47,24 +37,14 @@ export const listWorkoutSessions = async (
   if (filters.skip) params.append('skip', filters.skip.toString());
   if (filters.limit) params.append('limit', filters.limit.toString());
 
-  const response = await axios.get(`${API_BASE_URL}/v1/workout-sessions/?${params.toString()}`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-  return response.data;
+  return get<WorkoutSessionListItem[]>(`/v1/workout-sessions/?${params.toString()}`, accessToken);
 };
 
 export const getWorkoutSession = async (
   sessionId: number,
   accessToken: string
 ): Promise<WorkoutSession> => {
-  const response = await axios.get(`${API_BASE_URL}/v1/workout-sessions/${sessionId}`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-  return response.data;
+  return get<WorkoutSession>(`/v1/workout-sessions/${sessionId}`, accessToken);
 };
 
 export const updateWorkoutSession = async (
@@ -72,27 +52,14 @@ export const updateWorkoutSession = async (
   sessionUpdate: WorkoutSessionUpdate,
   accessToken: string
 ): Promise<WorkoutSession> => {
-  const response = await axios.patch(
-    `${API_BASE_URL}/v1/workout-sessions/${sessionId}`,
-    sessionUpdate,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  );
-  return response.data;
+  return patch<WorkoutSession>(`/v1/workout-sessions/${sessionId}`, sessionUpdate, accessToken);
 };
 
 export const deleteWorkoutSession = async (
   sessionId: number,
   accessToken: string
 ): Promise<void> => {
-  await axios.delete(`${API_BASE_URL}/v1/workout-sessions/${sessionId}`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+  await del(`/v1/workout-sessions/${sessionId}`, accessToken);
 };
 
 // Workout Set endpoints
@@ -101,28 +68,14 @@ export const addWorkoutSet = async (
   setData: WorkoutSetCreate,
   accessToken: string
 ): Promise<WorkoutSet> => {
-  const response = await axios.post(
-    `${API_BASE_URL}/v1/workout-sessions/${sessionId}/sets`,
-    setData,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  );
-  return response.data;
+  return post<WorkoutSet>(`/v1/workout-sessions/${sessionId}/sets`, setData, accessToken);
 };
 
 export const listWorkoutSets = async (
   sessionId: number,
   accessToken: string
 ): Promise<WorkoutSet[]> => {
-  const response = await axios.get(`${API_BASE_URL}/v1/workout-sessions/${sessionId}/sets`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-  return response.data;
+  return get<WorkoutSet[]>(`/v1/workout-sessions/${sessionId}/sets`, accessToken);
 };
 
 export const updateWorkoutSet = async (
@@ -131,16 +84,7 @@ export const updateWorkoutSet = async (
   setUpdate: WorkoutSetUpdate,
   accessToken: string
 ): Promise<WorkoutSet> => {
-  const response = await axios.patch(
-    `${API_BASE_URL}/v1/workout-sessions/${sessionId}/sets/${setId}`,
-    setUpdate,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  );
-  return response.data;
+  return patch<WorkoutSet>(`/v1/workout-sessions/${sessionId}/sets/${setId}`, setUpdate, accessToken);
 };
 
 export const deleteWorkoutSet = async (
@@ -148,11 +92,7 @@ export const deleteWorkoutSet = async (
   setId: number,
   accessToken: string
 ): Promise<void> => {
-  await axios.delete(`${API_BASE_URL}/v1/workout-sessions/${sessionId}/sets/${setId}`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+  await del(`/v1/workout-sessions/${sessionId}/sets/${setId}`, accessToken);
 };
 
 // Exercise Management endpoints (mid-workout swap/remove/add)
@@ -162,16 +102,11 @@ export const swapExercise = async (
   newExerciseId: number,
   accessToken: string
 ): Promise<WorkoutSession> => {
-  const response = await axios.post(
-    `${API_BASE_URL}/v1/workout-sessions/${sessionId}/exercises/swap`,
+  return post<WorkoutSession>(
+    `/v1/workout-sessions/${sessionId}/exercises/swap`,
     { old_exercise_id: oldExerciseId, new_exercise_id: newExerciseId },
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
+    accessToken
   );
-  return response.data;
 };
 
 export const removeExercise = async (
@@ -179,15 +114,7 @@ export const removeExercise = async (
   exerciseId: number,
   accessToken: string
 ): Promise<WorkoutSession> => {
-  const response = await axios.delete(
-    `${API_BASE_URL}/v1/workout-sessions/${sessionId}/exercises/${exerciseId}`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  );
-  return response.data;
+  return del<WorkoutSession>(`/v1/workout-sessions/${sessionId}/exercises/${exerciseId}`, accessToken);
 };
 
 export const addExercise = async (
@@ -195,16 +122,11 @@ export const addExercise = async (
   exerciseId: number,
   accessToken: string
 ): Promise<WorkoutSession> => {
-  const response = await axios.post(
-    `${API_BASE_URL}/v1/workout-sessions/${sessionId}/exercises/add`,
+  return post<WorkoutSession>(
+    `/v1/workout-sessions/${sessionId}/exercises/add`,
     { exercise_id: exerciseId },
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
+    accessToken
   );
-  return response.data;
 };
 
 // Per-exercise set add/remove endpoints
@@ -213,16 +135,11 @@ export const addSetToExercise = async (
   exerciseId: number,
   accessToken: string
 ): Promise<WorkoutSession> => {
-  const response = await axios.post(
-    `${API_BASE_URL}/v1/workout-sessions/${sessionId}/exercises/${exerciseId}/sets`,
+  return post<WorkoutSession>(
+    `/v1/workout-sessions/${sessionId}/exercises/${exerciseId}/sets`,
     {},
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
+    accessToken
   );
-  return response.data;
 };
 
 export const removeSetFromExercise = async (
@@ -230,15 +147,10 @@ export const removeSetFromExercise = async (
   exerciseId: number,
   accessToken: string
 ): Promise<WorkoutSession> => {
-  const response = await axios.delete(
-    `${API_BASE_URL}/v1/workout-sessions/${sessionId}/exercises/${exerciseId}/sets`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
+  return del<WorkoutSession>(
+    `/v1/workout-sessions/${sessionId}/exercises/${exerciseId}/sets`,
+    accessToken
   );
-  return response.data;
 };
 
 // Workout Feedback endpoints
@@ -247,13 +159,5 @@ export const submitWorkoutFeedback = async (
   feedback: { muscle_group: string; difficulty: string }[],
   accessToken: string
 ): Promise<void> => {
-  await axios.post(
-    `${API_BASE_URL}/v1/workout-sessions/${sessionId}/feedback`,
-    { feedback },
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  );
+  await post(`/v1/workout-sessions/${sessionId}/feedback`, { feedback }, accessToken);
 };

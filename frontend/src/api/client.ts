@@ -155,9 +155,15 @@ async function fetchApi<T>(
     if (response.status === 401 && !_isRetry) {
       const newToken = await tryRefreshToken();
       if (newToken) {
-        const retryHeaders = new Headers(options.headers);
-        retryHeaders.set('Authorization', `Bearer ${newToken}`);
-        return fetchApi<T>(endpoint, { ...options, headers: retryHeaders }, true);
+        // Build retry headers as a plain object so the spread on line 137 works
+        const existingHeaders: Record<string, string> = {};
+        if (options.headers instanceof Headers) {
+          options.headers.forEach((v, k) => { existingHeaders[k] = v; });
+        } else if (options.headers) {
+          Object.assign(existingHeaders, options.headers);
+        }
+        existingHeaders['Authorization'] = `Bearer ${newToken}`;
+        return fetchApi<T>(endpoint, { ...options, headers: existingHeaders }, true);
       }
       // Refresh failed — session is truly expired, log out
       if (_logout) _logout();

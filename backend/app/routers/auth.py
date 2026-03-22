@@ -4,6 +4,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from jose import jwt
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
 from pydantic import BaseModel
@@ -17,7 +18,6 @@ from app.utils.auth import (
     create_access_token,
     create_refresh_token,
     get_current_user,
-    decode_access_token
 )
 
 logger = logging.getLogger(__name__)
@@ -95,13 +95,17 @@ async def google_login(body: GoogleLoginBody, db: Session = Depends(get_db)):
     )
 
 
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
 @router.post("/refresh")
-async def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
+async def refresh_access_token(body: RefreshRequest, db: Session = Depends(get_db)):
     """
     Refresh access token using refresh token.
 
     Args:
-        refresh_token: Valid refresh token
+        body: JSON body containing refresh_token
         db: Database session
 
     Returns:
@@ -117,7 +121,7 @@ async def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
     )
 
     try:
-        payload = decode_access_token(refresh_token)
+        payload = jwt.decode(body.refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
 
         # Verify it's a refresh token
         if payload.get("type") != "refresh":
