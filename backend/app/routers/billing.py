@@ -70,10 +70,21 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         customer_id = data.get("customer")
         subscription_id = data.get("subscription")
         user = db.query(User).filter(User.stripe_customer_id == customer_id).first()
+        # Fallback: look up by email from checkout session
+        if not user:
+            customer_email = (data.get("customer_details") or {}).get("email")
+            logger.warning("No user found for stripe_customer_id=%s, trying email=%s", customer_id, customer_email)
+            if customer_email:
+                user = db.query(User).filter(User.email == customer_email).first()
+                if user:
+                    user.stripe_customer_id = customer_id
         if user:
             user.stripe_subscription_id = subscription_id
             user.subscription_status = "active"
             db.commit()
+            logger.info("Activated subscription for user=%s", user.email)
+        else:
+            logger.error("Webhook checkout.session.completed: no user found for customer=%s", customer_id)
 
     elif event_type in ("customer.subscription.updated", "customer.subscription.deleted"):
         subscription_id = data.get("id")
