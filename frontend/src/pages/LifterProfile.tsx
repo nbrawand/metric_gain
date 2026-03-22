@@ -29,7 +29,7 @@ function formatParam(value: number): string {
 }
 
 export default function LifterProfile() {
-  const { accessToken, user } = useAuthStore();
+  const { accessToken } = useAuthStore();
   const [entries, setEntries] = useState<MuscleParamEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [resetting, setResetting] = useState<string | null>(null);
