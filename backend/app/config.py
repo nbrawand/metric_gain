@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     # Environment
     ENVIRONMENT: str = "development"
 
+    # Google OAuth
+    GOOGLE_CLIENT_ID: str = ""
+
     # CORS
     CORS_ORIGINS: str = "http://localhost:5173"
 

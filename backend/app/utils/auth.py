@@ -182,6 +182,9 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     if not user:
         return None
 
+    if not user.password_hash:
+        return None
+
     if not verify_password(password, user.password_hash):
         return None
 

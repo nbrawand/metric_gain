@@ -5,7 +5,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import * as authApi from '../api/auth';
-import type { User, LoginRequest, RegisterRequest } from '../types/auth';
+import type { User } from '../types/auth';
 import type { ApiError } from '../api/client';
 
 interface AuthState {
@@ -17,8 +17,7 @@ interface AuthState {
   error: string | null;
 
   // Actions
-  register: (data: RegisterRequest) => Promise<void>;
-  login: (data: LoginRequest) => Promise<void>;
+  googleLogin: (idToken: string) => Promise<void>;
   logout: () => void;
   refreshAccessToken: () => Promise<void>;
   fetchCurrentUser: () => Promise<void>;
@@ -36,11 +35,11 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
 
-      register: async (data: RegisterRequest) => {
+      googleLogin: async (idToken: string) => {
         set({ isLoading: true, error: null });
 
         try {
-          const response = await authApi.register(data);
+          const response = await authApi.googleLogin(idToken);
 
           set({
             user: response.user,
@@ -53,31 +52,7 @@ export const useAuthStore = create<AuthState>()(
         } catch (err) {
           const apiError = err as ApiError;
           set({
-            error: apiError.detail || 'Registration failed',
-            isLoading: false,
-          });
-          throw err;
-        }
-      },
-
-      login: async (data: LoginRequest) => {
-        set({ isLoading: true, error: null });
-
-        try {
-          const response = await authApi.login(data);
-
-          set({
-            user: response.user,
-            accessToken: response.access_token,
-            refreshToken: response.refresh_token,
-            isAuthenticated: true,
-            isLoading: false,
-            error: null,
-          });
-        } catch (err) {
-          const apiError = err as ApiError;
-          set({
-            error: apiError.detail || 'Login failed',
+            error: apiError.detail || 'Google login failed',
             isLoading: false,
           });
           throw err;

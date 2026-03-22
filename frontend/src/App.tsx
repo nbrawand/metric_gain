@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Home } from './pages/Home';
@@ -14,6 +15,8 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import { useAuthStore } from './stores/authStore';
 import { setAuthStoreRef, onConnectivityChange, getServerReachable } from './api/client';
+import { getGoogleClientId } from './api/auth';
+import { GoogleAuthContext } from './contexts/GoogleAuthContext';
 
 function ConnectivityBanner() {
   const [reachable, setReachable] = useState(getServerReachable);
@@ -34,16 +37,7 @@ function RootPage() {
   return isAuthenticated ? <ProtectedRoute><Home /></ProtectedRoute> : <Landing />;
 }
 
-function App() {
-  const logout = useAuthStore((s) => s.logout);
-
-  // Wire the API client to the auth store so token refresh updates in-memory state
-  useEffect(() => {
-    setAuthStoreRef(
-      (token) => useAuthStore.setState({ accessToken: token }),
-      logout,
-    );
-  }, [logout]);
+function AppRoutes() {
   return (
     <BrowserRouter>
       <ConnectivityBanner />
@@ -65,6 +59,40 @@ function App() {
       </Routes>
     </BrowserRouter>
   );
+}
+
+function App() {
+  const logout = useAuthStore((s) => s.logout);
+  const [googleClientId, setGoogleClientId] = useState<string | null>(null);
+
+  // Wire the API client to the auth store so token refresh updates in-memory state
+  useEffect(() => {
+    setAuthStoreRef(
+      (token) => useAuthStore.setState({ accessToken: token }),
+      logout,
+    );
+  }, [logout]);
+
+  // Fetch Google Client ID from backend
+  useEffect(() => {
+    getGoogleClientId()
+      .then((res) => {
+        if (res.client_id) setGoogleClientId(res.client_id);
+      })
+      .catch(() => {});
+  }, []);
+
+  if (googleClientId) {
+    return (
+      <GoogleOAuthProvider clientId={googleClientId}>
+        <GoogleAuthContext.Provider value={true}>
+          <AppRoutes />
+        </GoogleAuthContext.Provider>
+      </GoogleOAuthProvider>
+    );
+  }
+
+  return <AppRoutes />;
 }
 
 export default App;

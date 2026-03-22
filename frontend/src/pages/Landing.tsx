@@ -22,7 +22,7 @@ export default function Landing() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
               <Link
-                to="/register"
+                to="/login"
                 className="bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 px-8 rounded-lg transition-colors text-lg"
               >
                 Get Started
@@ -227,7 +227,7 @@ export default function Landing() {
         <h2 className="text-2xl font-bold text-white mb-3">Ready to Start?</h2>
         <p className="text-gray-400 mb-8">Create your free account and build your first mesocycle.</p>
         <Link
-          to="/register"
+          to="/login"
           className="bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 px-8 rounded-lg transition-colors text-lg"
         >
           Get Started

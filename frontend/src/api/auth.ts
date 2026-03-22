@@ -2,12 +2,9 @@
  * Authentication API client
  */
 
-import { get, patch, post } from './client';
+import { get, post } from './client';
 import type {
   AuthResponse,
-  LoginRequest,
-  RegisterRequest,
-  TokenRefreshRequest,
   TokenResponse,
   User,
 } from '../types/auth';
@@ -15,27 +12,26 @@ import type {
 const AUTH_BASE = '/v1/auth';
 
 /**
- * Register a new user account
+ * Get Google OAuth client ID from backend
  */
-export async function register(data: RegisterRequest): Promise<AuthResponse> {
-  return post<AuthResponse>(`${AUTH_BASE}/register`, data);
+export async function getGoogleClientId(): Promise<{ client_id: string }> {
+  return get<{ client_id: string }>(`${AUTH_BASE}/google-client-id`);
 }
 
 /**
- * Login with email and password
+ * Login with Google OAuth id_token
  */
-export async function login(data: LoginRequest): Promise<AuthResponse> {
-  return post<AuthResponse>(`${AUTH_BASE}/login`, data);
+export async function googleLogin(idToken: string): Promise<AuthResponse> {
+  return post<AuthResponse>(`${AUTH_BASE}/google`, { id_token: idToken });
 }
 
 /**
  * Refresh access token using refresh token
  */
 export async function refreshToken(
-  refreshToken: string
+  refreshTokenStr: string
 ): Promise<TokenResponse> {
-  const data: TokenRefreshRequest = { refresh_token: refreshToken };
-  return post<TokenResponse>(`${AUTH_BASE}/refresh`, data);
+  return post<TokenResponse>(`${AUTH_BASE}/refresh`, { refresh_token: refreshTokenStr });
 }
 
 /**
@@ -52,6 +48,7 @@ export async function updateCurrentUser(
   data: Partial<Pick<User, 'full_name' | 'timezone' | 'preferences' | 'experience_level'>>,
   accessToken: string
 ): Promise<User> {
+  const { patch } = await import('./client');
   return patch<User>(`${AUTH_BASE}/users/me`, data, accessToken);
 }
 

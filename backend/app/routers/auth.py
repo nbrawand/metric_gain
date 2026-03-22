@@ -1,20 +1,21 @@
-"""Authentication endpoints for user registration and login."""
+"""Authentication endpoints — Google OAuth only."""
 
 import logging
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport import requests as google_requests
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.models.user import User
-from app.schemas.user import UserCreate, UserLogin, UserUpdate, UserResponse, AuthResponse
+from app.schemas.user import UserUpdate, UserResponse, AuthResponse
 from app.utils.auth import (
-    hash_password,
     create_access_token,
     create_refresh_token,
-    authenticate_user,
     get_current_user,
     decode_access_token
 )
@@ -28,88 +29,55 @@ class ResetMuscleParamsBody(BaseModel):
     experience_level: str = "intermediate"
 
 
-@router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate, db: Session = Depends(get_db)):
-    """
-    Register a new user account.
+class GoogleLoginBody(BaseModel):
+    id_token: str
 
-    Args:
-        user_data: User registration data (email, password, full_name)
-        db: Database session
 
-    Returns:
-        AuthResponse with user data and tokens
+@router.get("/google-client-id")
+async def get_google_client_id():
+    """Return the Google OAuth client ID for the frontend."""
+    return {"client_id": settings.GOOGLE_CLIENT_ID}
 
-    Raises:
-        HTTPException: If email already exists
-    """
-    # Check if user already exists
-    existing_user = db.query(User).filter(User.email == user_data.email).first()
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+
+@router.post("/google", response_model=AuthResponse)
+async def google_login(body: GoogleLoginBody, db: Session = Depends(get_db)):
+    """Authenticate via Google OAuth id_token. Creates account on first login."""
+    if not settings.GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=501, detail="Google login not configured")
+
+    try:
+        idinfo = google_id_token.verify_oauth2_token(
+            body.id_token,
+            google_requests.Request(),
+            settings.GOOGLE_CLIENT_ID,
         )
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid Google token")
 
-    # Create new user
-    hashed_password = hash_password(user_data.password)
-    new_user = User(
-        email=user_data.email,
-        password_hash=hashed_password,
-        full_name=user_data.full_name,
-        is_active=True,
-        experience_level=user_data.experience_level or "intermediate",
-        timezone="UTC",
-        preferences="{}"
-    )
+    email = idinfo.get("email")
+    if not email:
+        raise HTTPException(status_code=401, detail="Google token missing email")
 
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    name = idinfo.get("name", "")
 
-    # Create tokens
-    token_data = {"sub": str(new_user.id), "email": new_user.email}
-    access_token = create_access_token(token_data)
-    refresh_token = create_refresh_token(token_data)
-
-    # Return user and tokens
-    return AuthResponse(
-        user=UserResponse.from_orm(new_user),
-        access_token=access_token,
-        refresh_token=refresh_token
-    )
-
-
-@router.post("/login", response_model=AuthResponse)
-async def login(login_data: UserLogin, db: Session = Depends(get_db)):
-    """
-    Login with email and password.
-
-    Args:
-        login_data: User login credentials
-        db: Database session
-
-    Returns:
-        AuthResponse with user data and tokens
-
-    Raises:
-        HTTPException: If credentials are invalid
-    """
-    # Authenticate user
-    user = authenticate_user(db, login_data.email, login_data.password)
-
+    # Find or create user
+    user = db.query(User).filter(User.email == email).first()
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
+        user = User(
+            email=email,
+            full_name=name,
+            is_active=True,
+            experience_level="intermediate",
+            timezone="UTC",
+            preferences="{}",
         )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
 
-    # Update last login
     user.last_login = datetime.utcnow()
     db.commit()
 
-    # Create tokens
     token_data = {"sub": str(user.id), "email": user.email}
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
@@ -117,7 +85,7 @@ async def login(login_data: UserLogin, db: Session = Depends(get_db)):
     return AuthResponse(
         user=UserResponse.from_orm(user),
         access_token=access_token,
-        refresh_token=refresh_token
+        refresh_token=refresh_token,
     )
 
 

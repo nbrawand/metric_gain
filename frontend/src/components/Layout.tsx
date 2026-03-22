@@ -183,14 +183,9 @@ export default function Layout() {
                   Logout
                 </button>
               ) : (
-                <>
-                  <button onClick={() => handleNav('/login')} className="w-full text-left text-lg text-teal-400 hover:text-teal-300 py-4 border-b border-gray-700 transition-colors">
-                    Login
+                <button onClick={() => handleNav('/login')} className="w-full text-left text-lg text-teal-400 hover:text-teal-300 py-4 transition-colors">
+                    Sign In
                   </button>
-                  <button onClick={() => handleNav('/register')} className="w-full text-left text-lg text-teal-400 hover:text-teal-300 py-4 transition-colors">
-                    Sign Up
-                  </button>
-                </>
               )}
             </div>
           </div>
