@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /workout/
+Disallow: /mesocycles/
+Disallow: /exercises
+Disallow: /profile
+Disallow: /subscribe
+Disallow: /billing/
+
+Sitemap: https://www.strength-guider.com/sitemap.xml
