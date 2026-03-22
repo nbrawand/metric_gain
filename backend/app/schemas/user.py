@@ -36,6 +36,9 @@ class UserResponse(UserBase):
     experience_level: str
     timezone: str
     preferences: str
+    subscription_status: str = "trialing"
+    trial_ends_at: Optional[datetime] = None
+    is_admin: bool = False
 
     class Config:
         from_attributes = True  # Allows creation from ORM models

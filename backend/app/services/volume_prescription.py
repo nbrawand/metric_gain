@@ -11,7 +11,7 @@ import logging
 import math
 from collections import OrderedDict
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Dict, List, Optional, Tuple, Union
 
 from sqlalchemy.orm import Session
 
@@ -134,10 +134,10 @@ def find_previous_performance(
     db: Session,
     user_id: int,
     exercise_id: int,
-    mesocycle_instance_id: int | None = None,
-    current_week: int | None = None,
-    current_day: int | None = None,
-) -> tuple[float | None, int | None]:
+    mesocycle_instance_id: Optional[int] = None,
+    current_week: Optional[int] = None,
+    current_day: Optional[int] = None,
+) -> Tuple[Optional[float], Optional[int]]:
     """Find the last completed non-zero weight/reps for an exercise.
 
     Search priority:
@@ -225,7 +225,7 @@ def build_mesocycle_config(
     total_weeks: int,
     days_per_week: int,
     experience_level: str = "intermediate",
-    volume_profile: dict[str, list[float]] | list[float] | None = None,
+    volume_profile: Optional[Union[Dict[str, List[float]], List[float]]] = None,
     user=None,
 ) -> MesocycleConfig:
     """Scan WorkoutTemplate -> WorkoutExercise -> Exercise to compute
@@ -363,7 +363,7 @@ def reoptimize_instance_volumes(
     db: Session,
     instance,
     user,
-    muscle_groups: list[str] | None = None,
+    muscle_groups: Optional[List[str]] = None,
 ) -> None:
     """Re-run optimizer and update set counts on all uncompleted sessions.
 

@@ -11,6 +11,9 @@ export interface User {
   experience_level: string;
   timezone: string;
   preferences: string;
+  subscription_status: string;
+  trial_ends_at: string | null;
+  is_admin: boolean;
 }
 
 export interface AuthResponse {

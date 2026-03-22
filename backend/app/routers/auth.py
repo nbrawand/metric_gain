@@ -1,7 +1,7 @@
 """Authentication endpoints — Google OAuth only."""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from google.oauth2 import id_token as google_id_token
@@ -70,10 +70,16 @@ async def google_login(body: GoogleLoginBody, db: Session = Depends(get_db)):
             experience_level="intermediate",
             timezone="UTC",
             preferences="{}",
+            subscription_status="trialing",
+            trial_ends_at=datetime.now(timezone.utc) + timedelta(days=5),
         )
         db.add(user)
         db.commit()
         db.refresh(user)
+
+    # Backfill trial for existing users who predate the subscription feature
+    if user.subscription_status == "trialing" and user.trial_ends_at is None:
+        user.trial_ends_at = datetime.now(timezone.utc) + timedelta(days=5)
 
     user.last_login = datetime.utcnow()
     db.commit()

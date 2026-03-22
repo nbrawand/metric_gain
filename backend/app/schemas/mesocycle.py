@@ -2,7 +2,7 @@
 
 import json
 from datetime import date, datetime
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
 from app.schemas.exercise import ExerciseResponse
@@ -193,7 +193,7 @@ class MesocycleInstanceResponse(BaseModel):
     exercise_notes: Optional[dict] = None
 
     # Volume profile from optimizer (dict: muscle_group -> weekly sets, or legacy list)
-    volume_profile: Optional[dict[str, list[float]] | list[float]] = None
+    volume_profile: Optional[Union[dict[str, list[float]], list[float]]] = None
 
     @field_validator("exercise_notes", mode="before")
     @classmethod

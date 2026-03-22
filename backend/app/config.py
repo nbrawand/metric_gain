@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     # Google OAuth
     GOOGLE_CLIENT_ID: str = ""
 
+    # Stripe
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
+    STRIPE_PRICE_ID: str = ""
+    FRONTEND_URL: str = "http://localhost:5173"
+
     # CORS
     CORS_ORIGINS: str = "http://localhost:5173"
 

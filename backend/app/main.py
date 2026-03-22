@@ -2,10 +2,11 @@
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import SessionLocal
+from app.utils.auth import require_active_subscription
 
 
 @asynccontextmanager
@@ -70,11 +71,15 @@ async def health_check():
 
 
 # Import and include routers
-from app.routers import auth, exercises, mesocycles, mesocycle_instances, workout_sessions, volume
+from app.routers import auth, exercises, mesocycles, mesocycle_instances, workout_sessions, volume, billing, admin
+
+sub_guard = [Depends(require_active_subscription)]
 
 app.include_router(auth.router, prefix="/v1/auth", tags=["Authentication"])
-app.include_router(exercises.router, prefix="/v1/exercises", tags=["Exercises"])
-app.include_router(mesocycles.router, prefix="/v1/mesocycles", tags=["Mesocycle Templates"])
-app.include_router(mesocycle_instances.router, prefix="/v1/mesocycle-instances", tags=["Mesocycle Instances"])
-app.include_router(workout_sessions.router, prefix="/v1", tags=["Workout Sessions"])
-app.include_router(volume.router, prefix="/v1/mesocycle", tags=["Volume Optimization"])
+app.include_router(billing.router, prefix="/v1/billing", tags=["Billing"])
+app.include_router(admin.router, prefix="/v1/admin", tags=["Admin"])
+app.include_router(exercises.router, prefix="/v1/exercises", tags=["Exercises"], dependencies=sub_guard)
+app.include_router(mesocycles.router, prefix="/v1/mesocycles", tags=["Mesocycle Templates"], dependencies=sub_guard)
+app.include_router(mesocycle_instances.router, prefix="/v1/mesocycle-instances", tags=["Mesocycle Instances"], dependencies=sub_guard)
+app.include_router(workout_sessions.router, prefix="/v1", tags=["Workout Sessions"], dependencies=sub_guard)
+app.include_router(volume.router, prefix="/v1/mesocycle", tags=["Volume Optimization"], dependencies=sub_guard)

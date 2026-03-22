@@ -13,7 +13,7 @@ export default function Layout() {
   const [workoutSessions, setWorkoutSessions] = useState<WorkoutSessionListItem[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout, accessToken, isAuthenticated } = useAuthStore();
+  const { logout, accessToken, isAuthenticated, user } = useAuthStore();
 
   useEffect(() => {
     if (accessToken) {
@@ -261,6 +261,17 @@ export default function Layout() {
           </div>
         </div>
       )}
+
+      {/* Trial Banner */}
+      {isAuthenticated && user?.subscription_status === 'trialing' && user?.trial_ends_at && (() => {
+        const daysLeft = Math.max(0, Math.ceil((new Date(user.trial_ends_at!).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+        if (daysLeft <= 0) return null;
+        return (
+          <div className="bg-teal-700 text-white text-center text-sm py-2 px-4">
+            {daysLeft} day{daysLeft !== 1 ? 's' : ''} left in your free trial
+          </div>
+        );
+      })()}
 
       {/* Page Content */}
       <Outlet />

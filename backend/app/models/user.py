@@ -24,6 +24,13 @@ class User(Base):
 
     # Account status
     is_active = Column(Boolean, default=True, nullable=False)
+    is_admin = Column(Boolean, default=False, nullable=False)
+
+    # Subscription
+    stripe_customer_id = Column(String(255), nullable=True)
+    stripe_subscription_id = Column(String(255), nullable=True)
+    subscription_status = Column(String(50), default="trialing", nullable=False)
+    trial_ends_at = Column(DateTime(timezone=True), nullable=True)
 
     # Training profile
     experience_level = Column(String(20), default="intermediate", nullable=False)  # beginner, intermediate, advanced

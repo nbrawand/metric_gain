@@ -165,6 +165,26 @@ async def get_current_user(
     return user
 
 
+async def require_active_subscription(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Dependency that checks the user has an active subscription or valid trial."""
+    from datetime import datetime, timezone as tz
+
+    sub_status = current_user.subscription_status
+    if sub_status == "active":
+        return current_user
+    if sub_status == "trialing":
+        if current_user.trial_ends_at and current_user.trial_ends_at.replace(
+            tzinfo=tz.utc
+        ) > datetime.now(tz.utc):
+            return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="subscription_required",
+    )
+
+
 def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     """
     Authenticate a user by email and password.
