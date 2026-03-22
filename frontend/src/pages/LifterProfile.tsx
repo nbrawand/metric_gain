@@ -7,7 +7,6 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { getMuscleParams, resetSingleMuscleParams, MuscleParamEntry } from '../api/auth';
-import { createPortalSession } from '../api/billing';
 
 const PARAM_DESCRIPTIONS: { key: string; label: string; description: string }[] = [
   { key: 'k1', label: 'k1', description: 'Fitness gain multiplier — how much muscle growth you get per set. Higher means more responsive to training.' },
@@ -121,31 +120,6 @@ export default function LifterProfile() {
         </p>
       </div>
 
-      {/* Subscription Management */}
-      <div className="bg-gray-800 rounded-lg p-4 mb-6 flex items-center justify-between">
-        <div>
-          <span className="text-white font-medium">Subscription</span>
-          <span className="ml-2 text-sm text-gray-400 capitalize">
-            {user?.subscription_status === 'trialing' ? 'Free Trial' : user?.subscription_status || 'Unknown'}
-          </span>
-        </div>
-        {user?.subscription_status === 'active' && (
-          <button
-            onClick={async () => {
-              if (!accessToken) return;
-              try {
-                const { url } = await createPortalSession(accessToken);
-                window.location.href = url;
-              } catch {
-                setError('Failed to open billing portal.');
-              }
-            }}
-            className="bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm font-medium py-2 px-4 rounded-lg transition-colors"
-          >
-            Manage Subscription
-          </button>
-        )}
-      </div>
 
       {error && (
         <div className="bg-red-900/50 border border-red-700 text-red-300 rounded-lg px-4 py-3 mb-4 text-sm">

@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { getActiveMesocycleInstance } from '../api/mesocycles';
 import { listWorkoutSessions } from '../api/workoutSessions';
+import { createPortalSession } from '../api/billing';
 import { MesocycleInstance } from '../types/mesocycle';
 import { WorkoutSessionListItem } from '../types/workout_session';
 import OnboardingWizard from '../components/OnboardingWizard';
@@ -161,6 +162,22 @@ export function Home() {
                   <dd className="text-gray-200">{user?.timezone}</dd>
                 </div>
               </dl>
+              {user?.subscription_status === 'active' && (
+                <button
+                  onClick={async () => {
+                    if (!accessToken) return;
+                    try {
+                      const { url } = await createPortalSession(accessToken);
+                      window.location.href = url;
+                    } catch {
+                      alert('Failed to open billing portal.');
+                    }
+                  }}
+                  className="mt-3 w-full bg-gray-600 hover:bg-gray-500 text-gray-300 text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+                >
+                  Manage Subscription
+                </button>
+              )}
               <p className="mt-3 text-center text-xs text-gray-400">
                 Need help?{' '}
                 <a href="mailto:strengthguider@gmail.com" className="text-teal-400 hover:text-teal-300 transition-colors">
