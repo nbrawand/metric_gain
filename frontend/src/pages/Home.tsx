@@ -161,6 +161,12 @@ export function Home() {
                   <dd className="text-gray-200">{user?.timezone}</dd>
                 </div>
               </dl>
+              <p className="mt-3 text-center text-xs text-gray-400">
+                Need help?{' '}
+                <a href="mailto:strengthguider@gmail.com" className="text-teal-400 hover:text-teal-300 transition-colors">
+                  strengthguider@gmail.com
+                </a>
+              </p>
             </div>
           </div>
         </div>

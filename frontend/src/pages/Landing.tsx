@@ -239,6 +239,16 @@ export default function Landing() {
           </Link>
         </p>
       </section>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-700 py-8 px-4 text-center">
+        <p className="text-gray-400 text-sm">
+          Questions or feedback?{' '}
+          <a href="mailto:strengthguider@gmail.com" className="text-teal-400 hover:text-teal-300 transition-colors">
+            strengthguider@gmail.com
+          </a>
+        </p>
+      </footer>
     </main>
   );
 }
