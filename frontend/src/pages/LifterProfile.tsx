@@ -82,11 +82,7 @@ export default function LifterProfile() {
     setExpandedGroup(expandedGroup === mg ? null : mg);
   };
 
-  const allInfoEntries = [
-    ...PARAM_DESCRIPTIONS,
-    { key: 'volume_preview', label: 'Prescribed Sets', description: 'The optimal number of sets per week for this muscle group across a 9-week mesocycle, computed from your current parameters. Volume ramps up each week during accumulation, then drops for the deload week to allow recovery.' },
-  ];
-  const activeInfo = allInfoEntries.find(p => p.key === infoParam);
+  const showInfoModal = infoParam === 'all_params';
 
   if (loading) {
     return (
@@ -157,12 +153,6 @@ export default function LifterProfile() {
                           {PARAM_DESCRIPTIONS.map(({ key, label }) => (
                             <th key={key} className="px-2 py-2 text-white font-semibold text-center text-base">
                               {label}
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setInfoParam(key); }}
-                                className="ml-1 text-gray-400 hover:text-white align-middle"
-                              >
-                                &#9432;
-                              </button>
                             </th>
                           ))}
                         </tr>
@@ -189,16 +179,8 @@ export default function LifterProfile() {
                           return (
                             <div key={i} className="flex-1 text-center">
                               <span className="text-base text-white font-semibold">
-                                {isDeload ? 'Deload' : `Week ${i + 1}`}
+                                {isDeload ? 'DL' : `W${i + 1}`}
                               </span>
-                              {i === 0 && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setInfoParam('volume_preview'); }}
-                                  className="ml-1 text-gray-400 hover:text-white align-middle"
-                                >
-                                  &#9432;
-                                </button>
-                              )}
                             </div>
                           );
                         })}
@@ -207,15 +189,16 @@ export default function LifterProfile() {
                       <div className="flex gap-1">
                         {entry.volume_profile.map((sets, i) => (
                           <div key={i} className="flex-1 text-center">
-                            <span className="text-base text-white font-medium">{Math.round(sets)} sets</span>
+                            <span className="text-base text-white font-medium">{Math.round(sets)}</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
 
-                  {/* Reset buttons */}
-                  <div className="flex gap-2 flex-wrap mt-4">
+                  {/* Reset buttons + info icon */}
+                  <div className="flex items-center mt-4">
+                  <div className="flex gap-2 flex-wrap flex-1">
                     <span className="text-xs text-gray-400 self-center mr-1">Reset to:</span>
                     {EXPERIENCE_LEVELS.map((level) => {
                       const isResetting = resetting === `${entry.muscle_group}-${level}`;
@@ -230,6 +213,14 @@ export default function LifterProfile() {
                         </button>
                       );
                     })}
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setInfoParam('all_params'); }}
+                    className="ml-2 text-gray-400 hover:text-white self-center text-lg"
+                    title="Parameter info"
+                  >
+                    &#9432;
+                  </button>
                   </div>
                 </div>
               )}
@@ -268,11 +259,11 @@ export default function LifterProfile() {
       )}
 
       {/* Parameter info modal */}
-      {activeInfo && (
+      {showInfoModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-white">{activeInfo.label}</h3>
+              <h3 className="text-lg font-semibold text-white">Parameter Guide</h3>
               <button
                 onClick={() => setInfoParam(null)}
                 className="text-gray-400 hover:text-white text-xl"
@@ -280,7 +271,20 @@ export default function LifterProfile() {
                 &#10005;
               </button>
             </div>
-            <p className="text-sm text-gray-300 leading-relaxed">{activeInfo.description}</p>
+            <div className="space-y-3">
+              {PARAM_DESCRIPTIONS.map(({ label, description }) => (
+                <div key={label}>
+                  <span className="text-teal-400 font-semibold text-sm">{label}</span>
+                  <p className="text-sm text-gray-300 leading-relaxed">{description}</p>
+                </div>
+              ))}
+              <div className="pt-2 border-t border-gray-700">
+                <span className="text-teal-400 font-semibold text-sm">Prescribed Sets (W1, W2…)</span>
+                <p className="text-sm text-gray-300 leading-relaxed">
+                  The optimal number of sets per week for this muscle group, computed from your parameters. Volume ramps up each training week, then drops for the deload week (DL) to allow recovery.
+                </p>
+              </div>
+            </div>
             <button
               onClick={() => setInfoParam(null)}
               className="w-full mt-5 bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 rounded-lg"

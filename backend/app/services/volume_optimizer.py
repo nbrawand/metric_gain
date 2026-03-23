@@ -133,7 +133,7 @@ def compute_optimal_profile(
     step = 0.5
     w_starts = _frange(max(2.0, 0.0), min(w_max, 18.0), step)
     w_ends = _frange(max(2.0, 0.0), w_max + step, step)
-    deload_vols = [0.0, 2.0, 3.0, 4.0]
+    deload_vols = [2.0, 3.0, 4.0]
 
     for w_start in w_starts:
         for w_end in w_ends:
