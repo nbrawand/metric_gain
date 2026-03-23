@@ -17,8 +17,11 @@ export default function Landing() {
             <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4">
               Train Smarter. Grow Stronger.
             </h1>
-            <p className="text-lg sm:text-xl text-teal-100 max-w-2xl mb-8">
-              Strength Guider prescribes your training with mathematical precision: optimal volume, weight targets, and planned recovery. It adapts every week based on your feedback.
+            <p className="text-lg sm:text-xl text-white max-w-2xl mb-3">
+              The adaptive workout guide.
+            </p>
+            <p className="text-teal-200 max-w-2xl mb-8">
+              Strength Guider prescribes your training with mathematical precision: optimal volume, weight targets, and planned recovery. It adapts after every workout based on your feedback.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
               <Link
