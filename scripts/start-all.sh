@@ -61,9 +61,14 @@ for i in $(seq 1 30); do
   sleep 1
 done
 
-# 2. Start Backend
-echo "  Starting backend..."
+# 2. Run migrations and seed data
+echo "  Running migrations and seeding..."
 cd "$BACKEND_DIR"
+.venv/bin/alembic upgrade head
+.venv/bin/python pre_deploy.py
+
+# 3. Start Backend
+echo "  Starting backend..."
 .venv/bin/uvicorn app.main:app --reload --port 8000 > "$PROJECT_DIR/.backend.log" 2>&1 &
 echo $! > "$PROJECT_DIR/.backend.pid"
 
@@ -75,7 +80,7 @@ for i in $(seq 1 15); do
   sleep 1
 done
 
-# 3. Start Frontend
+# 4. Start Frontend
 echo "  Starting frontend..."
 cd "$FRONTEND_DIR"
 npm run dev > "$PROJECT_DIR/.frontend.log" 2>&1 &
