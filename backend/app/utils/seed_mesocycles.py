@@ -379,12 +379,260 @@ FIVE_DAY_LPPLU_TEMPLATE = {
     ],
 }
 
+BEGINNER_STRENGTH_TEMPLATE = {
+    "name": "Beginner Strength",
+    "description": "Compound-focused 3-day program inspired by Starting Strength and StrongLifts. Builds a foundation with barbell movements and simple linear progression. Ideal for true beginners learning the big lifts.",
+    "weeks": 5,
+    "days_per_week": 3,
+    "workouts": [
+        {
+            "name": "Workout A",
+            "description": "Squat, bench press, and row",
+            "exercises": [
+                {"name": "Barbell Squat", "sets": 3, "reps_min": 5, "reps_max": 8},
+                {"name": "Barbell Bench Press", "sets": 3, "reps_min": 5, "reps_max": 8},
+                {"name": "Barbell Row", "sets": 3, "reps_min": 5, "reps_max": 8},
+                {"name": "Cable Curl", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Crunches", "sets": 2, "reps_min": 10, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Workout B",
+            "description": "Squat, overhead press, and deadlift",
+            "exercises": [
+                {"name": "Barbell Squat", "sets": 3, "reps_min": 5, "reps_max": 8},
+                {"name": "Overhead Press", "sets": 3, "reps_min": 5, "reps_max": 8},
+                {"name": "Deadlift", "sets": 2, "reps_min": 5, "reps_max": 8},
+                {"name": "Tricep Pushdown (Rope)", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Hanging Leg Raise", "sets": 2, "reps_min": 8, "reps_max": 12},
+            ],
+        },
+    ],
+}
+
+BEGINNER_MACHINE_TEMPLATE = {
+    "name": "Beginner Machine Only",
+    "description": "3-day full body program using only machines and cables. Perfect for gym newcomers who want to build confidence and learn movement patterns before progressing to free weights.",
+    "weeks": 5,
+    "days_per_week": 3,
+    "workouts": [
+        {
+            "name": "Full Body A",
+            "description": "Chest, back, quads, hamstrings, and shoulders",
+            "exercises": [
+                {"name": "Machine Chest Press", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Machine Row", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Leg Press", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Lying Leg Curl", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Machine Shoulder Press", "sets": 2, "reps_min": 10, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Full Body B",
+            "description": "Back, chest, quads, calves, and arms",
+            "exercises": [
+                {"name": "Lat Pulldown", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Pec Deck", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Leg Extension", "sets": 3, "reps_min": 12, "reps_max": 15},
+                {"name": "Seated Calf Raise", "sets": 2, "reps_min": 12, "reps_max": 20},
+                {"name": "Machine Preacher Curl", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Machine Tricep Extension", "sets": 2, "reps_min": 10, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Full Body C",
+            "description": "Legs, back, chest, shoulders, and core",
+            "exercises": [
+                {"name": "Hack Squat", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Seated Leg Curl", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Seated Cable Row", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Machine Chest Press", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Machine Lateral Raise", "sets": 2, "reps_min": 12, "reps_max": 20},
+                {"name": "Cable Crunch", "sets": 2, "reps_min": 10, "reps_max": 15},
+            ],
+        },
+    ],
+}
+
+BEGINNER_UPPER_LOWER_3DAY_TEMPLATE = {
+    "name": "Beginner 3-Day Upper/Lower",
+    "description": "3-day upper/lower split alternating Upper, Lower, and Full Body sessions each week. A great stepping stone from full body to a 4-day upper/lower split. Suitable for beginners with 2-3 months of training experience.",
+    "weeks": 6,
+    "days_per_week": 3,
+    "workouts": [
+        {
+            "name": "Upper Body",
+            "description": "Chest, back, shoulders, biceps, and triceps",
+            "exercises": [
+                {"name": "Dumbbell Bench Press", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Lat Pulldown", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Dumbbell Shoulder Press", "sets": 2, "reps_min": 8, "reps_max": 12},
+                {"name": "Seated Cable Row", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Cable Curl", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Tricep Pushdown (Rope)", "sets": 2, "reps_min": 10, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Lower Body",
+            "description": "Quads, hamstrings, glutes, calves, and core",
+            "exercises": [
+                {"name": "Barbell Squat", "sets": 3, "reps_min": 6, "reps_max": 10},
+                {"name": "Romanian Deadlift", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Leg Press", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Leg Curl", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Standing Calf Raise", "sets": 2, "reps_min": 12, "reps_max": 20},
+                {"name": "Cable Crunch", "sets": 2, "reps_min": 10, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Full Body",
+            "description": "Compounds hitting every major muscle group",
+            "exercises": [
+                {"name": "Incline Dumbbell Press", "sets": 2, "reps_min": 8, "reps_max": 12},
+                {"name": "Pull-ups", "sets": 2, "reps_min": 5, "reps_max": 10},
+                {"name": "Goblet Squat", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Lying Leg Curl", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Lateral Raise", "sets": 2, "reps_min": 12, "reps_max": 15},
+                {"name": "Face Pulls", "sets": 2, "reps_min": 12, "reps_max": 15},
+            ],
+        },
+    ],
+}
+
+BRO_SPLIT_TEMPLATE = {
+    "name": "Bro Split",
+    "description": "Classic bodybuilding 5-day split training one muscle group per day: Chest, Back, Shoulders, Legs, Arms. High volume per session with full week recovery per muscle. Great for intermediate lifters focused on hypertrophy.",
+    "weeks": 6,
+    "days_per_week": 5,
+    "workouts": [
+        {
+            "name": "Chest Day",
+            "description": "Chest focused with heavy pressing and isolation work",
+            "exercises": [
+                {"name": "Barbell Bench Press", "sets": 3, "reps_min": 6, "reps_max": 8},
+                {"name": "Incline Dumbbell Press", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Decline Barbell Bench Press", "sets": 2, "reps_min": 8, "reps_max": 10},
+                {"name": "Cable Fly", "sets": 3, "reps_min": 12, "reps_max": 15},
+                {"name": "Pec Deck", "sets": 2, "reps_min": 12, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Back Day",
+            "description": "Back focused with vertical and horizontal pulling",
+            "exercises": [
+                {"name": "Deadlift", "sets": 3, "reps_min": 5, "reps_max": 8},
+                {"name": "Pull-ups", "sets": 3, "reps_min": 5, "reps_max": 10},
+                {"name": "Dumbbell Row", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Seated Cable Row", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Cable Pullover", "sets": 2, "reps_min": 10, "reps_max": 12},
+            ],
+        },
+        {
+            "name": "Shoulders & Traps",
+            "description": "Shoulders and traps with pressing, lateral work, and shrugs",
+            "exercises": [
+                {"name": "Overhead Press", "sets": 3, "reps_min": 6, "reps_max": 10},
+                {"name": "Arnold Press", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Cable Lateral Raise", "sets": 3, "reps_min": 12, "reps_max": 20},
+                {"name": "Face Pulls", "sets": 3, "reps_min": 15, "reps_max": 20},
+                {"name": "Barbell Shrug", "sets": 3, "reps_min": 8, "reps_max": 12},
+            ],
+        },
+        {
+            "name": "Leg Day",
+            "description": "Quads, hamstrings, and calves",
+            "exercises": [
+                {"name": "Barbell Squat", "sets": 3, "reps_min": 6, "reps_max": 10},
+                {"name": "Hack Squat", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Romanian Deadlift", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Lying Leg Curl", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Leg Extension", "sets": 2, "reps_min": 12, "reps_max": 15},
+                {"name": "Standing Calf Raise", "sets": 3, "reps_min": 10, "reps_max": 20},
+            ],
+        },
+        {
+            "name": "Arms Day",
+            "description": "Biceps and triceps alternating",
+            "exercises": [
+                {"name": "EZ Bar Curl", "sets": 3, "reps_min": 8, "reps_max": 10},
+                {"name": "Close-Grip Bench Press", "sets": 3, "reps_min": 6, "reps_max": 10},
+                {"name": "Hammer Curl", "sets": 3, "reps_min": 10, "reps_max": 12},
+                {"name": "Skull Crushers", "sets": 3, "reps_min": 10, "reps_max": 12},
+                {"name": "Preacher Curl", "sets": 2, "reps_min": 12, "reps_max": 15},
+                {"name": "Tricep Pushdown (Rope)", "sets": 2, "reps_min": 12, "reps_max": 15},
+            ],
+        },
+    ],
+}
+
+GLUTE_FOCUSED_UPPER_LOWER_TEMPLATE = {
+    "name": "Glute & Lower Body Focus",
+    "description": "4-day upper/lower split with extra glute and lower body emphasis. Inspired by Strong Curves and popular glute-building programs. Two lower body days (strength + hypertrophy) with hip thrusts, squats, and RDLs as primary lifts. Great for anyone prioritizing glute and leg development.",
+    "weeks": 6,
+    "days_per_week": 4,
+    "workouts": [
+        {
+            "name": "Lower Strength",
+            "description": "Heavy squats, hip thrusts, and posterior chain work",
+            "exercises": [
+                {"name": "Barbell Squat", "sets": 3, "reps_min": 5, "reps_max": 8},
+                {"name": "Hip Thrust", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Romanian Deadlift", "sets": 3, "reps_min": 8, "reps_max": 10},
+                {"name": "Bulgarian Split Squat", "sets": 2, "reps_min": 8, "reps_max": 12},
+                {"name": "Lying Leg Curl", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Standing Calf Raise", "sets": 2, "reps_min": 12, "reps_max": 20},
+            ],
+        },
+        {
+            "name": "Upper A",
+            "description": "Chest, back, shoulders, and arms",
+            "exercises": [
+                {"name": "Dumbbell Bench Press", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Lat Pulldown", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Dumbbell Shoulder Press", "sets": 2, "reps_min": 8, "reps_max": 12},
+                {"name": "Seated Cable Row", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Cable Curl", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Tricep Pushdown (Rope)", "sets": 2, "reps_min": 10, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Lower Hypertrophy",
+            "description": "High-rep glute and leg work for growth",
+            "exercises": [
+                {"name": "Hip Thrust", "sets": 3, "reps_min": 12, "reps_max": 15},
+                {"name": "Goblet Squat", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Cable Pull-Through", "sets": 3, "reps_min": 12, "reps_max": 15},
+                {"name": "Walking Lunges", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Leg Extension", "sets": 2, "reps_min": 12, "reps_max": 15},
+                {"name": "Seated Calf Raise", "sets": 2, "reps_min": 15, "reps_max": 20},
+            ],
+        },
+        {
+            "name": "Upper B",
+            "description": "Back, chest, shoulders, and core",
+            "exercises": [
+                {"name": "Machine Row", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Incline Dumbbell Press", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Face Pulls", "sets": 2, "reps_min": 12, "reps_max": 15},
+                {"name": "Cable Lateral Raise", "sets": 2, "reps_min": 12, "reps_max": 20},
+                {"name": "Pallof Press", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Hanging Leg Raise", "sets": 2, "reps_min": 8, "reps_max": 12},
+            ],
+        },
+    ],
+}
+
 STOCK_TEMPLATES = [
     PUSH_PULL_LEGS_TEMPLATE,
     TWO_DAY_FULL_BODY_TEMPLATE,
     THREE_DAY_FULL_BODY_TEMPLATE,
     FOUR_DAY_UPPER_LOWER_TEMPLATE,
     FIVE_DAY_LPPLU_TEMPLATE,
+    BEGINNER_STRENGTH_TEMPLATE,
+    BEGINNER_MACHINE_TEMPLATE,
+    BEGINNER_UPPER_LOWER_3DAY_TEMPLATE,
+    BRO_SPLIT_TEMPLATE,
+    GLUTE_FOCUSED_UPPER_LOWER_TEMPLATE,
 ]
 
 
