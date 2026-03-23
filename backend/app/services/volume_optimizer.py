@@ -173,7 +173,14 @@ def compute_optimal_profile(
                     best_score = p_final
                     best_profile = profile[:]
 
-    # Full simulation on the winner
+    # Clamp output sets to sane range
+    MIN_TRAINING_SETS = 4.0
+    MAX_TRAINING_SETS = 25.0
+    for i in range(len(best_profile)):
+        if i < total_weeks - 1:  # training weeks only, not deload
+            best_profile[i] = max(MIN_TRAINING_SETS, min(best_profile[i], MAX_TRAINING_SETS))
+
+    # Full simulation on the clamped profile
     sim = simulate(params, best_profile)
 
     peak_val = max(sim["p"])

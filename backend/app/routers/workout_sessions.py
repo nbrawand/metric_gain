@@ -1093,6 +1093,11 @@ def submit_workout_feedback(
         "Way Too Much": 1.10,  # +10% k3 → much more fatigue sensitivity → much less volume
     }
 
+    # k3 clamp bounds: 25% - 400% of default per experience level
+    from app.services.volume_optimizer import get_default_muscle_params
+    K3_CLAMP_MIN_FACTOR = 0.25
+    K3_CLAMP_MAX_FACTOR = 4.0
+
     affected_muscle_groups = []
     feedback_muscle_groups = [item.muscle_group for item in feedback_data.feedback
                               if item.difficulty != "Just Right"]
@@ -1105,6 +1110,10 @@ def submit_workout_feedback(
             if multiplier != 1.0 and item.muscle_group in params_map:
                 mp = params_map[item.muscle_group]
                 mp.k3 *= multiplier
+                # Clamp k3 to sane range based on experience level defaults
+                default_params = get_default_muscle_params(current_user.experience_level, item.muscle_group)
+                default_k3 = default_params["k3"]
+                mp.k3 = max(default_k3 * K3_CLAMP_MIN_FACTOR, min(mp.k3, default_k3 * K3_CLAMP_MAX_FACTOR))
                 affected_muscle_groups.append(item.muscle_group)
 
         # Re-optimize affected muscle groups on the active instance
