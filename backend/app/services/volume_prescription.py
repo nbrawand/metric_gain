@@ -106,6 +106,10 @@ def allocate_to_session(
     sets = base + (1 if day_position < remainder else 0)
     sets = max(sets, 1)  # Never prescribe 0 for a day that includes this muscle group
 
+    # Cap per-session sets to a sane maximum
+    MAX_SETS_PER_SESSION = 14
+    sets = min(sets, MAX_SETS_PER_SESSION)
+
     return sets
 
 
