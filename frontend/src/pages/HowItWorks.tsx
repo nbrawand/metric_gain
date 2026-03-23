@@ -57,7 +57,7 @@ export default function HowItWorks() {
             <div>
               <h3 className="text-white font-medium mb-1">Train and Log Your Workouts</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Work through your mesocycle session by session, recording the weight and reps for each set. The app provides target recommendations based on your previous performance, including a small weekly load increase of 2.5% (minimum 2.5 lbs) and an RIR target that decreases as the weeks progress.
+                Work through your mesocycle session by session, recording the weight and reps for each set. The app provides target recommendations based on your previous performance, including a small weekly load increase and an RIR target that decreases as the weeks progress.
               </p>
             </div>
           </div>
@@ -68,7 +68,7 @@ export default function HowItWorks() {
             <div>
               <h3 className="text-white font-medium mb-1">Provide Feedback After Each Workout</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                After completing a session, you will be asked how the prescribed volume was for each muscle group: Too Little, Just Right, Too Much, or Way Too Much. This feedback adjusts your per-muscle volume parameters so future sessions are better tailored to you.
+                After completing a session, you will be asked how the prescribed volume felt for each muscle group. This feedback adjusts your per-muscle volume parameters so future sessions are better tailored to you.
               </p>
             </div>
           </div>
