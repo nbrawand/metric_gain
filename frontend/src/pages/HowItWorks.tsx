@@ -231,7 +231,7 @@ export default function HowItWorks() {
           </p>
           <div className="bg-gray-700 rounded-lg p-3">
             <p className="text-white text-xs leading-relaxed font-mono">
-              Brawand, N. (2026). Strength Guider: A variable dose-response model for hypertrophy volume prescription with per-muscle-group parameterization and feedback-driven adaptation. Available at https://strengthguider.com
+              Strength Guider (2026). A variable dose-response model for hypertrophy volume prescription with per-muscle-group parameterization and feedback-driven adaptation. Available at https://www.strength-guider.com
             </p>
           </div>
         </div>
@@ -246,6 +246,11 @@ export default function HowItWorks() {
           Get Started
         </button>
       </div>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-700 mt-8 py-8 px-4 text-center">
+        <p className="text-gray-500 text-xs">&copy; 2026 Strength Guider. All rights reserved.</p>
+      </footer>
     </main>
   );
 }

@@ -12,6 +12,7 @@ import HowItWorks from './pages/HowItWorks';
 import LifterProfile from './pages/LifterProfile';
 import Subscribe from './pages/Subscribe';
 import Admin from './pages/Admin';
+import Terms from './pages/Terms';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import SubscriptionRoute from './components/SubscriptionRoute';
 import Layout from './components/Layout';
@@ -121,6 +122,7 @@ function AppRoutes() {
           {/* Public routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
+          <Route path="/terms" element={<Terms />} />
           {/* Authenticated but not subscription-gated */}
           <Route path="/subscribe" element={<ProtectedRoute><Subscribe /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
