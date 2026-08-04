@@ -17,7 +17,6 @@ class UserCreate(UserBase):
     """Schema for creating a new user (registration)."""
 
     password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
-    experience_level: Optional[str] = Field("intermediate", pattern="^(beginner|intermediate|advanced)$")
 
 
 class UserLogin(BaseModel):
@@ -33,7 +32,6 @@ class UserResponse(UserBase):
     id: int
     created_at: datetime
     is_active: bool
-    experience_level: str
     timezone: str
     preferences: str
     subscription_status: str = "trialing"
@@ -48,7 +46,6 @@ class UserUpdate(BaseModel):
     """Schema for updating user profile."""
 
     full_name: Optional[str] = None
-    experience_level: Optional[str] = Field(None, pattern="^(beginner|intermediate|advanced)$")
     timezone: Optional[str] = None
     preferences: Optional[str] = None
 

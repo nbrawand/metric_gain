@@ -106,30 +106,6 @@ class WorkoutSessionResponse(WorkoutSessionBase):
         from_attributes = True
 
 
-# WorkoutFeedback Schemas
-class WorkoutFeedbackItem(BaseModel):
-    """Single muscle group feedback item."""
-    muscle_group: str
-    difficulty: str = Field(..., pattern="^(Too Little|Just Right|Too Much|Way Too Much)$")
-
-
-class WorkoutFeedbackCreate(BaseModel):
-    """Schema for submitting workout feedback."""
-    feedback: List[WorkoutFeedbackItem]
-
-
-class WorkoutFeedbackResponse(BaseModel):
-    """Schema for feedback in responses."""
-    id: int
-    workout_session_id: int
-    muscle_group: str
-    difficulty: str
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
 class SwapExerciseRequest(BaseModel):
     """Request schema for swapping an exercise in a session."""
     old_exercise_id: int

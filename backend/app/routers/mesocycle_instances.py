@@ -22,14 +22,12 @@ from app.schemas.mesocycle import (
     MesocycleInstanceListResponse,
 )
 from app.utils.auth import get_current_user
-from app.services.volume_prescription import (
-    build_mesocycle_config,
-    get_prescribed_sets,
+from app.services.progression import (
+    compute_sets_for_week,
     compute_target_rir,
+    compute_progression_targets,
     find_previous_performance,
-    round_to_nearest_5,
 )
-from app.services.volume_optimizer import create_mesocycle_volume, ensure_user_muscle_params, create_mesocycle_volume_for_params
 
 logger = logging.getLogger(__name__)
 
@@ -199,72 +197,24 @@ def _generate_sets_for_session(
     workout_session,
     workout_template,
     week_number,
-    config,
+    total_weeks,
     user_id,
     mesocycle_instance_id,
     day_number,
-    is_deload=False,
 ):
     """Generate workout sets from a template for a given session.
 
-    For deload weeks: 1 set per exercise at 8 RIR, no weight target.
-    For training weeks: uses volume prescription per muscle group.
+    Set count follows the user's plan: target_sets + weekly_set_increment
+    per week. RIR ramps 3 -> 0 across the mesocycle.
     """
-    # Gather exercise info and count per muscle group
-    exercise_info = []
-    mg_exercise_count = OrderedDict()
+    target_rir = compute_target_rir(week_number, total_weeks)
 
     for template_exercise in workout_template.exercises:
-        exercise = db.query(Exercise).filter(
-            Exercise.id == template_exercise.exercise_id
-        ).first()
-        muscle_group = exercise.muscle_group if exercise else "Other"
-        exercise_info.append((template_exercise, exercise, muscle_group))
-        mg_exercise_count[muscle_group] = mg_exercise_count.get(muscle_group, 0) + 1
-
-    if is_deload:
-        # Deload: 1 set per exercise, 8 RIR, no weight target
-        for template_exercise, exercise, muscle_group in exercise_info:
-            workout_set = WorkoutSet(
-                workout_session_id=workout_session.id,
-                exercise_id=template_exercise.exercise_id,
-                set_number=1,
-                order_index=template_exercise.order_index * 100 + 1,
-                weight=0,
-                reps=0,
-                target_weight=None,
-                target_reps=template_exercise.target_reps_max,
-                target_rir=8,
-            )
-            db.add(workout_set)
-        return
-
-    # Training week: prescribe sets per muscle group
-    mg_total_sets = {}
-    mg_target_rir = {}
-    for mg, count in mg_exercise_count.items():
-        total = get_prescribed_sets(
-            db, mg, week_number, day_number,
-            user_id, mesocycle_instance_id, config,
+        num_sets = compute_sets_for_week(
+            template_exercise.target_sets,
+            template_exercise.weekly_set_increment,
+            week_number,
         )
-        rir = compute_target_rir(week_number, config.accumulation_weeks)
-        mg_total_sets[mg] = max(total, count)
-        mg_target_rir[mg] = rir
-
-    # Distribute sets to exercises
-    mg_exercise_index = {}
-    for template_exercise, exercise, muscle_group in exercise_info:
-        n_exercises = mg_exercise_count[muscle_group]
-        total = mg_total_sets[muscle_group]
-        base = total // n_exercises
-        remainder = total % n_exercises
-
-        idx = mg_exercise_index.get(muscle_group, 0)
-        num_sets = base + (1 if idx < remainder else 0)
-        num_sets = max(num_sets, 1)
-        mg_exercise_index[muscle_group] = idx + 1
-
-        target_rir = mg_target_rir[muscle_group]
 
         # Look up previous performance for target_weight/target_reps
         prev_weight, prev_reps = find_previous_performance(
@@ -273,21 +223,9 @@ def _generate_sets_for_session(
             current_week=week_number,
             current_day=day_number,
         )
-        hist_target_weight = None
-        hist_target_reps = template_exercise.target_reps_max
-        if prev_weight is not None:
-            increase = max(prev_weight * 0.025, 2.5)
-            hist_target_weight = round_to_nearest_5(prev_weight + increase)
-            if hist_target_weight <= prev_weight:
-                hist_target_weight = prev_weight
-                if prev_reps is not None:
-                    hist_target_reps = prev_reps + 1
-                elif hist_target_reps is not None:
-                    hist_target_reps = hist_target_reps + 1
-            elif prev_reps is not None:
-                hist_target_reps = prev_reps
-        elif prev_reps is not None:
-            hist_target_reps = prev_reps
+        hist_target_weight, hist_target_reps = compute_progression_targets(
+            prev_weight, prev_reps, template_exercise.target_reps_max,
+        )
 
         for set_num in range(1, num_sets + 1):
             workout_set = WorkoutSet(
@@ -309,7 +247,7 @@ def _generate_sets_from_source(
     workout_session,
     workout_template,
     source_session,
-    config,
+    total_weeks,
     user_id,
     mesocycle_instance_id,
     day_number,
@@ -317,7 +255,9 @@ def _generate_sets_from_source(
 ):
     """Generate sets for week 1 by copying from a source session (previous instance).
 
-    Uses source session's actual weights/reps as targets.
+    Uses source session's actual weights/reps as targets. Set counts come from
+    the template plan; source exercises no longer in the template keep their
+    source set count.
     """
     source_sets = db.query(WorkoutSet).filter(
         WorkoutSet.workout_session_id == source_session.id
@@ -327,30 +267,22 @@ def _generate_sets_from_source(
     for ss in source_sets:
         exercise_groups.setdefault(ss.exercise_id, []).append(ss)
 
-    target_rir = compute_target_rir(week_number, config.accumulation_weeks)
+    target_rir = compute_target_rir(week_number, total_weeks)
 
-    # Resolve muscle groups
-    mg_exercise_ids = OrderedDict()
-    for exercise_id in exercise_groups:
-        exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
-        mg = exercise.muscle_group if exercise else "Other"
-        mg_exercise_ids.setdefault(mg, []).append(exercise_id)
-
-    # Prescribe per muscle group
-    exercise_set_counts = {}
-    for mg, ex_ids in mg_exercise_ids.items():
-        total = max(len(ex_ids), get_prescribed_sets(
-            db, mg, week_number, day_number,
-            user_id, mesocycle_instance_id, config,
-        ))
-        base = total // len(ex_ids)
-        remainder = total % len(ex_ids)
-        for i, eid in enumerate(ex_ids):
-            exercise_set_counts[eid] = max(1, base + (1 if i < remainder else 0))
+    # Planned set counts from the template
+    template_exercises = {te.exercise_id: te for te in workout_template.exercises}
 
     # Create sets from source
     for exercise_id, source_exercise_sets in exercise_groups.items():
-        num_sets = exercise_set_counts[exercise_id]
+        template_exercise = template_exercises.get(exercise_id)
+        if template_exercise:
+            num_sets = compute_sets_for_week(
+                template_exercise.target_sets,
+                template_exercise.weekly_set_increment,
+                week_number,
+            )
+        else:
+            num_sets = len(source_exercise_sets)
         for set_num in range(1, num_sets + 1):
             source_set = next((s for s in source_exercise_sets if s.set_number == set_num), None)
             fallback_set = source_set or source_exercise_sets[-1]
@@ -372,16 +304,9 @@ def _generate_sets_from_source(
                     current_day=day_number,
                 )
                 if prev_weight is not None:
-                    increase = max(prev_weight * 0.025, 2.5)
-                    target_weight = round_to_nearest_5(prev_weight + increase)
-                    if target_weight <= prev_weight:
-                        target_weight = prev_weight
-                        if prev_reps is not None:
-                            target_reps = prev_reps + 1
-                        elif target_reps is not None:
-                            target_reps = target_reps + 1
-                    elif prev_reps is not None:
-                        target_reps = prev_reps
+                    target_weight, target_reps = compute_progression_targets(
+                        prev_weight, prev_reps, target_reps,
+                    )
                 elif prev_reps is not None and target_reps is None:
                     target_reps = prev_reps
 
@@ -462,16 +387,6 @@ async def start_mesocycle_instance(
     db.add(new_instance)
     db.flush()  # Get the instance ID
 
-    # Build mesocycle config with per-muscle-group optimization
-    config = build_mesocycle_config(
-        db, template.id, total_weeks, days_per_week,
-        experience_level=current_user.experience_level,
-        user=current_user,
-    )
-
-    # Store the per-muscle volume profile on the instance
-    new_instance.volume_profile = json.dumps(config.volume_profile) if config.volume_profile else None
-
     # Load workout templates sorted by order_index
     workout_templates = (
         db.query(WorkoutTemplate)
@@ -483,7 +398,6 @@ async def start_mesocycle_instance(
     # Create all workout sessions
     today = instance_data.start_date or date.today()
     for week in range(1, total_weeks + 1):
-        is_deload = (week == total_weeks)
         for day_idx, wt in enumerate(workout_templates):
             day_number = day_idx + 1
 
@@ -512,22 +426,20 @@ async def start_mesocycle_instance(
 
                 if source_session:
                     _generate_sets_from_source(
-                        db, session, wt, source_session, config,
+                        db, session, wt, source_session, total_weeks,
                         current_user.id, new_instance.id, day_number,
                     )
                 else:
                     # Source session not found for this day, fall back to template
                     _generate_sets_for_session(
-                        db, session, wt, week, config,
+                        db, session, wt, week, total_weeks,
                         current_user.id, new_instance.id, day_number,
-                        is_deload=is_deload,
                     )
             else:
                 # All other weeks (or week 1 fresh start)
                 _generate_sets_for_session(
-                    db, session, wt, week, config,
+                    db, session, wt, week, total_weeks,
                     current_user.id, new_instance.id, day_number,
-                    is_deload=is_deload,
                 )
 
     db.commit()

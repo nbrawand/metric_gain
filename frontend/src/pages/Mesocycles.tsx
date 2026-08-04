@@ -17,6 +17,7 @@ import { getExercises } from '../api/exercises';
 import { listWorkoutSessions } from '../api/workoutSessions';
 import { useAuthStore } from '../stores/authStore';
 import {
+  Mesocycle,
   MesocycleListItem,
   MesocycleCreate,
   WorkoutTemplateCreate,
@@ -24,6 +25,8 @@ import {
   MesocycleInstanceListItem,
 } from '../types/mesocycle';
 import { Exercise } from '../types/exercise';
+import { computeWeeklyVolumeByMuscleGroup } from '../utils/volume';
+import MuscleGroupVolumeChart from '../components/MuscleGroupVolumeChart';
 
 export default function Mesocycles() {
   const navigate = useNavigate();
@@ -35,10 +38,13 @@ export default function Mesocycles() {
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
+  // 'build' = editing the template, 'review' = per-muscle-group volume charts before confirming
+  const [createStep, setCreateStep] = useState<'build' | 'review'>('build');
 
   // Start Mesocycle Modal state
   const [showStartModal, setShowStartModal] = useState(false);
   const [startingMesocycle, setStartingMesocycle] = useState<MesocycleListItem | null>(null);
+  const [startingMesocycleDetail, setStartingMesocycleDetail] = useState<Mesocycle | null>(null);
   const [selectedSourceInstance, setSelectedSourceInstance] = useState<number | null>(null);
   const [selectedSourceWeek, setSelectedSourceWeek] = useState<number | null>(null);
 
@@ -145,6 +151,7 @@ export default function Mesocycles() {
           exercise_id: ex.exercise_id,
           order_index: ex.order_index,
           target_sets: ex.target_sets,
+          weekly_set_increment: ex.weekly_set_increment ?? 0,
           target_reps_min: ex.target_reps_min,
           target_reps_max: ex.target_reps_max,
           starting_rir: ex.starting_rir,
@@ -279,7 +286,30 @@ export default function Mesocycles() {
     });
     setWorkoutTemplates([]);
     setCollapsedDays(new Set());
+    setCreateStep('build');
   };
+
+  const handleReviewPlan = () => {
+    // Check if all days have at least one exercise
+    const hasEmptyWorkouts = workoutTemplates.some(w => w.exercises.length === 0);
+    if (hasEmptyWorkouts) {
+      alert('Please add at least one exercise to each training day');
+      return;
+    }
+    setCreateStep('review');
+  };
+
+  // Weekly set totals per muscle group for the create-form review charts
+  const reviewVolumeByMuscleGroup = computeWeeklyVolumeByMuscleGroup(
+    workoutTemplates.flatMap(wt =>
+      wt.exercises.map(ex => ({
+        muscleGroup: exercises.find(e => e.id === ex.exercise_id)?.muscle_group || 'Other',
+        targetSets: ex.target_sets,
+        increment: ex.weekly_set_increment,
+      }))
+    ),
+    mesocycleData.weeks
+  );
 
   const updateWorkoutTemplate = (index: number, field: string, value: string) => {
     const updated = [...workoutTemplates];
@@ -293,6 +323,7 @@ export default function Mesocycles() {
       exercise_id: exercises[0]?.id || 1,
       order_index: updated[workoutIndex].exercises.length,
       target_sets: 3,
+      weekly_set_increment: 0.5,
       target_reps_min: 8,
       target_reps_max: 12,
       starting_rir: 3,
@@ -430,9 +461,15 @@ export default function Mesocycles() {
                         e.stopPropagation();
                         if (hasActiveInstance) return;
                         setStartingMesocycle(mesocycle);
+                        setStartingMesocycleDetail(null);
                         setSelectedSourceInstance(null);
                         setSelectedSourceWeek(null);
                         setShowStartModal(true);
+                        if (accessToken) {
+                          getMesocycle(mesocycle.id, accessToken)
+                            .then(setStartingMesocycleDetail)
+                            .catch(() => {});
+                        }
                       }}
                       disabled={hasActiveInstance}
                       className={`px-4 py-2 rounded text-sm font-medium transition ${
@@ -532,14 +569,44 @@ export default function Mesocycles() {
           const completedForTemplate = instances.filter(
             i => i.status === 'completed' && i.mesocycle_template_id === startingMesocycle.id
           );
+          const startVolumeByMuscleGroup = startingMesocycleDetail
+            ? computeWeeklyVolumeByMuscleGroup(
+                startingMesocycleDetail.workout_templates.flatMap(wt =>
+                  wt.exercises.map(ex => ({
+                    muscleGroup: ex.exercise?.muscle_group || 'Other',
+                    targetSets: ex.target_sets,
+                    increment: ex.weekly_set_increment ?? 0,
+                  }))
+                ),
+                startingMesocycleDetail.weeks
+              )
+            : null;
           return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-gray-800 rounded-lg max-w-md w-full">
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+              <div className="bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="p-6 border-b border-gray-700">
                   <h2 className="text-xl font-bold text-white">Start: {startingMesocycle.name}</h2>
                 </div>
 
                 <div className="p-6 space-y-6">
+                  {/* Planned weekly volume per muscle group */}
+                  {startVolumeByMuscleGroup && (
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-300 mb-3">Planned Weekly Sets per Muscle Group</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {Object.entries(startVolumeByMuscleGroup)
+                          .sort(([a], [b]) => a.localeCompare(b))
+                          .map(([muscleGroup, weeklySets]) => (
+                            <MuscleGroupVolumeChart
+                              key={muscleGroup}
+                              muscleGroup={muscleGroup}
+                              weeklySets={weeklySets}
+                            />
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Start Fresh */}
                   <button
                     onClick={() => {
@@ -594,12 +661,12 @@ export default function Mesocycles() {
                               className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
                             >
                               <option value="">Select a week...</option>
-                              {Array.from({ length: startingMesocycle.weeks - 1 }, (_, i) => i + 1).map(w => (
+                              {Array.from({ length: startingMesocycle.weeks }, (_, i) => i + 1).map(w => (
                                 <option key={w} value={w}>Week {w}</option>
                               ))}
                             </select>
                             <p className="text-xs text-gray-500 mt-1 italic">
-                              Recommended: select a week 2-3 weeks before the deload (last week).
+                              Week 1 target weights are seeded from this week's results.
                             </p>
                           </div>
                         )}
@@ -643,7 +710,9 @@ export default function Mesocycles() {
               {/* Header */}
               <div className="p-6 border-b border-gray-700 sticky top-0 bg-gray-800 z-10">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-white">Create New Mesocycle</h2>
+                  <h2 className="text-2xl font-bold text-white">
+                    {createStep === 'build' ? 'Create New Mesocycle' : 'Review Weekly Volume'}
+                  </h2>
                   <button
                     type="button"
                     onClick={() => {
@@ -661,6 +730,28 @@ export default function Mesocycles() {
               </div>
 
               <form onSubmit={handleCreateMesocycle} className="p-6">
+                {/* Review step: per-muscle-group weekly volume charts */}
+                {createStep === 'review' && (
+                  <div className="mb-6">
+                    <p className="text-sm text-gray-300 mb-4">
+                      Total sets per muscle group each week, based on your starting sets and weekly increases.
+                      Go back to adjust, or confirm to create the template.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {Object.entries(reviewVolumeByMuscleGroup)
+                        .sort(([a], [b]) => a.localeCompare(b))
+                        .map(([muscleGroup, weeklySets]) => (
+                          <MuscleGroupVolumeChart
+                            key={muscleGroup}
+                            muscleGroup={muscleGroup}
+                            weeklySets={weeklySets}
+                          />
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className={createStep === 'build' ? '' : 'hidden'}>
                 {/* Mesocycle Basic Info */}
                 <div className="space-y-4 mb-6">
                   <div>
@@ -905,8 +996,49 @@ export default function Mesocycles() {
                                       />
                                     </div>
 
+                                    <div className="grid grid-cols-2 gap-3">
+                                      <div>
+                                        <label className="block text-gray-300 text-xs font-medium mb-1">Starting Sets (Week 1)</label>
+                                        <input
+                                          type="number"
+                                          min={1}
+                                          max={10}
+                                          value={exercise.target_sets}
+                                          onChange={(e) =>
+                                            updateExercise(
+                                              dayIndex,
+                                              exerciseIndex,
+                                              'target_sets',
+                                              Math.max(1, Math.min(10, parseInt(e.target.value) || 1))
+                                            )
+                                          }
+                                          className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-gray-300 text-xs font-medium mb-1">
+                                          Weekly Increase: <span className="text-teal-400">+{exercise.weekly_set_increment} sets/week</span>
+                                        </label>
+                                        <input
+                                          type="range"
+                                          min={0}
+                                          max={2}
+                                          step={0.5}
+                                          value={exercise.weekly_set_increment}
+                                          onChange={(e) =>
+                                            updateExercise(
+                                              dayIndex,
+                                              exerciseIndex,
+                                              'weekly_set_increment',
+                                              parseFloat(e.target.value)
+                                            )
+                                          }
+                                          className="w-full mt-2 accent-teal-500"
+                                        />
+                                      </div>
+                                    </div>
                                     <p className="text-xs text-gray-400 italic">
-                                      Sets, reps, and RIR will be automatically determined by the algorithm.
+                                      Reps and RIR targets are set automatically; RIR ramps 3 → 0 across the mesocycle.
                                     </p>
                                   </div>
                                 </div>
@@ -928,6 +1060,8 @@ export default function Mesocycles() {
                   )}
                 </div>
 
+                </div>
+
                 {/* Form Actions */}
                 <div className="flex justify-end gap-3 pt-4 border-t border-gray-700 sticky bottom-0 bg-gray-800 py-4">
                   <button
@@ -940,13 +1074,32 @@ export default function Mesocycles() {
                   >
                     Cancel
                   </button>
-                  <button
-                    type="submit"
-                    disabled={creating}
-                    className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:bg-teal-800 disabled:cursor-not-allowed transition-colors font-medium"
-                  >
-                    {creating ? 'Creating...' : 'Create Mesocycle Template'}
-                  </button>
+                  {createStep === 'build' ? (
+                    <button
+                      type="button"
+                      onClick={handleReviewPlan}
+                      className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium"
+                    >
+                      Review Plan
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setCreateStep('build')}
+                        className="px-6 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors font-medium"
+                      >
+                        Back
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={creating}
+                        className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:bg-teal-800 disabled:cursor-not-allowed transition-colors font-medium"
+                      >
+                        {creating ? 'Creating...' : 'Confirm & Create'}
+                      </button>
+                    </>
+                  )}
                 </div>
               </form>
             </div>

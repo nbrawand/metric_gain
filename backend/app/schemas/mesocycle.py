@@ -2,7 +2,7 @@
 
 import json
 from datetime import date, datetime
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 from app.schemas.exercise import ExerciseResponse
@@ -14,7 +14,8 @@ class WorkoutExerciseBase(BaseModel):
 
     exercise_id: int
     order_index: int = Field(0, ge=0)
-    target_sets: int = Field(3, ge=1, le=10)  # Default 3 sets
+    target_sets: int = Field(3, ge=1, le=10)  # Week-1 starting sets
+    weekly_set_increment: float = Field(0.0, ge=0, le=3)  # Sets added per week
     target_reps_min: int = Field(8, ge=1, le=100)  # Default 8 reps
     target_reps_max: int = Field(12, ge=1, le=100)  # Default 12 reps
     starting_rir: int = Field(3, ge=0, le=5)  # Default 3 RIR
@@ -23,15 +24,16 @@ class WorkoutExerciseBase(BaseModel):
 
 
 class WorkoutExerciseCreate(BaseModel):
-    """Schema for creating a workout exercise - only requires exercise selection."""
+    """Schema for creating a workout exercise."""
 
     exercise_id: int
     order_index: int = Field(0, ge=0)
-    target_sets: int = Field(3, ge=1, le=10)  # Auto-generated, default 3 sets
-    target_reps_min: int = Field(8, ge=1, le=100)  # Auto-generated, default 8 reps
-    target_reps_max: int = Field(12, ge=1, le=100)  # Auto-generated, default 12 reps
-    starting_rir: int = Field(3, ge=0, le=5)  # Auto-generated, default 3 RIR
-    ending_rir: int = Field(0, ge=0, le=5)  # Auto-generated, default 0 RIR
+    target_sets: int = Field(3, ge=1, le=10)  # Week-1 starting sets
+    weekly_set_increment: float = Field(0.0, ge=0, le=3)  # Sets added per week
+    target_reps_min: int = Field(8, ge=1, le=100)  # Default 8 reps
+    target_reps_max: int = Field(12, ge=1, le=100)  # Default 12 reps
+    starting_rir: int = Field(3, ge=0, le=5)  # Default 3 RIR
+    ending_rir: int = Field(0, ge=0, le=5)  # Default 0 RIR
     notes: Optional[str] = None
 
 
@@ -41,6 +43,7 @@ class WorkoutExerciseUpdate(BaseModel):
     exercise_id: Optional[int] = None
     order_index: Optional[int] = Field(None, ge=0)
     target_sets: Optional[int] = Field(None, ge=1, le=10)
+    weekly_set_increment: Optional[float] = Field(None, ge=0, le=3)
     target_reps_min: Optional[int] = Field(None, ge=1, le=100)
     target_reps_max: Optional[int] = Field(None, ge=1, le=100)
     starting_rir: Optional[int] = Field(None, ge=0, le=5)
@@ -192,24 +195,11 @@ class MesocycleInstanceResponse(BaseModel):
     # Per-exercise note overrides keyed by workout_exercise_id
     exercise_notes: Optional[dict] = None
 
-    # Volume profile from optimizer (dict: muscle_group -> weekly sets, or legacy list)
-    volume_profile: Optional[Union[dict[str, list[float]], list[float]]] = None
-
     @field_validator("exercise_notes", mode="before")
     @classmethod
     def parse_exercise_notes(cls, v):
         if isinstance(v, str):
             return json.loads(v)
-        return v
-
-    @field_validator("volume_profile", mode="before")
-    @classmethod
-    def parse_volume_profile(cls, v):
-        if isinstance(v, str):
-            try:
-                return json.loads(v)
-            except (json.JSONDecodeError, TypeError):
-                return None
         return v
 
     # Include template details (None if template was deleted)

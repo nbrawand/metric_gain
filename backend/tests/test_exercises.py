@@ -5,19 +5,9 @@ from fastapi import status
 
 
 @pytest.fixture
-def auth_headers(client):
+def auth_headers(make_auth_headers):
     """Create a user and return authentication headers."""
-    # Register a new user
-    response = client.post(
-        "/v1/auth/register",
-        json={
-            "email": "exercise_test@example.com",
-            "password": "testpass123",
-            "full_name": "Exercise Tester"
-        }
-    )
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    return make_auth_headers("exercise_test@example.com", "Exercise Tester")
 
 
 def test_list_exercises(client, auth_headers):

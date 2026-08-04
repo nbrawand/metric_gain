@@ -32,9 +32,6 @@ class User(Base):
     subscription_status = Column(String(50), default="trialing", nullable=False)
     trial_ends_at = Column(DateTime(timezone=True), nullable=True)
 
-    # Training profile
-    experience_level = Column(String(20), default="intermediate", nullable=False)  # beginner, intermediate, advanced
-
     # Future features
     timezone = Column(String(50), default="UTC", nullable=False)
     preferences = Column(String, default="{}", nullable=False)  # JSON stored as string for SQLite compatibility
@@ -44,7 +41,6 @@ class User(Base):
     mesocycles = relationship("Mesocycle", back_populates="user", cascade="all, delete-orphan")
     mesocycle_instances = relationship("MesocycleInstance", back_populates="user", cascade="all, delete-orphan")
     workout_sessions = relationship("WorkoutSession", back_populates="user", cascade="all, delete-orphan")
-    muscle_params = relationship("UserMuscleParams", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}')>"

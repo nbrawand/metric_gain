@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useOfflineSyncStore } from '../stores/offlineSyncStore';
 import { onConnectivityChange, getServerReachable } from '../api/client';
-import { getWorkoutSession, updateWorkoutSet, updateWorkoutSession, listWorkoutSessions, submitWorkoutFeedback, swapExercise, removeExercise, addExercise, addSetToExercise, removeSetFromExercise } from '../api/workoutSessions';
+import { getWorkoutSession, updateWorkoutSet, updateWorkoutSession, listWorkoutSessions, swapExercise, removeExercise, addExercise, addSetToExercise, removeSetFromExercise } from '../api/workoutSessions';
 import { getExercises } from '../api/exercises';
 import { getMesocycleInstance, updateMesocycleInstance, updateInstanceExerciseNotes } from '../api/mesocycles';
 import { WorkoutSession, WorkoutSet, WorkoutSessionListItem } from '../types/workout_session';
@@ -25,8 +25,6 @@ export default function WorkoutExecution() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [completionBanner, setCompletionBanner] = useState<{ week: number; day: number } | null>(null);
-  const [showFeedback, setShowFeedback] = useState(false);
-  const [muscleFeedback, setMuscleFeedback] = useState<Record<string, string>>({});
 
   const [showInfo, setShowInfo] = useState(false);
   const [showWeightInfo, setShowWeightInfo] = useState(false);
@@ -486,31 +484,6 @@ export default function WorkoutExecution() {
       setCompletingWorkout(false);
     }
 
-    // Initialize feedback for each muscle group in this workout
-    const muscleGroups = Object.keys(groupedExercises);
-    const initial: Record<string, string> = {};
-    muscleGroups.forEach(mg => { initial[mg] = ''; });
-    setMuscleFeedback(initial);
-    setShowFeedback(true);
-  };
-
-  const handleSubmitFeedback = async () => {
-    if (!accessToken || !session) return;
-
-    // Send feedback to backend
-    const feedbackItems = Object.entries(muscleFeedback)
-      .filter(([, difficulty]) => difficulty !== '')
-      .map(([muscle_group, difficulty]) => ({ muscle_group, difficulty }));
-
-    if (feedbackItems.length > 0) {
-      try {
-        await submitWorkoutFeedback(session.id, feedbackItems, accessToken);
-      } catch (err) {
-        console.error('Failed to submit feedback:', err);
-      }
-    }
-
-    setShowFeedback(false);
     await handleCompleteWorkout();
   };
 
@@ -530,7 +503,7 @@ export default function WorkoutExecution() {
         accessToken
       );
 
-      // Re-fetch sessions since re-optimization may have changed set counts
+      // Re-fetch sessions to find the next uncompleted workout
       const updatedSessions = await listWorkoutSessions(
         { mesocycle_instance_id: instance.id },
         accessToken
@@ -1192,20 +1165,15 @@ export default function WorkoutExecution() {
                               placeholder={set.target_reps ? set.target_reps.toString() : "0"}
                             />
                             {set.reps === 0 && (() => {
-                              const trainingWeeks = mesocycle.weeks - 1;
-                              const isDeload = session.week_number === mesocycle.weeks;
-                              const weekRir = isDeload
-                                ? 8
-                                : trainingWeeks <= 1
-                                  ? 3
-                                  : Math.round(3 * (trainingWeeks - session.week_number) / (trainingWeeks - 1));
+                              const totalWeeks = mesocycle.weeks;
+                              const weekRir = totalWeeks <= 1
+                                ? 0
+                                : Math.round(3 * (totalWeeks - session.week_number) / (totalWeeks - 1));
                               return (
                                 <div className="text-xs text-teal-400 text-center mt-1">
-                                  {isDeload
-                                    ? `${weekRir} RIR`
-                                    : set.target_reps
-                                      ? `target: ${set.target_reps} reps or ${weekRir} RIR`
-                                      : `target: 6-15 reps at ${weekRir} RIR`}
+                                  {set.target_reps
+                                    ? `target: ${set.target_reps} reps or ${weekRir} RIR`
+                                    : `target: 6-15 reps at ${weekRir} RIR`}
                                 </div>
                               );
                             })()}
@@ -1362,54 +1330,6 @@ export default function WorkoutExecution() {
                   </div>
                 ));
               })()}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Feedback Modal */}
-      {showFeedback && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold text-white mb-1">Volume Check</h3>
-            <p className="text-sm text-gray-400 mb-4">How was the prescribed volume?</p>
-
-            <div className="space-y-4">
-              {Object.keys(muscleFeedback).map((mg) => (
-                <div key={mg}>
-                  <p className="text-sm font-medium text-gray-300 mb-2">{mg}</p>
-                  <div className="grid grid-cols-4 gap-2">
-                    {['Too Little', 'Just Right', 'Too Much', 'Way Too Much'].map((option) => (
-                      <button
-                        key={option}
-                        onClick={() => setMuscleFeedback(prev => ({ ...prev, [mg]: option }))}
-                        className={`py-2 px-1 rounded text-xs font-medium transition-colors ${
-                          muscleFeedback[mg] === option
-                            ? 'bg-teal-600 text-white'
-                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                        }`}
-                      >
-                        {option}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={() => setShowFeedback(false)}
-                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-medium py-3 rounded-lg"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmitFeedback}
-                className="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-lg"
-              >
-                Submit & Complete
-              </button>
             </div>
           </div>
         </div>

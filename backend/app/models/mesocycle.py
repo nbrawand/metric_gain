@@ -63,9 +63,6 @@ class MesocycleInstance(Base):
     # Per-exercise note overrides, JSON: {"workout_exercise_id": "notes"}
     exercise_notes = Column(Text, nullable=True)
 
-    # JSON-encoded list of floats: optimizer volume profile, e.g. [6.0, 8.6, ...]
-    volume_profile = Column(Text, nullable=True)
-
     # Status: active, completed, abandoned
     status = Column(String(50), default="active", nullable=False, index=True)
 
@@ -131,8 +128,10 @@ class WorkoutExercise(Base):
     # Order in the workout (0-indexed for sorting)
     order_index = Column(Integer, default=0, nullable=False)
 
-    # Target sets and reps
+    # Target sets and reps. target_sets is the week-1 set count;
+    # weekly_set_increment is added each week (rounded half-up).
     target_sets = Column(Integer, nullable=False)
+    weekly_set_increment = Column(Float, default=0, nullable=False)
     target_reps_min = Column(Integer, nullable=False)  # e.g., 8 reps
     target_reps_max = Column(Integer, nullable=False)  # e.g., 12 reps (8-12 rep range)
 

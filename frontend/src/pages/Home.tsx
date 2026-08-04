@@ -70,26 +70,12 @@ export function Home() {
 
   const mesocycle = activeInstance?.mesocycle_template;
 
-  const handleOnboardingComplete = async (experienceLevel?: string) => {
+  const handleOnboardingComplete = async () => {
     setShowOnboarding(false);
     try {
       await updatePreferences({ onboarding_completed: true });
-      if (experienceLevel) {
-        await updateExperienceLevel(experienceLevel);
-      }
     } catch (err) {
       console.error('Error saving onboarding preference:', err);
-    }
-  };
-
-  const updateExperienceLevel = async (level: string) => {
-    if (!accessToken) return;
-    try {
-      const { updateCurrentUser } = await import('../api/auth');
-      const updated = await updateCurrentUser({ experience_level: level }, accessToken);
-      useAuthStore.setState({ user: updated });
-    } catch (err) {
-      console.error('Error updating experience level:', err);
     }
   };
 
@@ -146,10 +132,6 @@ export function Home() {
                 <div className="flex justify-between text-sm">
                   <dt className="text-gray-400">Email:</dt>
                   <dd className="text-gray-200">{user?.email}</dd>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <dt className="text-gray-400">Experience Level:</dt>
-                  <dd className="text-gray-200 capitalize">{user?.experience_level || 'intermediate'}</dd>
                 </div>
                 <div className="flex justify-between text-sm">
                   <dt className="text-gray-400">Account Status:</dt>

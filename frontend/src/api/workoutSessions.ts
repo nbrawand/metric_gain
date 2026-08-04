@@ -152,12 +152,3 @@ export const removeSetFromExercise = async (
     accessToken
   );
 };
-
-// Workout Feedback endpoints
-export const submitWorkoutFeedback = async (
-  sessionId: number,
-  feedback: { muscle_group: string; difficulty: string }[],
-  accessToken: string
-): Promise<void> => {
-  await post(`/v1/workout-sessions/${sessionId}/feedback`, { feedback }, accessToken);
-};

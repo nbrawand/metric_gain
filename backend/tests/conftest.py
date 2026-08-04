@@ -54,3 +54,34 @@ def client(test_db):
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def make_auth_headers(client):
+    """Create a user directly in the DB and return a factory for auth headers.
+
+    Auth is Google-OAuth-only, so tests mint tokens directly instead of
+    registering through an endpoint.
+    """
+    from app.models.user import User
+    from app.utils.auth import create_access_token
+
+    def _make(email="test_user@example.com", full_name="Test User"):
+        db = TestingSessionLocal()
+        try:
+            user = db.query(User).filter(User.email == email).first()
+            if not user:
+                user = User(
+                    email=email,
+                    full_name=full_name,
+                    subscription_status="active",
+                )
+                db.add(user)
+                db.commit()
+                db.refresh(user)
+            token = create_access_token({"sub": str(user.id)})
+        finally:
+            db.close()
+        return {"Authorization": f"Bearer {token}"}
+
+    return _make

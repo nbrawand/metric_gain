@@ -6,18 +6,9 @@ from fastapi import status
 
 
 @pytest.fixture
-def auth_headers(client):
+def auth_headers(make_auth_headers):
     """Create a user and return authentication headers."""
-    response = client.post(
-        "/v1/auth/register",
-        json={
-            "email": "workout_test@example.com",
-            "password": "testpass123",
-            "full_name": "Workout Tester"
-        }
-    )
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    return make_auth_headers("workout_test@example.com", "Workout Tester")
 
 
 @pytest.fixture
@@ -44,6 +35,7 @@ def sample_mesocycle_with_workouts(client, auth_headers, sample_exercise_id):
                         "exercise_id": sample_exercise_id,
                         "order_index": 0,
                         "target_sets": 3,
+                        "weekly_set_increment": 1.0,
                         "target_reps_min": 8,
                         "target_reps_max": 12,
                         "starting_rir": 3,
@@ -59,6 +51,7 @@ def sample_mesocycle_with_workouts(client, auth_headers, sample_exercise_id):
                         "exercise_id": sample_exercise_id,
                         "order_index": 0,
                         "target_sets": 4,
+                        "weekly_set_increment": 0.5,
                         "target_reps_min": 6,
                         "target_reps_max": 10,
                         "starting_rir": 2,
@@ -113,9 +106,8 @@ def test_create_workout_session(client, auth_headers, sample_mesocycle_with_work
     assert data["day_number"] == 1
     assert data["status"] == "in_progress"
     assert "workout_sets" in data
-    # Volume prescription generates sets per muscle group from the optimizer
-    # Exact count depends on optimizer params; just verify sets were created
-    assert len(data["workout_sets"]) >= 1
+    # Week 1 set count comes straight from the template plan (target_sets=3)
+    assert len(data["workout_sets"]) == 3
 
 
 def test_create_workout_session_auto_generates_sets(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
@@ -142,8 +134,8 @@ def test_create_workout_session_auto_generates_sets(client, auth_headers, sample
     sets = data["workout_sets"]
     exercise_template = template["exercises"][0]
 
-    # Volume prescription generates sets per muscle group from the optimizer
-    assert len(sets) >= 1
+    # Set count follows the user's plan: target_sets for week 1
+    assert len(sets) == exercise_template["target_sets"]
 
     for workout_set in sets:
         assert workout_set["exercise_id"] == exercise_template["exercise_id"]
@@ -535,7 +527,7 @@ def test_access_workout_sessions_without_auth(client):
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-def test_workout_session_isolation_between_users(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
+def test_workout_session_isolation_between_users(client, auth_headers, make_auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
     """Test that users cannot access other users' workout sessions."""
     # auth_headers belongs to the first user who owns the mesocycle
     mesocycle = sample_mesocycle_with_workouts
@@ -554,213 +546,84 @@ def test_workout_session_isolation_between_users(client, auth_headers, sample_me
     session_id = create_response.json()["id"]
 
     # Create a second user
-    user2_response = client.post(
-        "/v1/auth/register",
-        json={
-            "email": "workout_test2@example.com",
-            "password": "testpass123",
-            "full_name": "Second Tester"
-        }
-    )
-    user2_token = user2_response.json()["access_token"]
-    user2_headers = {"Authorization": f"Bearer {user2_token}"}
+    user2_headers = make_auth_headers("workout_test2@example.com", "Second Tester")
 
     # Try to access user1's session as user2
     response = client.get(f"/v1/workout-sessions/{session_id}", headers=user2_headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-# Workout Feedback Tests
+# Plan adherence tests (sets follow target_sets + weekly_set_increment)
 
-def test_submit_workout_feedback(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
-    """Test submitting muscle group feedback for a workout session."""
-    mesocycle = sample_mesocycle_with_workouts
+def _sessions_for_instance(client, auth_headers, instance_id):
+    response = client.get(
+        f"/v1/workout-sessions/?mesocycle_instance_id={instance_id}",
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    return response.json()
+
+
+def test_instance_pre_creates_sessions_with_planned_sets(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
+    """Starting an instance creates weeks x days sessions whose set counts follow the plan."""
     instance = sample_mesocycle_instance
-    template_id = mesocycle["workout_templates"][0]["id"]
+    sessions = _sessions_for_instance(client, auth_headers, instance["id"])
 
-    # Create session
-    session_data = {
-        "mesocycle_instance_id": instance["id"],
-        "workout_template_id": template_id,
-        "workout_date": str(date.today()),
-        "week_number": 1,
-        "day_number": 1
-    }
-    create_response = client.post("/v1/workout-sessions/", json=session_data, headers=auth_headers)
-    session_id = create_response.json()["id"]
+    # 4 weeks x 2 workout templates
+    assert len(sessions) == 8
 
-    # Submit feedback
-    feedback_data = {
-        "feedback": [
-            {"muscle_group": "Chest", "difficulty": "Just Right"},
-            {"muscle_group": "Triceps", "difficulty": "Too Little"},
-            {"muscle_group": "Shoulders", "difficulty": "Too Much"},
-        ]
-    }
-    response = client.post(
-        f"/v1/workout-sessions/{session_id}/feedback",
-        json=feedback_data,
-        headers=auth_headers
+    # Day 1: target_sets=3, increment=1.0 -> 3, 4, 5, 6
+    # Day 2: target_sets=4, increment=0.5 -> 4, 5, 5, 6 (round half up)
+    expected = {1: {1: 3, 2: 4, 3: 5, 4: 6}, 2: {1: 4, 2: 5, 3: 5, 4: 6}}
+    for s in sessions:
+        assert s["set_count"] == expected[s["day_number"]][s["week_number"]]
+
+
+def test_final_week_is_not_deload(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
+    """The final week follows the same formula (no forced 1-set / 8-RIR deload)."""
+    instance = sample_mesocycle_instance
+    sessions = _sessions_for_instance(client, auth_headers, instance["id"])
+    final = next(s for s in sessions if s["week_number"] == 4 and s["day_number"] == 1)
+
+    response = client.get(f"/v1/workout-sessions/{final['id']}", headers=auth_headers)
+    assert response.status_code == status.HTTP_200_OK
+    sets = response.json()["workout_sets"]
+
+    assert len(sets) == 6  # 3 + 1.0 * 3
+    # RIR ramps 3 -> 0 across all weeks
+    assert all(ws["target_rir"] == 0 for ws in sets)
+
+
+def test_completing_session_does_not_change_other_sessions(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
+    """Completing a workout must not re-adjust any other session's sets."""
+    instance = sample_mesocycle_instance
+    before = {s["id"]: s["set_count"] for s in _sessions_for_instance(client, auth_headers, instance["id"])}
+
+    first = next(
+        s for s in _sessions_for_instance(client, auth_headers, instance["id"])
+        if s["week_number"] == 1 and s["day_number"] == 1
     )
 
+    # Add an extra set mid-workout, then complete the session
+    detail = client.get(f"/v1/workout-sessions/{first['id']}", headers=auth_headers).json()
+    exercise_id = detail["workout_sets"][0]["exercise_id"]
+    response = client.post(
+        f"/v1/workout-sessions/{first['id']}/exercises/{exercise_id}/sets",
+        headers=auth_headers,
+    )
     assert response.status_code == status.HTTP_201_CREATED
-    data = response.json()
 
-    assert len(data) == 3
-    muscle_groups = {item["muscle_group"] for item in data}
-    assert muscle_groups == {"Chest", "Triceps", "Shoulders"}
-
-    difficulties = {item["muscle_group"]: item["difficulty"] for item in data}
-    assert difficulties["Chest"] == "Just Right"
-    assert difficulties["Triceps"] == "Too Little"
-    assert difficulties["Shoulders"] == "Too Much"
-
-    # Each entry should have an id and workout_session_id
-    for item in data:
-        assert "id" in item
-        assert item["workout_session_id"] == session_id
-        assert "created_at" in item
-
-
-def test_submit_feedback_replaces_existing(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
-    """Test that re-submitting feedback replaces the previous entries."""
-    mesocycle = sample_mesocycle_with_workouts
-    instance = sample_mesocycle_instance
-    template_id = mesocycle["workout_templates"][0]["id"]
-
-    # Create session
-    session_data = {
-        "mesocycle_instance_id": instance["id"],
-        "workout_template_id": template_id,
-        "workout_date": str(date.today()),
-        "week_number": 1,
-        "day_number": 1
-    }
-    create_response = client.post("/v1/workout-sessions/", json=session_data, headers=auth_headers)
-    session_id = create_response.json()["id"]
-
-    # Submit initial feedback
-    feedback_data = {
-        "feedback": [
-            {"muscle_group": "Chest", "difficulty": "Too Little"},
-        ]
-    }
-    client.post(
-        f"/v1/workout-sessions/{session_id}/feedback",
-        json=feedback_data,
-        headers=auth_headers
+    response = client.patch(
+        f"/v1/workout-sessions/{first['id']}",
+        json={"status": "completed"},
+        headers=auth_headers,
     )
+    assert response.status_code == status.HTTP_200_OK
 
-    # Re-submit with updated feedback
-    updated_feedback = {
-        "feedback": [
-            {"muscle_group": "Chest", "difficulty": "Way Too Much"},
-            {"muscle_group": "Back", "difficulty": "Just Right"},
-        ]
-    }
-    response = client.post(
-        f"/v1/workout-sessions/{session_id}/feedback",
-        json=updated_feedback,
-        headers=auth_headers
-    )
+    after = {s["id"]: s["set_count"] for s in _sessions_for_instance(client, auth_headers, instance["id"])}
 
-    assert response.status_code == status.HTTP_201_CREATED
-    data = response.json()
-
-    # Should only have the new entries, not the old ones
-    assert len(data) == 2
-    difficulties = {item["muscle_group"]: item["difficulty"] for item in data}
-    assert difficulties["Chest"] == "Way Too Much"
-    assert difficulties["Back"] == "Just Right"
-
-
-def test_submit_feedback_invalid_difficulty(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
-    """Test that submitting feedback with an invalid difficulty value is rejected."""
-    mesocycle = sample_mesocycle_with_workouts
-    instance = sample_mesocycle_instance
-    template_id = mesocycle["workout_templates"][0]["id"]
-
-    # Create session
-    session_data = {
-        "mesocycle_instance_id": instance["id"],
-        "workout_template_id": template_id,
-        "workout_date": str(date.today()),
-        "week_number": 1,
-        "day_number": 1
-    }
-    create_response = client.post("/v1/workout-sessions/", json=session_data, headers=auth_headers)
-    session_id = create_response.json()["id"]
-
-    # Submit feedback with invalid difficulty
-    feedback_data = {
-        "feedback": [
-            {"muscle_group": "Chest", "difficulty": "Super Hard"},
-        ]
-    }
-    response = client.post(
-        f"/v1/workout-sessions/{session_id}/feedback",
-        json=feedback_data,
-        headers=auth_headers
-    )
-
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-
-
-def test_submit_feedback_nonexistent_session(client, auth_headers):
-    """Test submitting feedback for a workout session that doesn't exist."""
-    feedback_data = {
-        "feedback": [
-            {"muscle_group": "Chest", "difficulty": "Too Little"},
-        ]
-    }
-    response = client.post(
-        "/v1/workout-sessions/99999/feedback",
-        json=feedback_data,
-        headers=auth_headers
-    )
-
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-def test_submit_feedback_other_users_session(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
-    """Test that a user cannot submit feedback for another user's session."""
-    mesocycle = sample_mesocycle_with_workouts
-    instance = sample_mesocycle_instance
-    template_id = mesocycle["workout_templates"][0]["id"]
-
-    # Create session as user1
-    session_data = {
-        "mesocycle_instance_id": instance["id"],
-        "workout_template_id": template_id,
-        "workout_date": str(date.today()),
-        "week_number": 1,
-        "day_number": 1
-    }
-    create_response = client.post("/v1/workout-sessions/", json=session_data, headers=auth_headers)
-    session_id = create_response.json()["id"]
-
-    # Create a second user
-    user2_response = client.post(
-        "/v1/auth/register",
-        json={
-            "email": "feedback_test2@example.com",
-            "password": "testpass123",
-            "full_name": "Feedback Tester"
-        }
-    )
-    user2_token = user2_response.json()["access_token"]
-    user2_headers = {"Authorization": f"Bearer {user2_token}"}
-
-    # Try to submit feedback as user2 for user1's session
-    feedback_data = {
-        "feedback": [
-            {"muscle_group": "Chest", "difficulty": "Too Little"},
-        ]
-    }
-    response = client.post(
-        f"/v1/workout-sessions/{session_id}/feedback",
-        json=feedback_data,
-        headers=user2_headers
-    )
-
-    assert response.status_code == status.HTTP_404_NOT_FOUND
+    # The completed session gained exactly the one manual set; nothing else moved
+    assert after[first["id"]] == before[first["id"]] + 1
+    for session_id, count in before.items():
+        if session_id != first["id"]:
+            assert after[session_id] == count

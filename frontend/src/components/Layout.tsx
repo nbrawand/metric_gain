@@ -154,9 +154,6 @@ export default function Layout() {
                   <button onClick={() => handleNav('/exercises')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
                     Exercises
                   </button>
-                  <button onClick={() => handleNav('/profile')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
-                    Lifter Profile
-                  </button>
                   <button onClick={() => handleNav('/how-it-works')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
                     How It Works
                   </button>

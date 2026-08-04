@@ -9,7 +9,6 @@ import Mesocycles from './pages/Mesocycles';
 import MesocycleDetail from './pages/MesocycleDetail';
 import WorkoutExecution from './pages/WorkoutExecution';
 import HowItWorks from './pages/HowItWorks';
-import LifterProfile from './pages/LifterProfile';
 import Subscribe from './pages/Subscribe';
 import Admin from './pages/Admin';
 import Terms from './pages/Terms';
@@ -134,7 +133,6 @@ function AppRoutes() {
           <Route path="/mesocycles" element={<SubscriptionRoute><Mesocycles /></SubscriptionRoute>} />
           <Route path="/mesocycles/:id" element={<SubscriptionRoute><MesocycleDetail /></SubscriptionRoute>} />
           <Route path="/workout/:sessionId" element={<SubscriptionRoute><WorkoutExecution /></SubscriptionRoute>} />
-          <Route path="/profile" element={<SubscriptionRoute><LifterProfile /></SubscriptionRoute>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

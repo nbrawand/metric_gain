@@ -35,7 +35,7 @@ export default function HowItWorks() {
             <div>
               <h3 className="text-white font-medium mb-1">Create a Mesocycle Template</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Go to the Mesocycles page and create a template. Choose how many days per week you would like to train and how many weeks the block will last, then assign exercises to each training day. You can start from a pre-built template or create your own.
+                Go to the Mesocycles page and create a template. Choose how many days per week you would like to train and how many weeks the block will last, then assign exercises to each training day. For each exercise, set a starting set count and how many sets to add per week. Before confirming, review bar charts of your planned weekly volume per muscle group. You can start from a pre-built template or create your own.
               </p>
             </div>
           </div>
@@ -46,7 +46,7 @@ export default function HowItWorks() {
             <div>
               <h3 className="text-white font-medium mb-1">Start an Instance</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Once your template is ready, start a mesocycle instance to generate your training schedule. The app will determine the number of sets per muscle group for each session, with volume increasing gradually across the block.
+                Once your template is ready, start a mesocycle instance to generate your training schedule. Every session is created up front from your plan, with set counts increasing each week exactly as you configured.
               </p>
             </div>
           </div>
@@ -66,9 +66,9 @@ export default function HowItWorks() {
           <div className="flex gap-4">
             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center text-white font-bold text-sm">4</div>
             <div>
-              <h3 className="text-white font-medium mb-1">Provide Feedback After Each Workout</h3>
+              <h3 className="text-white font-medium mb-1">Adjust on the Fly</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                After completing a session, you will be asked how the prescribed volume felt for each muscle group. This feedback adjusts your per-muscle volume parameters so future sessions are better tailored to you.
+                During a workout you can add or remove sets, swap exercises, or add new ones. These changes only affect the current session — future sessions stick to your plan.
               </p>
             </div>
           </div>
@@ -96,13 +96,10 @@ export default function HowItWorks() {
           Training in structured blocks helps ensure that each session has a clear purpose. It also helps balance training stimulus with recovery, reducing the risk of doing too little to see progress or too much to recover from.
         </p>
         <p className="text-gray-300 leading-relaxed mb-3">
-          Intensity also progresses across the mesocycle through RIR (Reps In Reserve) targets. Week one begins at 3 RIR, a moderate effort level that allows for technique focus and volume accumulation. Each subsequent week, the target RIR decreases, and by the final training week before the deload, the target reaches 0 RIR (failure).
-        </p>
-        <p className="text-gray-300 leading-relaxed mb-3">
-          The final week of each mesocycle is a deload week. During a deload, both volume and intensity are reduced. You still train, but with fewer sets and lighter weights. This allows your body to recover from the fatigue accumulated during the training block.
+          Intensity also progresses across the mesocycle through RIR (Reps In Reserve) targets. Week one begins at 3 RIR, a moderate effort level that allows for technique focus and volume accumulation. Each subsequent week, the target RIR decreases, and by the final week the target reaches 0 RIR (failure).
         </p>
         <p className="text-gray-300 leading-relaxed">
-          Periodic deloads help prevent performance plateaus and reduce injury risk. By including recovery in the program structure, each mesocycle can begin from a better starting point than the last.
+          Volume progresses the same way: each exercise starts at the set count you chose and increases by your chosen weekly amount, so each week builds on the last.
         </p>
       </section>
 
@@ -125,116 +122,25 @@ export default function HowItWorks() {
           <p><span className="text-teal-400 font-medium">0 RIR</span> — You could not have completed another rep. This is failure.</p>
         </div>
         <p className="text-gray-300 leading-relaxed mt-3">
-          Strength Guider uses RIR to manage intensity across each mesocycle. Earlier weeks use higher RIR targets to allow for volume accumulation, while later weeks lower the target to increase intensity. The deload week uses an RIR target of 8 to support recovery.
+          Strength Guider uses RIR to manage intensity across each mesocycle. Earlier weeks use higher RIR targets to allow for volume accumulation, while later weeks lower the target to increase intensity.
         </p>
       </section>
 
-      {/* Volume Prescription Theory */}
+      {/* Volume Planning */}
       <section id="volume-model" className="bg-gray-800 rounded-lg p-6 scroll-mt-16">
-        <h2 className="text-xl font-semibold text-teal-400 mb-3">The Volume Prescription Model</h2>
+        <h2 className="text-xl font-semibold text-teal-400 mb-3">Planning Your Volume</h2>
         <p className="text-gray-300 leading-relaxed mb-3">
-          Strength Guider uses a mathematical model to prescribe how many sets you should perform per muscle group each week. The model is rooted in exercise science research <span className="text-teal-400">[1, 2]</span> and adapts to your individual response over time.
-        </p>
-
-        {/* Foundation */}
-        <h3 className="text-white font-medium mb-2 mt-4">The Fitness-Fatigue Model</h3>
-        <p className="text-gray-300 leading-relaxed mb-3">
-          The foundation comes from the <span className="text-teal-400">Impulse-Response model</span> introduced by Banister et al. <span className="text-teal-400">[1]</span>. The core idea is that every training session produces two competing effects: <span className="text-white font-medium">fitness</span>, a long-lasting positive adaptation, and <span className="text-white font-medium">fatigue</span>, a short-lived negative cost. Your observable performance at any point is the difference between the two.
+          You are in full control of your training volume. When creating a mesocycle, each exercise gets two numbers: a <span className="text-white font-medium">starting set count</span> for week one and a <span className="text-white font-medium">weekly increase</span> — how many sets to add each week.
         </p>
         <div className="bg-gray-700 rounded-lg p-4 mb-3 font-mono text-sm space-y-1">
-          <p className="text-gray-300"><span className="text-teal-400">Performance</span> = Baseline + Fitness − Fatigue</p>
+          <p className="text-gray-300"><span className="text-teal-400">sets in week N</span> = starting sets + weekly increase × (N − 1)</p>
         </div>
         <p className="text-gray-300 leading-relaxed mb-3">
-          Both fitness and fatigue grow with training and decay when training stops, but on different timescales. Fitness decays slowly over weeks, while fatigue dissipates within days. This asymmetry is why a deload week works: fatigue drops rapidly while fitness is largely retained, producing a performance peak.
+          Half-set increases are allowed — an increase of 0.5 with 3 starting sets gives 3, 4, 4, 5, 5, 6 sets across a six-week block. Before confirming your mesocycle, you review bar charts of the total weekly sets for each muscle group so you can sanity-check the whole plan at a glance.
         </p>
-
-        {/* Busso extension */}
-        <h3 className="text-white font-medium mb-2 mt-4">Variable Fatigue Sensitivity</h3>
-        <p className="text-gray-300 leading-relaxed mb-3">
-          The original model treats every set equally regardless of training history. In practice, ten sets in week six of a hard block are far more fatiguing than ten sets in week one. Busso <span className="text-teal-400">[2]</span> addressed this by introducing a <span className="text-teal-400">variable fatigue sensitivity</span> that accumulates with sustained training.
+        <p className="text-gray-300 leading-relaxed">
+          Once a mesocycle starts, the plan is fixed. You can add or remove sets during any workout, but those changes only apply to that session — every future session follows the plan you reviewed. Weight targets still progress automatically from your logged performance, and RIR ramps from 3 down to 0 across the block.
         </p>
-        <div className="bg-gray-700 rounded-lg p-4 mb-3 font-mono text-sm space-y-1">
-          <p className="text-gray-300"><span className="text-teal-400">κ</span>(n) = <span className="text-teal-400">κ</span>(n−1) · e<sup>−1/τ₃</sup> + k₃ · w(n−1)</p>
-        </div>
-        <p className="text-gray-300 leading-relaxed mb-3">
-          Here <span className="text-teal-400 font-medium">κ</span> (kappa) represents how costly each set has become. It starts low and grows as training accumulates, then decays during rest. The fatigue equation becomes <span className="font-mono text-sm text-gray-300">h(n) = h(n−1) · e<sup>−1/τ₂</sup> + w(n) · κ(n)</span>, meaning the same volume produces more fatigue later in a training block.
-        </p>
-
-        {/* Our extensions */}
-        <h3 className="text-white font-medium mb-2 mt-4">Adaptation Threshold and Diminishing Returns</h3>
-        <p className="text-gray-300 leading-relaxed mb-3">
-          Strength Guider extends the model with two additional ideas. First, an <span className="text-teal-400">adaptation threshold</span> (<span className="text-teal-400 font-medium">α</span>) tracks your recent training volume as an exponential moving average. Volume below this threshold is merely maintenance — only volume <em>above</em> it drives new adaptation. This is what forces progressive overload: as your body adapts to a given workload, you need to increase volume to keep progressing.
-        </p>
-        <div className="bg-gray-700 rounded-lg p-4 mb-3 font-mono text-sm space-y-1">
-          <p className="text-gray-300"><span className="text-teal-400">α</span>(n) = <span className="text-teal-400">α</span>(n−1) · e<sup>−1/τ<sub>α</sub></sup> + (1 − e<sup>−1/τ<sub>α</sub></sup>) · w(n−1)</p>
-          <p className="text-gray-300">effective volume = max( w(n) − <span className="text-teal-400">α</span>(n), 0 )</p>
-        </div>
-        <p className="text-gray-300 leading-relaxed mb-3">
-          Second, fitness gain follows a <span className="text-teal-400">logarithmic curve</span> rather than a straight line. Doubling your sets in a given week does not double the fitness benefit — there are diminishing returns within each week.
-        </p>
-        <div className="bg-gray-700 rounded-lg p-4 mb-3 font-mono text-sm space-y-1">
-          <p className="text-gray-300"><span className="text-teal-400">g</span>(n) = <span className="text-teal-400">g</span>(n−1) · e<sup>−1/τ₁</sup> + k₁ · ln(effective volume + 1)</p>
-        </div>
-
-        {/* The full system */}
-        <h3 className="text-white font-medium mb-2 mt-4">The Complete Model</h3>
-        <p className="text-gray-300 leading-relaxed mb-3">
-          Putting it all together, the algorithm tracks five quantities each week. Given a candidate volume schedule, it simulates these forward and evaluates the resulting performance.
-        </p>
-        <div className="bg-gray-700 rounded-lg p-4 mb-4">
-          <div className="space-y-3 text-sm text-gray-300">
-            <div className="flex gap-3">
-              <span className="text-teal-400 font-medium font-mono w-6 flex-shrink-0">κ</span>
-              <span><span className="text-white font-medium">Fatigue Sensitivity</span> — how costly each set has become due to accumulated training</span>
-            </div>
-            <div className="flex gap-3">
-              <span className="text-teal-400 font-medium font-mono w-6 flex-shrink-0">α</span>
-              <span><span className="text-white font-medium">Adaptation Threshold</span> — the volume floor below which training is just maintenance</span>
-            </div>
-            <div className="flex gap-3">
-              <span className="text-teal-400 font-medium font-mono w-6 flex-shrink-0">g</span>
-              <span><span className="text-white font-medium">Fitness</span> — cumulative adaptation from effective training volume</span>
-            </div>
-            <div className="flex gap-3">
-              <span className="text-teal-400 font-medium font-mono w-6 flex-shrink-0">h</span>
-              <span><span className="text-white font-medium">Fatigue</span> — accumulated training cost, amplified by fatigue sensitivity</span>
-            </div>
-            <div className="flex gap-3">
-              <span className="text-teal-400 font-medium font-mono w-6 flex-shrink-0">p</span>
-              <span><span className="text-white font-medium">Performance</span> — baseline plus fitness minus fatigue</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Optimization */}
-        <h3 className="text-white font-medium mb-2">How Volume Is Optimized</h3>
-        <p className="text-gray-300 leading-relaxed mb-3">
-          When you start a mesocycle, the algorithm optimizes the weekly volume ramp to maximize predicted performance at the end of the deload week. It does this independently for each muscle group using your personalized parameters.
-        </p>
-        <p className="text-gray-300 leading-relaxed mb-3">
-          After each workout, your feedback adjusts the fatigue sensitivity parameter (<span className="text-teal-400 font-medium">k₃</span>) for the muscle groups you trained. If volume felt like too much, k₃ increases so the model prescribes less going forward. If it felt like too little, k₃ decreases to allow more volume. The remaining sessions in your mesocycle are then re-optimized with the updated parameters.
-        </p>
-
-        {/* References */}
-        <div className="border-t border-gray-700 mt-4 pt-3 space-y-1">
-          <p className="text-white text-xs leading-relaxed">
-            <span className="text-teal-400 font-medium">[1]</span> Banister, E.W., Calvert, T.W., Savage, M.V., & Bach, T. (1975). A systems model of training for athletic performance. <em>Australian Journal of Sports Medicine</em>, 7, 57–61.
-          </p>
-          <p className="text-white text-xs leading-relaxed">
-            <span className="text-teal-400 font-medium">[2]</span> Busso, T. (2003). Variable dose-response relationship between exercise training and performance. <em>Medicine & Science in Sports & Exercise</em>, 35(7), 1188–1195.
-          </p>
-        </div>
-
-        <div className="border-t border-gray-700 mt-3 pt-3">
-          <p className="text-gray-400 text-xs leading-relaxed mb-2">
-            If you use the Strength Guider model in your research, please cite it as:
-          </p>
-          <div className="bg-gray-700 rounded-lg p-3">
-            <p className="text-white text-xs leading-relaxed font-mono">
-              Strength Guider (2026). A variable dose-response model for hypertrophy volume prescription with per-muscle-group parameterization and feedback-driven adaptation. Available at https://www.strength-guider.com
-            </p>
-          </div>
-        </div>
       </section>
 
       {/* CTA */}

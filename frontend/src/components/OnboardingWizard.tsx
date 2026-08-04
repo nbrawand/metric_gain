@@ -1,30 +1,11 @@
 import { useState } from 'react';
 
 interface OnboardingWizardProps {
-  onComplete: (experienceLevel?: string) => void;
+  onComplete: () => void;
 }
-
-const experienceLevels = [
-  {
-    value: 'beginner',
-    label: 'Beginner',
-    description: 'Less than 1 year of consistent training',
-  },
-  {
-    value: 'intermediate',
-    label: 'Intermediate',
-    description: '1-3 years of consistent training',
-  },
-  {
-    value: 'advanced',
-    label: 'Advanced',
-    description: '3+ years of consistent training',
-  },
-];
 
 export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const [step, setStep] = useState(0);
-  const [selectedLevel, setSelectedLevel] = useState('intermediate');
 
   const steps = [
     {
@@ -59,9 +40,8 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
             recover from.
           </p>
           <p className="text-gray-300 leading-relaxed">
-            The final week of each mesocycle is a <span className="text-teal-400 font-medium">deload</span> —
-            volume and intensity are reduced so your body can recover before the
-            next block.
+            You decide the shape of each block: pick a starting set count and a
+            weekly increase for every exercise when you create your mesocycle.
           </p>
         </>
       ),
@@ -71,51 +51,23 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
       content: (
         <>
           <p className="text-gray-300 leading-relaxed mb-3">
-            The app auto-prescribes <span className="text-teal-400 font-medium">how many sets</span> you
-            should perform per muscle group each session, increasing volume week
-            over week across the mesocycle.
+            For each exercise you choose a{' '}
+            <span className="text-teal-400 font-medium">starting set count</span> and a{' '}
+            <span className="text-teal-400 font-medium">weekly increase</span>. Before
+            confirming, you review per-muscle-group charts of your planned weekly
+            volume — then the plan sticks for the whole mesocycle.
           </p>
           <p className="text-gray-300 leading-relaxed mb-3">
             Intensity is managed through{' '}
             <span className="text-teal-400 font-medium">RIR (Reps In Reserve)</span> —
             the number of reps you could have done before failure. Week 1 targets
             3 RIR (moderate effort), decreasing each week until 0 RIR (failure)
-            in the final training week.
+            in the final week.
           </p>
           <p className="text-gray-300 leading-relaxed">
-            After each session, you rate how each muscle group felt. This
-            feedback, combined with your logged performance, informs future
-            adjustments.
+            During a workout you can add or remove sets on the spot — future
+            sessions stay on your plan.
           </p>
-        </>
-      ),
-    },
-    {
-      title: 'Your Experience Level',
-      content: (
-        <>
-          <p className="text-gray-300 leading-relaxed mb-4">
-            Your training experience determines how the algorithm prescribes
-            volume. You can adjust individual muscle group parameters later
-            from the Lifter Profile page.
-          </p>
-          <div className="space-y-3">
-            {experienceLevels.map((level) => (
-              <button
-                key={level.value}
-                type="button"
-                onClick={() => setSelectedLevel(level.value)}
-                className={`w-full text-left p-4 rounded-lg border-2 transition-colors ${
-                  selectedLevel === level.value
-                    ? 'border-teal-500 bg-teal-900/30'
-                    : 'border-gray-600 bg-gray-700 hover:border-gray-500'
-                }`}
-              >
-                <div className="font-medium text-white">{level.label}</div>
-                <div className="text-sm text-gray-400 mt-1">{level.description}</div>
-              </button>
-            ))}
-          </div>
         </>
       ),
     },
@@ -130,7 +82,8 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
               </div>
               <p className="text-gray-300 text-sm leading-relaxed">
                 Go to <span className="text-teal-400 font-medium">Mesocycles</span> and
-                create a template — choose your training days, weeks, and exercises.
+                create a template — choose your training days, weeks, exercises,
+                and how sets ramp up each week.
               </p>
             </div>
             <div className="flex gap-3">
@@ -139,8 +92,8 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
               </div>
               <p className="text-gray-300 text-sm leading-relaxed">
                 Click <span className="text-teal-400 font-medium">Start Instance</span> to
-                begin your training block. The app will generate your schedule with
-                prescribed sets.
+                begin your training block. The app will generate your full schedule
+                from your plan.
               </p>
             </div>
             <div className="flex gap-3">
@@ -204,7 +157,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
           )}
 
           <button
-            onClick={() => (isLast ? onComplete(selectedLevel) : setStep(step + 1))}
+            onClick={() => (isLast ? onComplete() : setStep(step + 1))}
             className="bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
           >
             {isLast ? 'Finish' : 'Next'}

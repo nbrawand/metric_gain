@@ -13,6 +13,7 @@ export interface WorkoutExercise {
   exercise_id: number;
   order_index: number;
   target_sets: number;
+  weekly_set_increment: number;
   target_reps_min: number;
   target_reps_max: number;
   starting_rir: number;
@@ -30,6 +31,7 @@ export interface WorkoutExerciseCreate {
   exercise_id: number;
   order_index: number;
   target_sets: number;
+  weekly_set_increment: number;
   target_reps_min: number;
   target_reps_max: number;
   starting_rir: number;
@@ -134,7 +136,6 @@ export interface MesocycleInstance {
   template_weeks: number | null;
   template_days_per_week: number | null;
   exercise_notes?: Record<string, string>;
-  volume_profile?: Record<string, number[]> | number[] | null;
   mesocycle_template: Mesocycle | null; // Null if template was deleted
 }
 

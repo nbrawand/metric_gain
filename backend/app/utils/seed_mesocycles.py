@@ -109,6 +109,7 @@ def _set_workout_exercises(db: Session, workout_template: WorkoutTemplate, exerc
             exercise_id=exercise.id,
             order_index=exercise_idx,
             target_sets=exercise_data["sets"],
+            weekly_set_increment=exercise_data.get("increment", 0.5),
             target_reps_min=exercise_data["reps_min"],
             target_reps_max=exercise_data["reps_max"],
             starting_rir=3,

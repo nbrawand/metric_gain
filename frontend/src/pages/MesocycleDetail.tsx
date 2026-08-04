@@ -79,6 +79,7 @@ export default function MesocycleDetail() {
           exercise_id: ex.exercise_id,
           order_index: ex.order_index,
           target_sets: ex.target_sets,
+          weekly_set_increment: ex.weekly_set_increment ?? 0,
           target_reps_min: ex.target_reps_min,
           target_reps_max: ex.target_reps_max,
           starting_rir: ex.starting_rir,
@@ -203,6 +204,7 @@ export default function MesocycleDetail() {
           exercise_id: exercises[0]?.id || 1,
           order_index: updated[workoutIndex].exercises.length,
           target_sets: 3,
+          weekly_set_increment: 0.5,
           target_reps_min: 8,
           target_reps_max: 12,
           starting_rir: 3,
@@ -612,8 +614,49 @@ export default function MesocycleDetail() {
                                     className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                                   />
                                 </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="block text-gray-300 text-xs font-medium mb-1">Starting Sets (Week 1)</label>
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      max={10}
+                                      value={exercise.target_sets}
+                                      onChange={(e) =>
+                                        updateExercise(
+                                          dayIndex,
+                                          exerciseIndex,
+                                          'target_sets',
+                                          Math.max(1, Math.min(10, parseInt(e.target.value) || 1))
+                                        )
+                                      }
+                                      className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-gray-300 text-xs font-medium mb-1">
+                                      Weekly Increase: <span className="text-teal-400">+{exercise.weekly_set_increment} sets/week</span>
+                                    </label>
+                                    <input
+                                      type="range"
+                                      min={0}
+                                      max={2}
+                                      step={0.5}
+                                      value={exercise.weekly_set_increment}
+                                      onChange={(e) =>
+                                        updateExercise(
+                                          dayIndex,
+                                          exerciseIndex,
+                                          'weekly_set_increment',
+                                          parseFloat(e.target.value)
+                                        )
+                                      }
+                                      className="w-full mt-2 accent-teal-500"
+                                    />
+                                  </div>
+                                </div>
                                 <p className="text-xs text-gray-400 italic">
-                                  Sets, reps, and RIR will be automatically determined by the algorithm.
+                                  Reps and RIR targets are set automatically; RIR ramps 3 → 0 across the mesocycle.
                                 </p>
                               </div>
                             </div>
@@ -699,6 +742,11 @@ export default function MesocycleDetail() {
                                     {exercise.exercise.muscle_group}
                                     {exercise.exercise.equipment &&
                                       ` \u2022 ${exercise.exercise.equipment}`}
+                                  </p>
+                                  <p className="text-sm text-teal-400 mt-1">
+                                    {exercise.target_sets} sets
+                                    {(exercise.weekly_set_increment ?? 0) > 0 &&
+                                      ` \u2022 +${exercise.weekly_set_increment}/week`}
                                   </p>
                                 </div>
                               </div>

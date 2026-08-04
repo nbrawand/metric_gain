@@ -5,34 +5,15 @@ from fastapi import status
 
 
 @pytest.fixture
-def auth_headers(client):
+def auth_headers(make_auth_headers):
     """Create a user and return authentication headers."""
-    # Register a new user
-    response = client.post(
-        "/v1/auth/register",
-        json={
-            "email": "mesocycle_test@example.com",
-            "password": "testpass123",
-            "full_name": "Mesocycle Tester"
-        }
-    )
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    return make_auth_headers("mesocycle_test@example.com", "Mesocycle Tester")
 
 
 @pytest.fixture
-def second_user_headers(client):
+def second_user_headers(make_auth_headers):
     """Create a second user for testing ownership."""
-    response = client.post(
-        "/v1/auth/register",
-        json={
-            "email": "mesocycle_test2@example.com",
-            "password": "testpass123",
-            "full_name": "Second Tester"
-        }
-    )
-    token = response.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    return make_auth_headers("mesocycle_test2@example.com", "Second Tester")
 
 
 @pytest.fixture
@@ -71,6 +52,7 @@ def test_create_mesocycle_minimal(client, auth_headers, sample_exercise_id):
                         "exercise_id": sample_exercise_id,
                         "order_index": 0,
                         "target_sets": 3,
+                        "weekly_set_increment": 0.5,
                         "target_reps_min": 8,
                         "target_reps_max": 12,
                         "starting_rir": 3,
@@ -93,6 +75,36 @@ def test_create_mesocycle_minimal(client, auth_headers, sample_exercise_id):
     assert data["workout_templates"][0]["name"] == "Push Day"
     assert len(data["workout_templates"][0]["exercises"]) == 1
     assert "exercise" in data["workout_templates"][0]["exercises"][0]
+    # weekly_set_increment round-trips
+    assert data["workout_templates"][0]["exercises"][0]["weekly_set_increment"] == 0.5
+
+
+def test_create_mesocycle_increment_defaults_to_zero(client, auth_headers, sample_exercise_id):
+    """weekly_set_increment defaults to 0 when omitted."""
+    mesocycle_data = {
+        "name": "No Increment Mesocycle",
+        "weeks": 4,
+        "days_per_week": 1,
+        "workout_templates": [
+            {
+                "name": "Day 1",
+                "order_index": 0,
+                "exercises": [
+                    {
+                        "exercise_id": sample_exercise_id,
+                        "order_index": 0,
+                        "target_sets": 3,
+                        "target_reps_min": 8,
+                        "target_reps_max": 12,
+                    }
+                ]
+            }
+        ]
+    }
+
+    response = client.post("/v1/mesocycles/", json=mesocycle_data, headers=auth_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()["workout_templates"][0]["exercises"][0]["weekly_set_increment"] == 0.0
 
 
 def test_create_mesocycle_full(client, auth_headers, sample_exercise_id):
