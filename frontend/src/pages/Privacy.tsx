@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { usePageMeta } from '../utils/pageMeta';
 
 /**
  * Privacy Policy.
@@ -14,6 +15,13 @@ import { Link } from 'react-router-dom';
  * this changes with them. The policy has to match the product.
  */
 export default function Privacy() {
+
+  usePageMeta({
+    title: 'Privacy Policy | Strength Guider',
+    description:
+      'What Strength Guider collects, who it is shared with, how long it is kept, and how to export or delete your account yourself.',
+    path: '/privacy',
+  });
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);

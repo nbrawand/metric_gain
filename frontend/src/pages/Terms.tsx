@@ -1,7 +1,14 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { usePageMeta } from '../utils/pageMeta';
 
 export default function Terms() {
+
+  usePageMeta({
+    title: 'Terms of Service | Strength Guider',
+    description: 'The terms you agree to when using Strength Guider.',
+    path: '/terms',
+  });
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);

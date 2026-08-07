@@ -4,10 +4,18 @@
 
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { usePageMeta } from '../utils/pageMeta';
 
 export default function HowItWorks() {
   const navigate = useNavigate();
   const { hash } = useLocation();
+
+  usePageMeta({
+    title: 'How Strength Training Works | RIR, Mesocycles and Progressive Overload',
+    description:
+      'A plain explanation of the ideas a good training block runs on: reps in reserve, mesocycles, progressive overload, deload weeks and how much volume you can actually recover from.',
+    path: '/how-it-works',
+  });
 
   useEffect(() => {
     if (hash) {
@@ -23,8 +31,38 @@ export default function HowItWorks() {
       {/* Hero */}
       <div className="text-center mb-4">
         <h1 className="text-3xl font-bold text-white mb-2">How It Works</h1>
-        <p className="text-gray-400">An overview of how to use Strength Guider and the principles behind it</p>
+        <p className="text-gray-400">
+          How to use Strength Guider, and the training principles it is built on. Worth
+          reading whether or not you ever sign up.
+        </p>
       </div>
+
+      {/* Contents. The sections were already anchored and nothing surfaced them,
+          so the page could only be read top to bottom. */}
+      <nav aria-label="Contents" className="bg-gray-800 rounded-lg p-6">
+        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">
+          On this page
+        </h2>
+        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+          {[
+            ['getting-started', 'Getting started'],
+            ['progressive-overload', 'Progressive overload'],
+            ['mesocycles', 'What is a mesocycle?'],
+            ['rir', 'What is RIR?'],
+            ['deload', 'The deload week'],
+            ['volume-model', 'Planning your volume'],
+            ['rest', 'Resting between sets'],
+            ['progress', 'Seeing your progress'],
+            ['offline', 'Training without signal'],
+          ].map(([anchor, label]) => (
+            <li key={anchor}>
+              <a href={`#${anchor}`} className="text-teal-400 hover:text-teal-300 transition-colors">
+                {label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
       {/* How to Use the App */}
       <section id="getting-started" className="bg-gray-800 rounded-lg p-6 scroll-mt-16">
@@ -169,7 +207,7 @@ export default function HowItWorks() {
       </section>
 
       {/* RIR */}
-      <section className="bg-gray-800 rounded-lg p-6">
+      <section id="rir" className="bg-gray-800 rounded-lg p-6 scroll-mt-16">
         <h2 className="text-xl font-semibold text-teal-400 mb-3">What Is RIR (Reps In Reserve)?</h2>
         <p className="text-gray-300 leading-relaxed mb-3">
           RIR stands for Reps In Reserve. It refers to the number of additional repetitions you could have completed before reaching failure on a given set. It is a way to gauge how hard a set was without needing to train to failure every time.

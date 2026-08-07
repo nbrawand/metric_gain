@@ -248,10 +248,18 @@ device.
 "genuinely usable, forever". A read-only demo block or an annotated screenshot
 tour would let people evaluate before committing.
 
-[ ] Use How It Works as top-of-funnel content. It is public, genuinely
+[x] Use How It Works as top-of-funnel content. It is public, genuinely
 educational, and now covers RIR, mesocycles, progressive overload, deloads and
 autoregulation, but it is positioned as documentation rather than a reason to
 visit. SEO and content-marketing value going unused.
+    The blocker was smaller and more basic than the framing suggested: there
+    was no per-route metadata at all, so every page served the home page's
+    title and description to search engines and link previews. `usePageMeta`
+    fixes that for the five public routes. The RIR section, the most searchable
+    thing on the page, had no anchor to link to. There is a contents list now,
+    a "Learn the Method, Free" section on the landing page that links each
+    question to its section, and a sitemap that includes /privacy plus a
+    robots.txt that excludes /account and /progress.
 
 [ ] Add email capture for people who are not ready to pay yet.
 

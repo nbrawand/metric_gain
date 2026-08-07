@@ -6,5 +6,7 @@ Disallow: /mesocycles/
 Disallow: /exercises
 Disallow: /subscribe
 Disallow: /billing/
+Disallow: /progress
+Disallow: /account
 
 Sitemap: https://www.strength-guider.com/sitemap.xml

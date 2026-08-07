@@ -1,6 +1,13 @@
 import { Link, useNavigate } from 'react-router-dom';
+import { usePageMeta } from '../utils/pageMeta';
 
 export default function Landing() {
+  usePageMeta({
+    title: 'Strength Guider | Science-Backed Strength Training',
+    description:
+      'A hypertrophy training app that adapts from the sets you logged, not from a survey. Works offline, $4.99 a month, free for 5 days with no card up front.',
+    path: '/',
+  });
   const navigate = useNavigate();
 
   const goToHowItWorks = () => {
@@ -418,6 +425,64 @@ export default function Landing() {
               Read the Method
             </button>
           </div>
+        </div>
+      </section>
+
+      {/* The guide, positioned as a reason to visit rather than as
+          documentation. It is public, it answers questions people actually
+          search for, and nothing on this page previously said so. */}
+      <section className="max-w-4xl mx-auto px-4 py-16 border-t border-gray-800">
+        <h2 className="text-2xl font-bold text-white text-center mb-4">
+          Learn the Method, Free
+        </h2>
+        <p className="text-gray-300 text-center leading-relaxed max-w-2xl mx-auto mb-10">
+          The thinking behind the app is written up in plain language and open to
+          everyone, no account needed. If you take nothing else from this page, take
+          this: understanding these five ideas will improve your training whatever you
+          end up training with.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl mx-auto">
+          {[
+            {
+              to: '/how-it-works#rir',
+              q: 'What is RIR?',
+              a: 'How to judge a set by what you left in the tank, without going to failure every week.',
+            },
+            {
+              to: '/how-it-works#mesocycles',
+              q: 'What is a mesocycle?',
+              a: 'Why training in blocks beats turning up and picking a weight that feels right.',
+            },
+            {
+              to: '/how-it-works#progressive-overload',
+              q: 'How does progressive overload work?',
+              a: 'What actually has to increase, and why adding 5 lb to everything every week is not it.',
+            },
+            {
+              to: '/how-it-works#deload',
+              q: 'What is a deload week?',
+              a: 'Why the easy week at the end is doing more for you than another hard one would.',
+            },
+            {
+              to: '/how-it-works#volume-model',
+              q: 'How many sets per muscle?',
+              a: 'Where the useful range sits, and what happens past the point you can recover from.',
+            },
+            {
+              to: '/how-it-works',
+              q: 'Read the whole guide',
+              a: 'All of the above, plus how the app turns it into a week of training.',
+            },
+          ].map((item) => (
+            <Link
+              key={item.to + item.q}
+              to={item.to}
+              className="block bg-gray-800 rounded-lg border border-gray-700 p-5 hover:border-teal-600 transition-colors"
+            >
+              <h3 className="text-teal-400 font-semibold mb-1">{item.q}</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">{item.a}</p>
+            </Link>
+          ))}
         </div>
       </section>
 
