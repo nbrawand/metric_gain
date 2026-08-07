@@ -58,6 +58,34 @@ beforeEach(() => {
   vi.mocked(mesocyclesApi.listMesocycleInstances).mockResolvedValue([] as never);
   vi.mocked(exercisesApi.getExercises).mockResolvedValue([exercise] as never);
   vi.mocked(mesocyclesApi.deleteMesocycle).mockResolvedValue(undefined as never);
+  // The start modal fetches the template to draw its volume preview. Leaving
+  // this auto-mocked returns undefined, and the component calls .then on it,
+  // which throws inside an event handler where it is easy to miss locally and
+  // fails the test outright on CI.
+  vi.mocked(mesocyclesApi.getMesocycle).mockResolvedValue({
+    ...template,
+    workout_templates: [
+      {
+        id: 1,
+        name: 'Day 1',
+        order_index: 0,
+        exercises: [
+          {
+            id: 1,
+            exercise_id: 7,
+            exercise,
+            order_index: 0,
+            target_sets: 3,
+            weekly_set_increment: 0,
+            target_reps_min: 8,
+            target_reps_max: 10,
+            starting_rir: 3,
+            ending_rir: 0,
+          },
+        ],
+      },
+    ],
+  } as never);
   vi.mocked(mesocyclesApi.startMesocycleInstance).mockResolvedValue({ id: 20 } as never);
   vi.mocked(sessionsApi.listWorkoutSessions).mockResolvedValue([
     { id: 101, week_number: 2, day_number: 1 },
