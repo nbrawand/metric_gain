@@ -105,6 +105,10 @@ class WorkoutSessionResponse(WorkoutSessionBase):
     completed_at: Optional[datetime]
     workout_sets: List[WorkoutSetResponse] = []
 
+    # How many later weeks of this same day an exercise add/remove/swap also
+    # changed. Only set on those endpoints; None everywhere else.
+    future_sessions_updated: Optional[int] = None
+
     class Config:
         from_attributes = True
 

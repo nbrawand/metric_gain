@@ -25,6 +25,9 @@ export default function WorkoutExecution() {
   const [allSessions, setAllSessions] = useState<WorkoutSessionListItem[]>([]);
   const [showCalendar, setShowCalendar] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Exercise edits also change the later weeks of this day, which the user
+  // cannot see from here — say so rather than changing them silently
+  const [notice, setNotice] = useState<string | null>(null);
   const [completionBanner, setCompletionBanner] = useState<{ week: number; day: number } | null>(null);
 
   const [showInfo, setShowInfo] = useState(false);
@@ -187,9 +190,14 @@ export default function WorkoutExecution() {
       .catch((err) => console.error('Error loading exercises:', err));
   }, [showExercisePicker, accessToken]);
 
+  const futureWeeksNotice = (count: number | null | undefined, verb: string) => {
+    if (!count) return;
+    setNotice(`Also ${verb} in the next ${count} ${count === 1 ? 'week' : 'weeks'} of this day.`);
+  };
+
   const handleRemoveExercise = async (exerciseId: number) => {
     if (!accessToken || !session) return;
-    if (!confirm('Remove this exercise from the workout?')) return;
+    if (!confirm('Remove this exercise from this workout and the rest of the block?')) return;
     try {
       const updated = await removeExercise(session.id, exerciseId, accessToken);
       // Clean up stale IDs for removed sets
@@ -200,6 +208,7 @@ export default function WorkoutExecution() {
         return next;
       });
       setSession(updated);
+      futureWeeksNotice(updated.future_sessions_updated, 'removed');
       setShowExerciseMenu(null);
     } catch (err: any) {
       console.error('Error removing exercise:', err);
@@ -279,8 +288,10 @@ export default function WorkoutExecution() {
           return next;
         });
         swappedSetIds.forEach((id) => removeForSet(session.id, id));
+        futureWeeksNotice(updated.future_sessions_updated, 'swapped');
       } else {
         updated = await addExercise(session.id, newExerciseId, accessToken);
+        futureWeeksNotice(updated.future_sessions_updated, 'added');
       }
       setSession(updated);
     } catch (err: any) {
@@ -991,6 +1002,17 @@ export default function WorkoutExecution() {
           <button
             onClick={() => setError(null)}
             className="text-red-200 hover:text-white text-sm font-medium shrink-0"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+      {notice && (
+        <div className="bg-teal-900/80 border-b border-teal-500 px-4 py-3 flex items-start justify-between gap-3">
+          <p className="text-sm text-teal-100">{notice}</p>
+          <button
+            onClick={() => setNotice(null)}
+            className="text-teal-200 hover:text-white text-sm font-medium shrink-0"
           >
             Dismiss
           </button>

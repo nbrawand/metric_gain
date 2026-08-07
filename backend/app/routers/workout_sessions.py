@@ -5,7 +5,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
@@ -308,6 +308,148 @@ def _reload_session(db, session_id: int) -> WorkoutSession:
     ).filter(WorkoutSession.id == session_id).first()
 
 
+# Changing the exercises in one workout is nearly always a decision about the
+# block, not about today: a machine is broken, a movement hurts, a substitute
+# works better. Sessions for the whole block are created up front, so without
+# these the same edit had to be repeated every week.
+
+
+def _with_future_count(workout_session: WorkoutSession, count: int) -> WorkoutSession:
+    """Attach how many later weeks the change reached, for the response.
+
+    Not a column — just an attribute the response schema reads, so the client
+    can say "applied to the next 4 weeks" instead of changing them silently.
+    """
+    workout_session.future_sessions_updated = count
+    return workout_session
+
+
+def _future_sessions_same_day(db, workout_session: WorkoutSession) -> List[WorkoutSession]:
+    """Later weeks of this same training day, in this same block.
+
+    Completed sessions are deliberately excluded. They are the record of what
+    was actually performed, and editing them would rewrite history rather than
+    change a plan.
+    """
+    return (
+        db.query(WorkoutSession)
+        .filter(
+            WorkoutSession.mesocycle_instance_id == workout_session.mesocycle_instance_id,
+            WorkoutSession.user_id == workout_session.user_id,
+            WorkoutSession.day_number == workout_session.day_number,
+            WorkoutSession.week_number > workout_session.week_number,
+            WorkoutSession.status != "completed",
+        )
+        .order_by(WorkoutSession.week_number)
+        .all()
+    )
+
+
+def _has_logged_work(db, session_id: int, exercise_id: int) -> bool:
+    """True if anything was recorded against this exercise in this session.
+
+    A future week is normally untouched, but someone can jump ahead and log
+    into it. Propagation must never delete or blank work that was performed.
+    """
+    return (
+        db.query(WorkoutSet)
+        .filter(
+            WorkoutSet.workout_session_id == session_id,
+            WorkoutSet.exercise_id == exercise_id,
+            or_(WorkoutSet.weight > 0, WorkoutSet.reps > 0, WorkoutSet.skipped == 1),
+        )
+        .first()
+        is not None
+    )
+
+
+def _session_exercise_ids(db, session_id: int) -> set:
+    rows = (
+        db.query(WorkoutSet.exercise_id)
+        .filter(WorkoutSet.workout_session_id == session_id)
+        .distinct()
+        .all()
+    )
+    return {r[0] for r in rows}
+
+
+def _plan_context(db, workout_session: WorkoutSession):
+    """The template and block length behind a session, for set-count maths."""
+    template = (
+        db.query(WorkoutTemplate)
+        .filter(WorkoutTemplate.id == workout_session.workout_template_id)
+        .first()
+    )
+    total_weeks = template.mesocycle.weeks if (template and template.mesocycle) else 0
+    if not total_weeks and workout_session.mesocycle_instance:
+        # The template can be deleted mid-block, which nulls workout_template_id
+        total_weeks = workout_session.mesocycle_instance.template_weeks or 0
+    return template, total_weeks
+
+
+def _add_exercise_sets(
+    db,
+    workout_session: WorkoutSession,
+    exercise_id: int,
+    template,
+    total_weeks: int,
+    user_id: int,
+) -> None:
+    """Create this exercise's sets for one session, sized for that session's week."""
+    max_order = (
+        db.query(func.max(WorkoutSet.order_index))
+        .filter(WorkoutSet.workout_session_id == workout_session.id)
+        .scalar()
+        or 0
+    )
+    new_order_index = max_order + 100
+
+    num_sets = 3
+    target_rir = 3
+    planned_entries = []
+    if template:
+        planned_entries = [
+            te for te in template.exercises if te.exercise_id == exercise_id
+        ]
+        if planned_entries:
+            # Per week, so a propagated exercise still follows the plan's ramp
+            # rather than being frozen at the set count of the week it was added
+            num_sets = sum(
+                compute_sets_for_week(
+                    te.target_sets, te.weekly_set_increment, workout_session.week_number
+                )
+                for te in planned_entries
+            )
+    if total_weeks:
+        target_rir = compute_target_rir(workout_session.week_number, total_weeks)
+
+    prev_weight, prev_reps = find_previous_performance(
+        db, user_id, exercise_id,
+        mesocycle_instance_id=workout_session.mesocycle_instance_id,
+        current_week=workout_session.week_number,
+        current_day=workout_session.day_number,
+    )
+    fallback_reps = planned_entries[0].target_reps_max if planned_entries else None
+    target_weight, target_reps = compute_progression_targets(
+        prev_weight, prev_reps, fallback_reps
+    )
+
+    for set_num in range(1, num_sets + 1):
+        db.add(
+            WorkoutSet(
+                workout_session_id=workout_session.id,
+                exercise_id=exercise_id,
+                set_number=set_num,
+                order_index=new_order_index,
+                weight=0,
+                reps=0,
+                target_weight=target_weight,
+                target_reps=target_reps,
+                target_rir=target_rir,
+            )
+        )
+
+
 @router.post("/{session_id}/exercises/swap", response_model=WorkoutSessionResponse)
 def swap_exercise(
     session_id: int,
@@ -350,21 +492,47 @@ def swap_exercise(
     # user recorded about the old lift has to go, including the RIR they rated
     # it at and any note — otherwise the new exercise comes back carrying a
     # rating for a set that was never performed on it.
-    for ws in old_sets:
-        ws.exercise_id = request.new_exercise_id
-        ws.weight = 0
-        ws.reps = 0
-        ws.rir = None
-        ws.notes = None
-        ws.target_weight = None
-        # The old lift's rep target goes too — 5-rep deadlift guidance on a
-        # swapped-in crunch would stick for the whole block, since the refresh
-        # only replaces it once the new exercise has history
-        ws.target_reps = None
-        ws.skipped = 0
+    def _apply_swap(sets):
+        for ws in sets:
+            ws.exercise_id = request.new_exercise_id
+            ws.weight = 0
+            ws.reps = 0
+            ws.rir = None
+            ws.notes = None
+            ws.target_weight = None
+            # The old lift's rep target goes too — 5-rep deadlift guidance on a
+            # swapped-in crunch would stick for the whole block, since the
+            # refresh only replaces it once the new exercise has history
+            ws.target_reps = None
+            ws.skipped = 0
+
+    _apply_swap(old_sets)
+
+    # Carry the swap into the rest of the block
+    updated = 0
+    if request.new_exercise_id != request.old_exercise_id:
+        for future in _future_sessions_same_day(db, workout_session):
+            present = _session_exercise_ids(db, future.id)
+            if request.old_exercise_id not in present:
+                continue
+            # Swapping onto an exercise already there would give it two runs of
+            # set numbers, the same collision the check above rejects
+            if request.new_exercise_id in present:
+                continue
+            if _has_logged_work(db, future.id, request.old_exercise_id):
+                continue
+            _apply_swap(
+                db.query(WorkoutSet)
+                .filter(
+                    WorkoutSet.workout_session_id == future.id,
+                    WorkoutSet.exercise_id == request.old_exercise_id,
+                )
+                .all()
+            )
+            updated += 1
 
     db.commit()
-    return _reload_session(db, session_id)
+    return _with_future_count(_reload_session(db, session_id), updated)
 
 
 @router.delete("/{session_id}/exercises/{exercise_id}", response_model=WorkoutSessionResponse)
@@ -389,8 +557,25 @@ def remove_exercise(
             detail="That exercise isn't in this workout.",
         )
 
+    # Drop it from the rest of the block too, but never from a week someone has
+    # already logged into — that would delete work they performed
+    updated = 0
+    for future in _future_sessions_same_day(db, workout_session):
+        if _has_logged_work(db, future.id, exercise_id):
+            continue
+        removed = (
+            db.query(WorkoutSet)
+            .filter(
+                WorkoutSet.workout_session_id == future.id,
+                WorkoutSet.exercise_id == exercise_id,
+            )
+            .delete()
+        )
+        if removed:
+            updated += 1
+
     db.commit()
-    return _reload_session(db, session_id)
+    return _with_future_count(_reload_session(db, session_id), updated)
 
 
 @router.post("/{session_id}/exercises/add", response_model=WorkoutSessionResponse)
@@ -417,65 +602,22 @@ def add_exercise(
             detail="That exercise is already in this workout.",
         )
 
-    # Determine order_index: max existing + 100
-    max_order = db.query(func.max(WorkoutSet.order_index)).filter(
-        WorkoutSet.workout_session_id == session_id
-    ).scalar() or 0
-    new_order_index = max_order + 100
-
-    # Set count from the template plan if this exercise is in it; default 3
-    template = db.query(WorkoutTemplate).filter(
-        WorkoutTemplate.id == workout_session.workout_template_id
-    ).first()
-    total_weeks = template.mesocycle.weeks if (template and template.mesocycle) else 0
-    if not total_weeks and workout_session.mesocycle_instance:
-        # The template can be deleted mid-block, which nulls workout_template_id
-        total_weeks = workout_session.mesocycle_instance.template_weeks or 0
-
-    num_sets = 3
-    target_rir = 3
-    planned_entries = []
-    if template:
-        planned_entries = [
-            te for te in template.exercises if te.exercise_id == request.exercise_id
-        ]
-        if planned_entries:
-            num_sets = sum(
-                compute_sets_for_week(
-                    te.target_sets, te.weekly_set_increment, workout_session.week_number
-                )
-                for te in planned_entries
-            )
-    if total_weeks:
-        target_rir = compute_target_rir(workout_session.week_number, total_weeks)
-
-    # Seed targets from history like every other set-generating path, so an
-    # exercise added mid-block isn't the only one that starts with no guidance.
-    # The plan's rep range is the same fallback the seeding path uses — without
-    # it, a planned exercise removed and re-added before it has any history
-    # permanently loses its rep target.
-    prev_weight, prev_reps = find_previous_performance(
-        db, current_user.id, request.exercise_id,
-        mesocycle_instance_id=workout_session.mesocycle_instance_id,
-        current_week=workout_session.week_number,
-        current_day=workout_session.day_number,
+    # Seeded targets, set count and RIR all come from the shared helper, which
+    # sizes each session for its own week
+    template, total_weeks = _plan_context(db, workout_session)
+    _add_exercise_sets(
+        db, workout_session, request.exercise_id, template, total_weeks, current_user.id
     )
-    fallback_reps = planned_entries[0].target_reps_max if planned_entries else None
-    target_weight, target_reps = compute_progression_targets(prev_weight, prev_reps, fallback_reps)
 
-    for set_num in range(1, num_sets + 1):
-        workout_set = WorkoutSet(
-            workout_session_id=session_id,
-            exercise_id=request.exercise_id,
-            set_number=set_num,
-            order_index=new_order_index,
-            weight=0,
-            reps=0,
-            target_weight=target_weight,
-            target_reps=target_reps,
-            target_rir=target_rir,
+    # Add it to the rest of the block as well
+    updated = 0
+    for future in _future_sessions_same_day(db, workout_session):
+        if request.exercise_id in _session_exercise_ids(db, future.id):
+            continue
+        _add_exercise_sets(
+            db, future, request.exercise_id, template, total_weeks, current_user.id
         )
-        db.add(workout_set)
+        updated += 1
 
     try:
         db.commit()
@@ -487,7 +629,7 @@ def add_exercise(
             status_code=status.HTTP_409_CONFLICT,
             detail="That exercise was just added to this workout. Refresh to see it.",
         )
-    return _reload_session(db, session_id)
+    return _with_future_count(_reload_session(db, session_id), updated)
 
 
 # Per-exercise set add/remove endpoints

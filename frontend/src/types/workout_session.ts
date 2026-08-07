@@ -61,6 +61,11 @@ export interface WorkoutSession {
   updated_at: string;
   completed_at?: string;
   workout_sets: WorkoutSet[];
+  /**
+   * How many later weeks of this same day an exercise add/remove/swap also
+   * changed. Only present on those responses.
+   */
+  future_sessions_updated?: number | null;
 }
 
 /**
