@@ -94,10 +94,13 @@ who want to drive it themselves.
 
 ### Table stakes we're missing
 
-[ ] Progress analytics. There is no route for it at all (see the `Route` list
+[x] Progress analytics. There is no route for it at all (see the `Route` list
 in `frontend/src/App.tsx`) — we store every set ever logged and show none of it
 back. Estimated 1RM over time, weekly volume per muscle group across blocks,
 PR history. Reviewers ding RP for weak analytics, so this is cheap ground.
+    Done: /progress, backed by /v1/analytics. Estimated 1RM counts reps left in
+    reserve, so a set stopped at 2 RIR isn't read as weaker than the same
+    weight taken to failure; Epley is clamped at 12 effective reps.
 
 [ ] Optional rest timer. **Product decision needed first — don't just build
 it.** The rest/log info modals in `frontend/src/pages/WorkoutExecution.tsx`

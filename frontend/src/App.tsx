@@ -11,6 +11,7 @@ import WorkoutExecution from './pages/WorkoutExecution';
 import HowItWorks from './pages/HowItWorks';
 import Subscribe from './pages/Subscribe';
 import Admin from './pages/Admin';
+import Progress from './pages/Progress';
 import Terms from './pages/Terms';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import SubscriptionRoute from './components/SubscriptionRoute';
@@ -191,6 +192,7 @@ function AppRoutes() {
           {/* Protected + subscription-gated routes */}
           <Route path="/" element={<RootPage />} />
           <Route path="/exercises" element={<SubscriptionRoute><Exercises /></SubscriptionRoute>} />
+          <Route path="/progress" element={<SubscriptionRoute><Progress /></SubscriptionRoute>} />
           <Route path="/mesocycles" element={<SubscriptionRoute><Mesocycles /></SubscriptionRoute>} />
           <Route path="/mesocycles/:id" element={<SubscriptionRoute><MesocycleDetail /></SubscriptionRoute>} />
           <Route path="/workout/:sessionId" element={<SubscriptionRoute><WorkoutExecution /></SubscriptionRoute>} />
