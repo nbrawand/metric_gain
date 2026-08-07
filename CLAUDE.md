@@ -229,8 +229,11 @@ better for us.
 
 ### Smaller
 
-[ ] Add a Privacy Policy. The footer links only Terms. We use Google OAuth and
+[x] Add a Privacy Policy. The footer links only Terms. We use Google OAuth and
 Stripe — this is a trust signal and probably a compliance gap.
+    Written against an audit of what the code actually does, not a template.
+    **Not reviewed by a lawyer** — treat it as an accurate description of our
+    practices that still needs professional review before it is relied on.
 
 [ ] Reframe the PWA angle. "No download needed" reads apologetic. It is a
 benefit: nothing to install, no app store, updates instantly, works on any
@@ -248,6 +251,13 @@ visit. SEO and content-marketing value going unused.
 [ ] Add email capture for people who are not ready to pay yet.
 
 ## Open
+
+[ ] Self-service account deletion and data export. Writing the privacy policy
+made this concrete: there is no endpoint for either, so the policy has to
+promise both by email. Most privacy regimes expect a user to be able to delete
+their account and get a copy of their data without asking a human. The policy
+says we are working on making both self-service, so this is now a promise in
+writing.
 
 [ ] Error monitoring. Eighteen commits of behaviour change — autoregulation,
 deload weeks, unit conversion that rewrites logged history — and a production

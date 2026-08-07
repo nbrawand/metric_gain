@@ -13,6 +13,7 @@ import Subscribe from './pages/Subscribe';
 import Admin from './pages/Admin';
 import Progress from './pages/Progress';
 import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import SubscriptionRoute from './components/SubscriptionRoute';
 import Layout from './components/Layout';
@@ -190,6 +191,7 @@ function AppRoutes() {
           <Route path="/login" element={<Login />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
           {/* Authenticated but not subscription-gated */}
           <Route path="/subscribe" element={<ProtectedRoute><Subscribe /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />

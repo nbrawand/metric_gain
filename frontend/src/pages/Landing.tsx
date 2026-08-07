@@ -481,6 +481,10 @@ export default function Landing() {
           <Link to="/terms" className="text-teal-400 hover:text-teal-300 transition-colors">
             Terms of Service
           </Link>
+          {' '}&middot;{' '}
+          <Link to="/privacy" className="text-teal-400 hover:text-teal-300 transition-colors">
+            Privacy Policy
+          </Link>
         </p>
         <p className="text-gray-500 text-xs">&copy; 2026 Strength Guider. All rights reserved.</p>
       </footer>

@@ -544,6 +544,12 @@ export default function Terms() {
             </a>.
           </p>
         </div>
+
+        <div className="mt-12 pt-8 border-t border-gray-700">
+          <Link to="/privacy" className="text-teal-400 hover:text-teal-300 transition-colors">
+            Privacy Policy
+          </Link>
+        </div>
       </div>
     </main>
   );
