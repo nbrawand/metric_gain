@@ -110,6 +110,14 @@ export default function Mesocycles() {
         ...Array.from({ length: days - prev.length }, (_, i) => blankDay(prev.length + i)),
       ];
     });
+    // Forget days that no longer exist. Collapsed state is keyed by index, so
+    // dropping to 2 days and back to 4 otherwise handed the removed day's
+    // collapsed flag to the blank one taking its place — a day you just added
+    // showed up already closed.
+    setCollapsedDays((prev) => {
+      const kept = [...prev].filter((index) => index < days);
+      return kept.length === prev.size ? prev : new Set(kept);
+    });
   };
 
   const loadData = async () => {
