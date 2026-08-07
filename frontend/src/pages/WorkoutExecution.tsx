@@ -10,6 +10,7 @@ import { WorkoutSession, WorkoutSet, WorkoutSessionListItem } from '../types/wor
 import { Exercise } from '../types/exercise';
 import { MesocycleInstance } from '../types/mesocycle';
 import { computeTargetRir } from '../utils/volume';
+import { weightUnitFromPreferences, weightUnitLabel } from '../utils/units';
 
 // Local state for tracking input values before they're saved
 type SetInputValues = Record<number, { weight: string; reps: string }>;
@@ -17,7 +18,10 @@ type SetInputValues = Record<number, { weight: string; reps: string }>;
 export default function WorkoutExecution() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
-  const { accessToken } = useAuthStore();
+  const { accessToken, user } = useAuthStore();
+  // Weights are stored in whatever unit the lifter logs in, so this is
+  // only a label — there is nothing to convert on the way out.
+  const unitLabel = weightUnitLabel(weightUnitFromPreferences(user?.preferences));
 
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<WorkoutSession | null>(null);
@@ -736,9 +740,9 @@ export default function WorkoutExecution() {
     if (set.weight > 0) return '';
 
     if (set.target_weight && set.target_weight > 0) {
-      // The backend already rounds to the nearest 5; rounding again here made
+      // The backend already rounds to a loadable step; rounding again here made
       // this disagree with the placeholder showing the same target
-      return `target: ${set.target_weight} lbs`;
+      return `target: ${set.target_weight} ${unitLabel}`;
     }
 
     return '';
@@ -1363,7 +1367,7 @@ export default function WorkoutExecution() {
                   {/* Column Headers */}
                   <div className="grid grid-cols-12 gap-1 sm:gap-2 text-xs text-gray-400 mb-2">
                     <div className="col-span-1"></div>
-                    <div className="col-span-4 text-center">WEIGHT <button onClick={() => setShowWeightInfo(true)} className="text-gray-400 hover:text-white">ⓘ</button></div>
+                    <div className="col-span-4 text-center">WEIGHT ({unitLabel}) <button onClick={() => setShowWeightInfo(true)} className="text-gray-400 hover:text-white">ⓘ</button></div>
                     <div className="col-span-4 text-center">REPS <button onClick={() => setShowInfo(true)} className="text-gray-400 hover:text-white">ⓘ</button></div>
                     <div className="col-span-3 text-center">SAVE <button onClick={() => setShowLogInfo(true)} className="text-gray-400 hover:text-white">ⓘ</button></div>
                   </div>

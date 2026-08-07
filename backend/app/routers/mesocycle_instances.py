@@ -21,8 +21,9 @@ from app.schemas.mesocycle import (
     MesocycleInstanceListResponse,
 )
 from app.utils.auth import get_current_user
-from app.utils.db import apply_update
+from app.utils.db import apply_update, user_weight_unit
 from app.services.progression import (
+    LB,
     DEFAULT_INCREMENT,
     compute_deload_sets,
     compute_deload_weight,
@@ -208,6 +209,7 @@ def _generate_sets_for_session(
     user_id,
     mesocycle_instance_id,
     day_number,
+    unit=LB,
 ):
     """Generate workout sets from a template for a given session.
 
@@ -217,7 +219,7 @@ def _generate_sets_for_session(
     target_rir = compute_target_rir(week_number, total_weeks)
 
     increments = increments_for_exercises(
-        db, [te.exercise_id for te in workout_template.exercises]
+        db, [te.exercise_id for te in workout_template.exercises], unit
     )
 
     for template_exercise in workout_template.exercises:
@@ -268,6 +270,7 @@ def _generate_deload_sets(
     user_id,
     mesocycle_instance_id,
     day_number,
+    unit=LB,
 ):
     """Generate the extra recovery week that follows the training weeks.
 
@@ -277,7 +280,7 @@ def _generate_deload_sets(
     a hard session.
     """
     increments = increments_for_exercises(
-        db, [te.exercise_id for te in workout_template.exercises]
+        db, [te.exercise_id for te in workout_template.exercises], unit
     )
 
     for template_exercise in workout_template.exercises:
@@ -326,6 +329,7 @@ def _generate_sets_from_source(
     mesocycle_instance_id,
     day_number,
     week_number=1,
+    unit=LB,
 ):
     """Generate sets for week 1 by copying from a source session (previous instance).
 
@@ -343,6 +347,7 @@ def _generate_sets_from_source(
         db,
         [te.exercise_id for te in workout_template.exercises]
         + [ss.exercise_id for ss in source_sets],
+        unit,
     )
 
     source_by_exercise = OrderedDict()
@@ -534,6 +539,8 @@ async def start_mesocycle_instance(
             detail="This template has no workout days. Add at least one before starting it.",
         )
 
+    unit = user_weight_unit(current_user)
+
     # Create all workout sessions, plus one extra week for the deload. A block
     # used to end on its hardest week and hand the next one a fully fatigued
     # lifter; the deload is where that fatigue gets paid down.
@@ -573,23 +580,27 @@ async def start_mesocycle_instance(
                     _generate_sets_from_source(
                         db, session, wt, source_session, total_weeks,
                         current_user.id, new_instance.id, day_number,
+                        unit=unit,
                     )
                 else:
                     # Source session not found for this day, fall back to template
                     _generate_sets_for_session(
                         db, session, wt, week, total_weeks,
                         current_user.id, new_instance.id, day_number,
+                        unit=unit,
                     )
             elif is_deload_week(week, total_weeks):
                 _generate_deload_sets(
                     db, session, wt, total_weeks,
                     current_user.id, new_instance.id, day_number,
+                    unit=unit,
                 )
             else:
                 # All other weeks (or week 1 fresh start)
                 _generate_sets_for_session(
                     db, session, wt, week, total_weeks,
                     current_user.id, new_instance.id, day_number,
+                    unit=unit,
                 )
 
     db.commit()

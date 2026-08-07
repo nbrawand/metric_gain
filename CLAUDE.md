@@ -38,10 +38,15 @@ and keep the percentage as the driver rather than the floor.
 and `target_rir`, so missing 8 reps at 0 RIR still earns a heavier target next
 week. Hold (or back off) on a miss.
 
-[ ] Add kg support. `lbs` is hardcoded in
+[x] Add kg support. `lbs` is hardcoded in
 `frontend/src/pages/WorkoutExecution.tsx` (search `target: ${...} lbs`) and
 `round_to_nearest_5` is meaningless on kg plates, which go in 2.5/1.25 steps.
 Needs a user-level unit preference; `users.preferences` JSON already exists.
+    Stored in preferences as `weight_unit`. Weights are kept as the number the
+    lifter typed, so switching units converts the logged history server-side —
+    otherwise a 225 lb squat silently becomes 225 kg and feeds every future
+    target. Rounding happens in the chosen unit, never by converting a pounds
+    answer. Toggle lives in the nav menu.
 
 [x] Add a deload week. `compute_target_rir` ramps `[3,2,2,1,1,0]` over a 6-week
 block, so RIR hits 0 on the final week and the block just ends — the next block

@@ -5,6 +5,7 @@ import { getActiveMesocycleInstance, updateMesocycleInstance } from '../api/meso
 import { listWorkoutSessions } from '../api/workoutSessions';
 import { MesocycleInstance } from '../types/mesocycle';
 import { WorkoutSessionListItem } from '../types/workout_session';
+import { weightUnitFromPreferences, weightUnitLabel, WeightUnit } from '../utils/units';
 
 export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -13,7 +14,22 @@ export default function Layout() {
   const [workoutSessions, setWorkoutSessions] = useState<WorkoutSessionListItem[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout, accessToken, isAuthenticated, user } = useAuthStore();
+  const { logout, accessToken, isAuthenticated, user, updatePreferences } = useAuthStore();
+  const [switchingUnit, setSwitchingUnit] = useState(false);
+  const weightUnit = weightUnitFromPreferences(user?.preferences);
+
+  const handleUnitChange = async (unit: WeightUnit) => {
+    if (unit === weightUnit || switchingUnit) return;
+    setSwitchingUnit(true);
+    try {
+      // The server converts every weight already logged. Without that the
+      // numbers keep their value and only change label, turning a 225 lb
+      // squat into a 225 kg one and poisoning every future target.
+      await updatePreferences({ weight_unit: unit });
+    } finally {
+      setSwitchingUnit(false);
+    }
+  };
 
   useEffect(() => {
     if (accessToken) {
@@ -183,6 +199,30 @@ export default function Layout() {
 
             {/* Footer */}
             <div className="px-4 pb-8 pt-4 border-t border-gray-700">
+              {isAuthenticated && (
+                <div className="pb-4 mb-2 border-b border-gray-700">
+                  <div className="text-sm text-gray-400 mb-2">Weight units</div>
+                  <div className="flex gap-2">
+                    {(['lb', 'kg'] as WeightUnit[]).map((unit) => (
+                      <button
+                        key={unit}
+                        onClick={() => handleUnitChange(unit)}
+                        disabled={switchingUnit}
+                        className={`flex-1 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50 ${
+                          weightUnit === unit
+                            ? 'bg-teal-600 text-white'
+                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        }`}
+                      >
+                        {weightUnitLabel(unit)}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Switching converts the weights you've already logged.
+                  </p>
+                </div>
+              )}
               {isAuthenticated ? (
                 <button onClick={handleLogout} className="w-full text-left text-lg text-red-400 hover:text-red-300 py-4 transition-colors">
                   Sign Out

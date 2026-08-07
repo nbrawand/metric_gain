@@ -1,5 +1,7 @@
 """Authentication endpoints — Google OAuth only."""
 
+import logging
+
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -19,8 +21,11 @@ from app.utils.auth import (
     create_refresh_token,
     get_current_user,
 )
-from app.utils.db import apply_update
+from app.utils.db import apply_update, user_weight_unit
 from app.utils.ratelimit import limiter
+from app.services.progression import convert_weight
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -209,6 +214,32 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
     return UserResponse.from_orm(current_user)
 
 
+def _convert_logged_weights(db: Session, user: User, from_unit: str, to_unit: str) -> int:
+    """Rewrite every weight this user has logged into the new unit.
+
+    Weights are stored as the number the lifter typed, so switching units
+    without this would relabel a 225 lb squat as 225 kg — and every future
+    target is computed from that history. Converted values land on a loadable
+    step in the new unit rather than a decimal nobody can put on a bar.
+    """
+    from app.models.workout_session import WorkoutSession, WorkoutSet
+
+    rows = (
+        db.query(WorkoutSet)
+        .join(WorkoutSession, WorkoutSession.id == WorkoutSet.workout_session_id)
+        .filter(WorkoutSession.user_id == user.id)
+        .all()
+    )
+    for workout_set in rows:
+        if workout_set.weight:
+            workout_set.weight = convert_weight(workout_set.weight, from_unit, to_unit)
+        if workout_set.target_weight:
+            workout_set.target_weight = convert_weight(
+                workout_set.target_weight, from_unit, to_unit
+            )
+    return len(rows)
+
+
 @router.patch("/users/me", response_model=UserResponse)
 async def update_current_user(
     updates: UserUpdate,
@@ -216,7 +247,23 @@ async def update_current_user(
     db: Session = Depends(get_db),
 ):
     """Update current authenticated user's profile fields."""
-    apply_update(current_user, updates.model_dump(exclude_unset=True))
+    update_data = updates.model_dump(exclude_unset=True)
+
+    # Catch a unit switch before the new preferences overwrite the old ones
+    previous_unit = user_weight_unit(current_user)
+    apply_update(current_user, update_data)
+
+    if "preferences" in update_data:
+        new_unit = user_weight_unit(current_user)
+        if new_unit != previous_unit:
+            converted = _convert_logged_weights(
+                db, current_user, previous_unit, new_unit
+            )
+            logger.info(
+                "Converted %s logged weights from %s to %s for user=%s",
+                converted, previous_unit, new_unit, current_user.email,
+            )
+
     db.commit()
     db.refresh(current_user)
     return UserResponse.from_orm(current_user)

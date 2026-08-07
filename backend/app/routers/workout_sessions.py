@@ -14,6 +14,7 @@ from app.models.exercise import Exercise
 from app.models.user import User
 from app.models.mesocycle import WorkoutExercise, WorkoutTemplate
 from app.services.progression import (
+    LB,
     DEFAULT_INCREMENT,
     increment_for_equipment,
     is_deload_week,
@@ -36,7 +37,7 @@ from app.schemas.workout_session import (
     AddExerciseRequest,
 )
 from app.utils.auth import get_current_user
-from app.utils.db import apply_update
+from app.utils.db import apply_update, user_weight_unit
 
 
 router = APIRouter(prefix="/workout-sessions", tags=["workout-sessions"])
@@ -142,6 +143,7 @@ def get_workout_session(
         # A deload week must not be progressed. The refresh path recomputes
         # targets for every in-progress session, so without this the recovery
         # week quietly climbed back above the training weeks.
+        unit = user_weight_unit(current_user)
         _, training_weeks = _plan_context(db, workout_session)
         deload = is_deload_week(workout_session.week_number, training_weeks)
 
@@ -158,7 +160,7 @@ def get_workout_session(
         for ws in workout_session.workout_sets:
             # ws.exercise is already joined-loaded, so this costs no query
             increment = increment_for_equipment(
-                ws.exercise.equipment if ws.exercise else None
+                ws.exercise.equipment if ws.exercise else None, unit
             )
             rep_ceiling = rep_ceilings.get(ws.exercise_id)
             prev_exercise_sets = prev_map.get(ws.exercise_id)
@@ -443,6 +445,7 @@ def _add_exercise_sets(
     template,
     total_weeks: int,
     user_id: int,
+    unit: str = LB,
 ) -> None:
     """Create this exercise's sets for one session, sized for that session's week."""
     max_order = (
@@ -490,7 +493,7 @@ def _add_exercise_sets(
     fallback_reps = planned_entries[0].target_reps_max if planned_entries else None
     exercise_row = db.query(Exercise).filter(Exercise.id == exercise_id).first()
     increment = increment_for_equipment(
-        exercise_row.equipment if exercise_row else None
+        exercise_row.equipment if exercise_row else None, unit
     )
     if deload:
         target_weight = compute_deload_weight(prev_weight, increment)
@@ -675,8 +678,10 @@ def add_exercise(
     # Seeded targets, set count and RIR all come from the shared helper, which
     # sizes each session for its own week
     template, total_weeks = _plan_context(db, workout_session)
+    unit = user_weight_unit(current_user)
     _add_exercise_sets(
-        db, workout_session, request.exercise_id, template, total_weeks, current_user.id
+        db, workout_session, request.exercise_id, template, total_weeks,
+        current_user.id, unit,
     )
 
     # Add it to the rest of the block as well
@@ -685,7 +690,8 @@ def add_exercise(
         if request.exercise_id in _session_exercise_ids(db, future.id):
             continue
         _add_exercise_sets(
-            db, future, request.exercise_id, template, total_weeks, current_user.id
+            db, future, request.exercise_id, template, total_weeks,
+            current_user.id, unit,
         )
         updated += 1
 

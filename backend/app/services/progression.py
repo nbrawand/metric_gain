@@ -10,38 +10,77 @@ from typing import Optional, Tuple
 from sqlalchemy.orm import Session
 
 
-# Smallest weight change that is actually loadable, by equipment. Matched as
-# lowercase substrings against Exercise.equipment, which is freeform text and
-# often a combination ("Barbell/Dumbbells", "Cable Machine/Band"), so the first
-# match wins and order matters: the finer increment is listed first, because a
-# combination is only as fine as its finest option.
+# Smallest weight change that is actually loadable, by equipment and unit.
+# Matched as lowercase substrings against Exercise.equipment, which is freeform
+# text and often a combination ("Barbell/Dumbbells", "Cable Machine/Band"). Any
+# fine-equipment keyword wins, because a combination is only as fine as its
+# finest option.
 #
-# Everything in a commercial gym lands on 5 lb — the smallest plate pair is
+# In a pounds gym almost everything lands on 5: the smallest plate pair is
 # 2 x 2.5, dumbbells step in 5s, and selectorised stacks in 5s or 10s. The
-# exceptions are lifts loaded by a single plate or by adding weight to
-# bodyweight, where a lone 2.5 is loadable.
+# exceptions are lifts loaded by a single plate or added to bodyweight, where a
+# lone 2.5 is loadable.
+LB = "lb"
+KG = "kg"
+WEIGHT_UNITS = (LB, KG)
+KG_PER_LB = 0.45359237
+
 DEFAULT_INCREMENT = 5.0
-_EQUIPMENT_INCREMENTS = (
-    ("bodyweight", 2.5),
-    ("pull-up bar", 2.5),
-    ("parallel bars", 2.5),
-    ("plate", 2.5),
-    ("ab wheel", 2.5),
-    ("medicine ball", 2.5),
-    ("band", 2.5),
-    ("other", 2.5),
+# Kilogram gyms load in different steps: the smallest plate pair is 2 x 1.25,
+# so 2.5 kg is the barbell equivalent of 5 lb, and a lone 1.25 is the finest
+# step for anything loaded by a single plate.
+DEFAULT_INCREMENT_KG = 2.5
+
+_FINE_EQUIPMENT = (
+    "bodyweight",
+    "pull-up bar",
+    "parallel bars",
+    "plate",
+    "ab wheel",
+    "medicine ball",
+    "band",
+    "other",
 )
+_FINE_INCREMENT = {LB: 2.5, KG: 1.25}
+_DEFAULT_INCREMENT = {LB: DEFAULT_INCREMENT, KG: DEFAULT_INCREMENT_KG}
 
 
-def increment_for_equipment(equipment: Optional[str]) -> float:
-    """The smallest weight step this equipment can actually be loaded with."""
+def normalize_unit(unit: Optional[str]) -> str:
+    """Fall back to pounds for anything unrecognised."""
+    if unit and unit.lower() in WEIGHT_UNITS:
+        return unit.lower()
+    return LB
+
+
+def increment_for_equipment(equipment: Optional[str], unit: str = LB) -> float:
+    """The smallest weight step this equipment can actually be loaded with.
+
+    Rounding has to happen in the unit the lifter will actually load, which is
+    why this takes the unit rather than converting a pounds answer: 5 lb is
+    2.27 kg, which is not a number any plate rack can produce.
+    """
+    unit = normalize_unit(unit)
     if not equipment:
-        return DEFAULT_INCREMENT
+        return _DEFAULT_INCREMENT[unit]
     text = equipment.lower()
-    for keyword, increment in _EQUIPMENT_INCREMENTS:
+    for keyword in _FINE_EQUIPMENT:
         if keyword in text:
-            return increment
-    return DEFAULT_INCREMENT
+            return _FINE_INCREMENT[unit]
+    return _DEFAULT_INCREMENT[unit]
+
+
+def convert_weight(value: Optional[float], from_unit: str, to_unit: str) -> Optional[float]:
+    """Convert a logged weight between units, landing on a loadable step.
+
+    Used when someone switches their unit preference. Leaving the numbers alone
+    would relabel a 225 lb squat as 225 kg and feed that into every future
+    target.
+    """
+    from_unit, to_unit = normalize_unit(from_unit), normalize_unit(to_unit)
+    if value is None or from_unit == to_unit:
+        return value
+    converted = value * KG_PER_LB if to_unit == KG else value / KG_PER_LB
+    return round_to_increment(converted, _FINE_INCREMENT[to_unit])
 
 
 def round_to_increment(value: float, increment: float) -> float:
@@ -63,7 +102,7 @@ def round_to_nearest_5(value: float) -> float:
     return round_to_increment(value, 5.0)
 
 
-def increments_for_exercises(db: Session, exercise_ids) -> dict:
+def increments_for_exercises(db: Session, exercise_ids, unit: str = LB) -> dict:
     """Map exercise id -> loadable increment, in one query.
 
     Batched because set generation runs per exercise per day per week; looking
@@ -80,7 +119,7 @@ def increments_for_exercises(db: Session, exercise_ids) -> dict:
         .filter(Exercise.id.in_(ids))
         .all()
     )
-    return {row[0]: increment_for_equipment(row[1]) for row in rows}
+    return {row[0]: increment_for_equipment(row[1], unit) for row in rows}
 
 
 def compute_sets_for_week(target_sets: int, increment: float, week: int) -> int:
