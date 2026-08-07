@@ -272,21 +272,28 @@ service worker's `navigateFallback` answers navigations from its precache,
 which is why it went unnoticed. It hits everyone arriving from outside: a
 shared link, a bookmark, and every crawler reading the sitemap.
 
-    **This needs a change in the Render dashboard, it cannot be fixed from the
-    repo.** The frontend is served by Render behind Cloudflare, not by Vercel:
-    responses carry Render's `rndr-id` header. On the static site, add a
-    rewrite rule, Source `/*`, Destination `/index.html`, Action **Rewrite**
-    (not Redirect). That is the SPA fallback every client-routed app needs.
+    The frontend is served by Render behind Cloudflare, not by Vercel:
+    responses carry Render's `rndr-id` header, and the service is
+    `strength-guider` (its onrender.com subdomain serves the same build as the
+    live site). `render.yaml` at the repo root now carries the fix, a rewrite
+    of `/*` to `/index.html`, validated against Render's published schema.
+    It does nothing until the service is under Blueprint management: a
+    Blueprint does not adopt a service just because the file exists. Either
+    generate a Blueprint from the existing services in the dashboard and merge
+    the blocks in, or check every field in the file against the dashboard
+    first, because anything omitted can change on sync. The one-off
+    alternative is the same rule typed into the dashboard: Source `/*`,
+    Destination `/index.html`, Action **Rewrite** (not Redirect).
 
 [ ] **`frontend/vercel.json` is inert and always has been.** Same discovery.
 It was added for security headers and a CSP, and none of it is live: the site
 returns no HSTS, no `X-Frame-Options`, no `Referrer-Policy`, no
 `Permissions-Policy` and no CSP at all, report-only or otherwise. The only
 security header present is `X-Content-Type-Options`, which comes from
-elsewhere. Either move those headers to Render's dashboard (Headers section on
-the static site) or delete the file so it stops implying protection that is not
-there. The `rewrites` block added while diagnosing the 404 is correct config
-for Vercel and does nothing today.
+elsewhere. The header list is ported into `render.yaml`, subject to the
+same Blueprint caveat above; the dashboard's Headers section is the one-off
+alternative. `frontend/vercel.json` is now redundant either way and should
+probably go, it only serves to imply protection that is not there.
 
 
 [x] Self-service account deletion and data export. Writing the privacy policy

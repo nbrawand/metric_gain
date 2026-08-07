@@ -1,0 +1,62 @@
+# Render Blueprint.
+#
+# WHY THIS EXISTS: the frontend is a Render static site, and two things it needs
+# were only ever written in frontend/vercel.json, which Render does not read.
+# Every route except / returns 404 because there is no SPA rewrite, and none of
+# the security headers are served. Both are dashboard settings today. This file
+# is how they live in version control instead.
+#
+# BEFORE SYNCING, READ THIS. A Blueprint does not adopt a service just because
+# the file exists. Either generate a Blueprint from the existing services in the
+# dashboard and merge the routes and headers blocks below into it, which is the
+# safer route, or check every field here against the service's current settings
+# first. Render's docs are explicit: when adding an existing resource, include
+# all configuration options currently set in the dashboard. Anything omitted
+# here that is set there can change on sync. Environment variables are the
+# exception, existing values are retained.
+#
+# The service name is confirmed: strength-guider.onrender.com serves the same
+# build as the live site. The build settings are inferred from the repo and are
+# the ones to check most carefully.
+#
+# The backend is deliberately absent. It is a separate service with a database,
+# env vars and a deploy command, and describing it from guesswork is how a sync
+# breaks production.
+
+services:
+  - name: strength-guider
+    type: web
+    runtime: static
+    rootDir: frontend                      # CHECK against the dashboard
+    buildCommand: npm ci && npm run build  # CHECK
+    staticPublishPath: dist                # CHECK
+
+    routes:
+      # The fix for the 404s. Every client-side route has to fall back to the
+      # app shell, or a direct visit to /how-it-works asks Render for a file
+      # that is not there. Rewrite, not redirect: the URL must not change.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+    headers:
+      - path: /*
+        name: Strict-Transport-Security
+        value: "max-age=31536000; includeSubDomains"
+      - path: /*
+        name: X-Content-Type-Options
+        value: "nosniff"
+      - path: /*
+        name: X-Frame-Options
+        value: "DENY"
+      - path: /*
+        name: Referrer-Policy
+        value: "strict-origin-when-cross-origin"
+      - path: /*
+        name: Permissions-Policy
+        value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+      # Still report-only, and still unverified against a real sign-in.
+      # See frontend/CSP.md before renaming this to the enforcing header.
+      - path: /*
+        name: Content-Security-Policy-Report-Only
+        value: "default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://lh3.googleusercontent.com; font-src 'self' data:; connect-src 'self' https://metric-gain-backend.onrender.com https://accounts.google.com; frame-src https://accounts.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
