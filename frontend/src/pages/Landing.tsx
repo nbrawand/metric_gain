@@ -17,18 +17,31 @@ export default function Landing() {
             <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4">
               Train Smarter. Grow Stronger.
             </h1>
+            {/* The positioning line. Our sets adapt from logged performance;
+                the expensive competitor asks five subjective questions per
+                muscle per session to approximate the same thing. */}
             <p className="text-lg sm:text-xl text-white max-w-2xl mb-3">
-              Your plan. Your progress.
+              It adapts from what you lifted, not from a survey.
             </p>
-            <p className="text-teal-200 max-w-2xl mb-8">
-              Strength Guider turns your training plan into guided workouts: it handles weight targets, RIR, and set counts that adjust from what you actually lift, and lays out every session for the whole block. It works in the gym with no signal at all.
+            <p className="text-teal-200 max-w-2xl mb-6">
+              Strength Guider turns your training plan into guided workouts: it handles weight targets, RIR, and set counts that adjust from what you actually lift, and lays out every session for the whole block. No questionnaires, no guesswork, and it works in the gym with no signal at all.
             </p>
+
+            {/* Price and trial belong here, not in the footer: both are the
+                strongest cards against a competitor at $34.99/mo with no trial */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 justify-center md:justify-start mb-6">
+              <span className="text-white text-2xl font-bold">$4.99<span className="text-base font-medium text-teal-200">/month</span></span>
+              <span className="text-teal-100 text-sm bg-teal-900/60 border border-teal-500 rounded-full px-3 py-1">
+                Free for 5 days — no card up front
+              </span>
+            </div>
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
               <Link
                 to="/login"
                 className="bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 px-8 rounded-lg transition-colors text-lg"
               >
-                Get Started
+                Start Free
               </Link>
               <button
                 onClick={goToHowItWorks}
@@ -65,7 +78,10 @@ export default function Landing() {
         <div className="flex flex-col md:flex-row items-center gap-10">
           <div className="flex-1">
             <p className="text-gray-300 leading-relaxed mb-3">
-              Most apps just log what you did. Strength Guider walks you through every session of a structured training block: you plan how many sets each exercise gets and how volume ramps week over week, and the app generates your full schedule with weight targets and RIR goals. With 115 exercises and ready-made mesocycle templates, you can start training right away or build your own program from scratch.
+              Most apps just log what you did. Strength Guider walks you through every session of a structured training block: it generates your full schedule with weight targets and RIR goals, then adjusts your sets each week from what you actually logged. With <span className="text-white font-medium">140 exercises</span> across 12 muscle groups and <span className="text-white font-medium">16 ready-made blocks</span>, you can start training today or build your own from scratch.
+            </p>
+            <p className="text-gray-300 leading-relaxed mb-3">
+              Every block ends with a deload week. Weights only rise when you hit the last session's targets, and they move in steps your gym can actually load — in pounds or kilograms. Tap any target for the plates and a warmup ramp, and see your estimated strength, weekly volume and best lifts on the Progress page.
             </p>
             <p className="text-gray-300 leading-relaxed">
               Think of it as a knowledgeable training guide that keeps you on a structured plan instead of guesswork, at a fraction of the cost of a personal trainer. Along the way, you learn the science just by using the app.
@@ -150,6 +166,26 @@ export default function Landing() {
             </p>
           </div>
         </div>
+
+        {/* Beginners */}
+        <div className="mt-6 bg-gray-800 rounded-lg border border-gray-700 p-6">
+          <h3 className="text-white font-semibold text-lg mb-2">
+            Good for your first structured block
+          </h3>
+          <p className="text-gray-400 text-sm leading-relaxed">
+            Serious training apps tend to assume you already know what a mesocycle is. Three
+            of the ready-made blocks are built for people who don't yet — including a
+            machines-only one if free weights are still intimidating. Pick one, and the app
+            explains RIR, volume and progression as you go rather than asking you to
+            configure them first.
+          </p>
+          <button
+            onClick={goToHowItWorks}
+            className="mt-3 text-teal-400 hover:text-teal-300 text-sm font-medium underline"
+          >
+            See how it works
+          </button>
+        </div>
       </section>
 
       {/* How It Works */}
@@ -204,6 +240,24 @@ export default function Landing() {
               Read the Full Theory
             </button>
           </div>
+        </div>
+      </section>
+
+      {/* Offline — the clearest head-to-head win, so it gets its own band
+          rather than sitting as one card among four */}
+      <section className="bg-teal-900/30 border-t border-b border-teal-800 py-14 px-4">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-2xl font-bold text-white mb-3">
+            No signal? Train anyway.
+          </h2>
+          <p className="text-gray-300 leading-relaxed mb-3">
+            Your whole block is on the device before you get to the gym. Log every set as
+            normal in a basement, a car park, or anywhere with no bars — nothing waits on
+            the network, and your sets sync themselves the moment you are back online.
+          </p>
+          <p className="text-gray-400 text-sm">
+            Most training apps stop working the moment reception does.
+          </p>
         </div>
       </section>
 

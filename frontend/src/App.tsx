@@ -23,10 +23,16 @@ import { GoogleAuthContext } from './contexts/GoogleAuthContext';
 
 function ConnectivityBanner() {
   const [reachable, setReachable] = useState(getServerReachable);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   useEffect(() => onConnectivityChange(setReachable), []);
 
   if (reachable) return null;
+  // Only people with work to lose need this. A prospect reading the landing
+  // page has nothing queued, and "Can't reach the server" across the top of a
+  // marketing page — which is exactly what a cold backend produces — reads as
+  // a broken product.
+  if (!isAuthenticated) return null;
 
   return (
     <div className="fixed top-0 left-0 right-0 z-[100] bg-red-600 text-white text-center text-sm font-medium py-2 px-4">
@@ -244,19 +250,20 @@ function App() {
     };
   }, []);
 
-  // Wait for the config before mounting the routes: swapping the provider in
-  // afterwards remounts the whole tree and refires every request on the page.
-  if (!configLoaded) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <p className="text-gray-400">Loading...</p>
-      </div>
-    );
-  }
-
+  // Routes mount immediately. Only the login page needs the Google client id,
+  // and gating everything on it meant the public landing page — the one thing a
+  // prospect sees before paying — waited on a backend round trip, with retries.
+  // A cold server turned that into seconds of "Loading..." on a marketing page.
+  //
+  // The provider is always rendered rather than swapped in once the id arrives:
+  // going from no provider to provider is a structural change that remounts the
+  // tree and refires every request on the page. Changing only its clientId prop
+  // leaves the children mounted.
   return (
     <GoogleOAuthProvider clientId={googleClientId ?? ''}>
-      <GoogleAuthContext.Provider value={!!googleClientId}>
+      <GoogleAuthContext.Provider
+        value={{ available: !!googleClientId, loading: !configLoaded }}
+      >
         <AppRoutes />
       </GoogleAuthContext.Provider>
     </GoogleOAuthProvider>

@@ -5,7 +5,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { useAuthStore } from '../stores/authStore';
-import { useGoogleAuthAvailable } from '../contexts/GoogleAuthContext';
+import { useGoogleAuth } from '../contexts/GoogleAuthContext';
 
 export function Login() {
   const navigate = useNavigate();
@@ -15,7 +15,7 @@ export function Login() {
   const location = useLocation();
   const redirectTo =
     (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/';
-  const googleAvailable = useGoogleAuthAvailable();
+  const { available: googleAvailable, loading: googleLoading } = useGoogleAuth();
 
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
@@ -52,6 +52,10 @@ export function Login() {
                 text="signin_with"
               />
             </div>
+          ) : googleLoading ? (
+            /* Still fetching the config. Saying "unavailable" here would turn a
+               slow backend into a visitor who thinks sign-in is broken. */
+            <p className="text-gray-400 text-center text-sm">Loading sign-in…</p>
           ) : (
             <p className="text-gray-400 text-center text-sm">
               Sign-in is unavailable right now. Please check your connection and reload.

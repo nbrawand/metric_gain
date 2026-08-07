@@ -156,36 +156,45 @@ Everything below is visible to people who have not paid. Ordered by leverage.
 
 ### Highest leverage
 
-[ ] Put the price in the hero. $4.99/mo appears once, in the footer. RP is
+[x] Put the price in the hero. $4.99/mo appears once, in the footer. RP is
 $34.99 and price is the single most repeated complaint about them. Being 7x
 cheaper is the strongest card and it is currently buried.
 
-[ ] Sell the free trial above the fold. RP has no free trial at all — only a
+[x] Sell the free trial above the fold. RP has no free trial at all — only a
 money-back guarantee, which requires paying first. "Free for 5 days, no card up
 front" is a structural advantage that appears nowhere near the top. Change the
 CTA from "Get Started" to something that says free.
 
-[ ] State the positioning: *it adapts from what you lifted, not from a survey.*
+[x] State the positioning: *it adapts from what you lifted, not from a survey.*
 RP asks 5 subjective questions per muscle per session (soreness, pump,
 workload, joint pain, disruption); we score the same thing objectively off
 logged sets with zero extra taps. Concrete, checkable, and currently unsaid on
 the landing page.
 
-[ ] Promote offline from one card among four to a headline-level claim. RP's
+[x] Promote offline from one card among four to a headline-level claim. RP's
 most-cited App Store complaint is reportedly needing internet. Clearest
 head-to-head win we have.
 
-[ ] Claim beginners explicitly. Reviewers consistently say RP is too complex for
+[x] Claim beginners explicitly. Reviewers consistently say RP is too complex for
 newcomers. We ship three beginner templates and an educational How It Works
 page, and the landing page never says "good for your first structured block."
 
+Two bugs found while doing the above, both fixed:
+- The whole app, landing page included, blocked on fetching the Google client
+  id from the backend, with retries. A cold server meant seconds of "Loading..."
+  on the one page a prospect sees before paying. Only the login page needs that
+  config; routes now mount immediately.
+- The red "Can't reach the server" banner showed to logged-out visitors, which
+  is exactly what a cold backend produces on the landing page. It now only
+  appears for people who actually have work to lose.
+
 ### Accuracy — the page describes an older product
 
-[ ] Fix the exercise count. It says 115; there are 140. Template count is not
+[x] Fix the exercise count. It says 115; there are 140. Template count is not
 mentioned at all; there are 16. This category competes on countable numbers
 (RP leads with "100+ plans, 250+ videos").
 
-[ ] Advertise what shipped but is not mentioned: deload weeks, kg support,
+[x] Advertise what shipped but is not mentioned: deload weeks, kg support,
 plate calculator and warmup ramps, the Progress page, the optional rest timer,
 per-muscle volume warnings.
 
