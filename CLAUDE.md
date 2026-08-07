@@ -59,13 +59,18 @@ is an extra week or the last planned week, and make the calendar and the
     their old span (the flag is stored, not derived) since they have no
     sessions for that week.
 
-[ ] Warn on unrecoverable volume at plan time. There is no ceiling at all — the
+[x] Warn on unrecoverable volume at plan time. There is no ceiling at all — the
 old auto-volume setup and per-session cap were removed in `2812ab0`/`855754d`.
 Five chest exercises at 3 starting sets +2/week generates 15/25/35/45/55/65
 sets per week; RP's chest MRV is ~22. The volume chart
 (`frontend/src/utils/volume.ts`, `MuscleGroupVolumeChart`) already computes
 these totals for the review step — flag the muscle groups that blow past a
 sane weekly ceiling instead of rendering the number silently.
+    Ceilings live in `volume.ts` as `WEEKLY_SET_CEILINGS`, roughly where the
+    published MRV ranges top out. The review step lists the offending groups
+    (first week crossed, plus the peak) and the chart draws the ceiling as a
+    dashed line with over-cap weeks in amber. It warns rather than blocks — it
+    is still the lifter's plan.
 
 ### The strategic bet
 

@@ -25,7 +25,7 @@ import {
   MesocycleInstanceListItem,
 } from '../types/mesocycle';
 import { Exercise } from '../types/exercise';
-import { computeWeeklyVolumeByMuscleGroup } from '../utils/volume';
+import { computeWeeklyVolumeByMuscleGroup, findVolumeWarnings } from '../utils/volume';
 import MuscleGroupVolumeChart from '../components/MuscleGroupVolumeChart';
 import ClampedNumberInput from '../components/ClampedNumberInput';
 
@@ -372,6 +372,11 @@ export default function Mesocycles() {
     ),
     mesocycleData.weeks
   );
+
+  // Muscle groups the plan drives past a recoverable weekly ceiling. Shown at
+  // the review step rather than blocking creation: it is the lifter's plan, but
+  // rendering 65 chest sets in week 6 without comment reads as endorsement.
+  const reviewVolumeWarnings = findVolumeWarnings(reviewVolumeByMuscleGroup);
 
   const updateWorkoutTemplate = (index: number, field: string, value: string) => {
     const updated = [...workoutTemplates];
@@ -828,6 +833,27 @@ export default function Mesocycles() {
                       Total sets per muscle group each week, based on your starting sets and weekly increases.
                       Go back to adjust, or confirm to create the template.
                     </p>
+
+                    {reviewVolumeWarnings.length > 0 && (
+                      <div className="bg-amber-900/40 border border-amber-600 rounded-lg p-4 mb-4">
+                        <h4 className="text-sm font-semibold text-amber-200 mb-2">
+                          More volume than most lifters recover from
+                        </h4>
+                        <ul className="space-y-1 mb-2">
+                          {reviewVolumeWarnings.map((w) => (
+                            <li key={w.muscleGroup} className="text-sm text-amber-100">
+                              <span className="font-medium">{w.muscleGroup}</span>{' '}
+                              passes ~{w.ceiling} sets/week in week {w.firstExceededWeek},
+                              peaking at {w.peakSets} in week {w.peakWeek}.
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="text-xs text-amber-200/80">
+                          Lower the starting sets or the weekly increase for those exercises,
+                          or drop one. You can still create this template as it is.
+                        </p>
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {Object.entries(reviewVolumeByMuscleGroup)
                         .sort(([a], [b]) => a.localeCompare(b))
