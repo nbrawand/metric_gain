@@ -1,6 +1,6 @@
 """WorkoutSession and WorkoutSet models for tracking actual workout execution."""
 
-from sqlalchemy import Column, Integer, String, Text, Date, DateTime, ForeignKey, Float
+from sqlalchemy import Column, Integer, String, Text, Date, DateTime, ForeignKey, Float, UniqueConstraint
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
@@ -65,6 +65,17 @@ class WorkoutSet(Base):
     progressive overload tracking.
     """
     __tablename__ = "workout_sets"
+
+    # The routers guard set numbering with check-then-insert, which two
+    # concurrent or retried requests can slip past; duplicate numbers corrupt
+    # set add/remove and next week's per-set target matching. The database is
+    # the only place that can actually hold the line.
+    __table_args__ = (
+        UniqueConstraint(
+            "workout_session_id", "exercise_id", "set_number",
+            name="uq_workout_set_number",
+        ),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     workout_session_id = Column(Integer, ForeignKey("workout_sessions.id", ondelete="CASCADE"), nullable=False, index=True)

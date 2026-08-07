@@ -1,6 +1,6 @@
 """User model for authentication."""
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean
+from sqlalchemy import BigInteger, Column, Integer, String, DateTime, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
@@ -35,6 +35,13 @@ class User(Base):
     stripe_subscription_id = Column(String(255), nullable=True)
     subscription_status = Column(String(50), default="trialing", nullable=False)
     trial_ends_at = Column(DateTime(timezone=True), nullable=True)
+
+    # The Stripe event last applied to this user's subscription state. Stripe
+    # neither orders deliveries nor stops retrying for days, so without these
+    # a stale past_due retry could overwrite a newer active status — and
+    # nothing after it would ever put the account right again.
+    stripe_event_id = Column(String(255), nullable=True)
+    stripe_event_created = Column(BigInteger, nullable=True)  # unix seconds
 
     # Future features
     timezone = Column(String(50), default="UTC", nullable=False)

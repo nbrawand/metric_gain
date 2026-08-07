@@ -59,6 +59,28 @@ def _find_user_by_subscription(db: Session, subscription_id: Optional[str]):
         User.stripe_subscription_id == subscription_id
     ).first()
 
+
+def _stale_event(user: User, event) -> bool:
+    """True when this event was already applied, or is older than the last one.
+
+    Stripe neither orders deliveries nor stops retrying for days, so both
+    cases really happen: the same event redelivered after it was processed,
+    and an old past_due arriving after the active that superseded it. Events
+    stamped the same second as the last applied one are let through — their
+    order is unknowable, and dropping them risks discarding a genuinely newer
+    state.
+    """
+    if user.stripe_event_id == event["id"]:
+        return True
+    if user.stripe_event_created is not None and event["created"] < user.stripe_event_created:
+        return True
+    return False
+
+
+def _mark_event_applied(user: User, event) -> None:
+    user.stripe_event_id = event["id"]
+    user.stripe_event_created = event["created"]
+
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
@@ -177,7 +199,9 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 user = db.query(User).filter(User.email == customer_email).first()
                 if user:
                     user.stripe_customer_id = customer_id
-        if user:
+        if user and _stale_event(user, event):
+            logger.info("Skipping stale/duplicate event %s for user=%s", event["id"], user.email)
+        elif user:
             # Never overwrite a stored subscription id with nothing — losing
             # it means later cancellation events can't find this user and
             # their access would never end.
@@ -197,6 +221,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     "Checkout completed with payment_status=%s for user=%s; awaiting payment",
                     payment_status, user.email,
                 )
+            _mark_event_applied(user, event)
             db.commit()
         else:
             logger.error("Webhook checkout.session.completed: no user found for customer=%s", customer_id)
@@ -205,7 +230,9 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         subscription_id = data.get("id")
         stripe_status = data.get("status")
         user = _find_user_by_subscription(db, subscription_id)
-        if user:
+        if user and _stale_event(user, event):
+            logger.info("Skipping stale/duplicate event %s for user=%s", event["id"], user.email)
+        elif user:
             status_map = {
                 "active": "active",
                 "trialing": "trialing",
@@ -224,6 +251,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 )
             else:
                 user.subscription_status = mapped
+                _mark_event_applied(user, event)
                 db.commit()
         else:
             logger.error("Webhook %s: no user for subscription=%s", event_type, subscription_id)
@@ -242,8 +270,11 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 user = db.query(User).filter(
                     User.stripe_customer_id == customer_id
                 ).first()
-        if user:
+        if user and _stale_event(user, event):
+            logger.info("Skipping stale/duplicate event %s for user=%s", event["id"], user.email)
+        elif user:
             user.subscription_status = "past_due"
+            _mark_event_applied(user, event)
             db.commit()
         else:
             logger.error(

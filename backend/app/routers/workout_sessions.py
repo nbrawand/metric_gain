@@ -6,6 +6,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
 from app.models.workout_session import WorkoutSession, WorkoutSet
@@ -476,7 +477,16 @@ def add_exercise(
         )
         db.add(workout_set)
 
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # A concurrent or retried add slipped past the SELECT guard above;
+        # the unique constraint on set numbers is what actually caught it
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="That exercise was just added to this workout. Refresh to see it.",
+        )
     return _reload_session(db, session_id)
 
 
@@ -528,7 +538,16 @@ def add_set_to_exercise(
         target_rir=last_set.target_rir,
     )
     db.add(new_set)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # Two concurrent adds both computed last_set + 1; the unique
+        # constraint on set numbers rejected the second
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A set was just added to this exercise. Refresh to see it.",
+        )
     return _reload_session(db, session_id)
 
 

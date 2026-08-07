@@ -771,3 +771,33 @@ def test_explicit_null_in_a_partial_update_is_ignored(
         json={"status": None},
         headers=auth_headers,
     ).json()["status"] == "in_progress"
+
+
+def test_duplicate_set_numbers_are_rejected_by_the_database(
+    client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance
+):
+    """The routers guard numbering with check-then-insert, which concurrent or
+    retried requests can slip past — the unique constraint is the backstop."""
+    from sqlalchemy.exc import IntegrityError
+
+    from app.models.workout_session import WorkoutSet
+    from tests.conftest import TestingSessionLocal
+
+    db = TestingSessionLocal()
+    try:
+        existing = db.query(WorkoutSet).first()
+        assert existing is not None
+        duplicate = WorkoutSet(
+            workout_session_id=existing.workout_session_id,
+            exercise_id=existing.exercise_id,
+            set_number=existing.set_number,
+            order_index=0,
+            weight=0,
+            reps=0,
+        )
+        db.add(duplicate)
+        with pytest.raises(IntegrityError):
+            db.commit()
+        db.rollback()
+    finally:
+        db.close()

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { get, post } from '../api/client';
 
@@ -11,6 +11,17 @@ interface AdminUser {
   is_admin: boolean;
 }
 
+// Mirrors the statuses the backend accepts in set-subscription, so a status a
+// user can be put into is always a status they can be found by.
+const STATUS_FILTERS: { value: string; label: string }[] = [
+  { value: 'all', label: 'All statuses' },
+  { value: 'active', label: 'Active' },
+  { value: 'trialing', label: 'Trialing' },
+  { value: 'past_due', label: 'Past due' },
+  { value: 'canceled', label: 'Canceled' },
+  { value: 'none', label: 'None' },
+];
+
 export default function Admin() {
   const { accessToken } = useAuthStore();
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -19,10 +30,38 @@ export default function Admin() {
   const [success, setSuccess] = useState<string | null>(null);
   const [grantEmail, setGrantEmail] = useState('');
   const [grantDays, setGrantDays] = useState(30);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
     loadUsers();
   }, [accessToken]);
+
+  // Counts come off the unfiltered list so the dropdown keeps reading as a
+  // summary of the whole user base rather than of whatever is on screen
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: users.length };
+    for (const u of users) {
+      counts[u.subscription_status] = (counts[u.subscription_status] || 0) + 1;
+    }
+    return counts;
+  }, [users]);
+
+  const visibleUsers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return users.filter((u) => {
+      if (statusFilter !== 'all' && u.subscription_status !== statusFilter) return false;
+      if (!query) return true;
+      // Email is searched alongside the name because Google does not always
+      // give us one — name-only search would make those users unfindable
+      return (
+        (u.full_name?.toLowerCase().includes(query) ?? false) ||
+        u.email.toLowerCase().includes(query)
+      );
+    });
+  }, [users, search, statusFilter]);
+
+  const isFiltered = search.trim() !== '' || statusFilter !== 'all';
 
   const loadUsers = async () => {
     if (!accessToken) return;
@@ -150,6 +189,58 @@ export default function Admin() {
         </div>
       </div>
 
+      {/* Filters */}
+      <div className="bg-gray-800 rounded-lg p-4 mb-4">
+        <div className="flex gap-2 items-end flex-wrap">
+          <div className="flex-1 min-w-[200px]">
+            <label htmlFor="user-search" className="text-xs text-gray-400 block mb-1">
+              Search
+            </label>
+            <input
+              id="user-search"
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Name or email"
+              className="w-full bg-gray-700 text-white placeholder-gray-500 rounded px-3 py-2 text-sm"
+            />
+          </div>
+          <div className="min-w-[160px]">
+            <label htmlFor="status-filter" className="text-xs text-gray-400 block mb-1">
+              Status
+            </label>
+            <select
+              id="status-filter"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full bg-gray-700 text-white rounded px-3 py-2 text-sm"
+            >
+              {STATUS_FILTERS.map((f) => (
+                <option key={f.value} value={f.value}>
+                  {f.label} ({statusCounts[f.value] || 0})
+                </option>
+              ))}
+            </select>
+          </div>
+          {isFiltered && (
+            <button
+              onClick={() => {
+                setSearch('');
+                setStatusFilter('all');
+              }}
+              className="bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm font-medium py-2 px-4 rounded transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+        <p className="text-xs text-gray-500 mt-2">
+          {isFiltered
+            ? `Showing ${visibleUsers.length} of ${users.length} users`
+            : `${users.length} ${users.length === 1 ? 'user' : 'users'}`}
+        </p>
+      </div>
+
       {/* Users table */}
       <div className="bg-gray-800 rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
@@ -163,7 +254,14 @@ export default function Admin() {
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
+              {visibleUsers.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-500">
+                    No users match these filters.
+                  </td>
+                </tr>
+              )}
+              {visibleUsers.map((u) => (
                 <tr key={u.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                   <td className="px-4 py-3">
                     <div className="text-sm text-white">{u.email}</div>
