@@ -265,16 +265,28 @@ visit. SEO and content-marketing value going unused.
 
 ## Open
 
-[x] Every route except `/` returned 404 on direct navigation in production.
-Found while checking the SEO work had actually deployed: `/how-it-works`,
-`/privacy`, `/terms` and `/login` all 404, and only `/` served the app. Vercel
-serves `dist` statically and `frontend/vercel.json` had no SPA fallback, so any
-path without a matching file fell through. Installed users never saw it,
-because the service worker's `navigateFallback` answers navigations from cache,
-which is exactly why it went unnoticed. Anyone following a shared link, and
-every crawler reading the sitemap that was just published, got a 404. Fixed
-with a rewrite to `/index.html`, excluding `/assets/` so a stale client asking
-for a deleted chunk still gets a real 404 rather than HTML.
+[ ] **Every route except `/` returns 404 on direct navigation in production.**
+`/how-it-works`, `/privacy`, `/terms` and `/login` all 404 against the live
+site; only `/` serves the app. Installed users never see it, because the
+service worker's `navigateFallback` answers navigations from its precache,
+which is why it went unnoticed. It hits everyone arriving from outside: a
+shared link, a bookmark, and every crawler reading the sitemap.
+
+    **This needs a change in the Render dashboard, it cannot be fixed from the
+    repo.** The frontend is served by Render behind Cloudflare, not by Vercel:
+    responses carry Render's `rndr-id` header. On the static site, add a
+    rewrite rule, Source `/*`, Destination `/index.html`, Action **Rewrite**
+    (not Redirect). That is the SPA fallback every client-routed app needs.
+
+[ ] **`frontend/vercel.json` is inert and always has been.** Same discovery.
+It was added for security headers and a CSP, and none of it is live: the site
+returns no HSTS, no `X-Frame-Options`, no `Referrer-Policy`, no
+`Permissions-Policy` and no CSP at all, report-only or otherwise. The only
+security header present is `X-Content-Type-Options`, which comes from
+elsewhere. Either move those headers to Render's dashboard (Headers section on
+the static site) or delete the file so it stops implying protection that is not
+there. The `rewrites` block added while diagnosing the 404 is correct config
+for Vercel and does nothing today.
 
 
 [x] Self-service account deletion and data export. Writing the privacy policy
@@ -334,10 +346,12 @@ the pin, but nothing tests the live API surface (Customer, Subscription,
 checkout, billing_portal) because those call Stripe. One test-mode checkout and
 one portal visit would settle it.
 
-[ ] Promote the CSP from report-only. It protects nothing today. Needs one real
-sign-in with the browser console open to catch what Google's GSI widget
-actually reaches for, then swap the header name, steps in `frontend/CSP.md`.
-Until then, tokens in localStorage mean an XSS is full account takeover.
+[ ] Promote the CSP from report-only. It protects nothing today, and it turns
+out it is not even being served: it lives in `frontend/vercel.json`, and the
+site is on Render. So this now starts with getting the headers deployed at all,
+then one real sign-in with the browser console open to catch what Google's GSI
+widget reaches for, then enforcing. Steps in `frontend/CSP.md`. Until then,
+tokens in localStorage mean an XSS is full account takeover.
 
 [x] Tests for WorkoutExecution.tsx and Mesocycles.tsx (1,600 and 1,141 lines,
 no direct coverage). Both need refactoring to be testable; the components and

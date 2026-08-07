@@ -1,5 +1,11 @@
 # Content Security Policy
 
+> **None of this is live.** The site is served by Render, not Vercel, so
+> `vercel.json` is not read by anything. Verified against production: the only
+> security header that arrives is `X-Content-Type-Options`. The headers below
+> have to be configured on the Render static site before any of what follows
+> means anything.
+
 `vercel.json` ships the CSP as **`Content-Security-Policy-Report-Only`**, not as an
 enforcing policy. The other headers there (HSTS, `X-Frame-Options`,
 `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`) *are* enforcing -

@@ -94,6 +94,18 @@ cd frontend
 npm run lint
 ```
 
+### Where this is actually deployed
+
+The backend and **the frontend** are both on Render, behind Cloudflare.
+Responses carry Render's `rndr-id` header, which is how to check.
+
+`frontend/vercel.json` is therefore **not read by anything**. It holds security
+headers, a report-only CSP and an SPA rewrite, and none of it is in effect.
+Confirmed against production: the only security header the site returns is
+`X-Content-Type-Options`. Anything that has to be true of the served response,
+headers, redirects, the SPA fallback, belongs in the Render static site's
+settings, not in that file.
+
 ### CI
 
 `.github/workflows/ci.yml` runs on every push to `main`/`develop` and on every
