@@ -127,7 +127,7 @@ export default function Mesocycles() {
       setExercises(exercisesData);
       setError(null);
     } catch (err) {
-      setError('Failed to load data');
+      setError('Could not load your templates. Please try again.');
       console.error('Error loading data:', err);
     } finally {
       setLoading(false);
@@ -160,7 +160,9 @@ export default function Mesocycles() {
 
     try {
       await deleteMesocycle(id, accessToken);
-      setMesocycles(mesocycles.filter((m) => m.id !== id));
+      // Functional update: a second delete started while this one was in
+      // flight used to filter the pre-delete list and put the first one back.
+      setMesocycles((prev) => prev.filter((m) => m.id !== id));
     } catch (err: any) {
       alert(err?.detail || "Could not delete that mesocycle template.");
       console.error('Error deleting mesocycle:', err);
@@ -267,7 +269,7 @@ export default function Mesocycles() {
     e.preventDefault();
 
     if (!accessToken) {
-      alert('Not authenticated');
+      alert('Your session has expired. Please sign in again.');
       return;
     }
 
@@ -293,7 +295,7 @@ export default function Mesocycles() {
       resetForm();
       loadData();
     } catch (err: any) {
-      const errorMessage = err?.detail || 'Failed to create mesocycle';
+      const errorMessage = err?.detail || 'Could not create the template. Please try again.';
       alert(errorMessage);
       console.error('Error creating mesocycle:', err);
     } finally {
@@ -328,7 +330,7 @@ export default function Mesocycles() {
     // The build fields are hidden during review, so validate here — the browser
     // cannot report a constraint violation on an input it cannot focus.
     if (!mesocycleData.name.trim()) {
-      alert('Please enter a mesocycle name');
+      alert('Please enter a template name');
       return;
     }
     if (workoutTemplates.length === 0) {
@@ -368,8 +370,17 @@ export default function Mesocycles() {
 
   const addExerciseToWorkout = (workoutIndex: number) => {
     const updated = [...workoutTemplates];
+    const alreadyUsed = new Set(updated[workoutIndex].exercises.map((e) => e.exercise_id));
+    // A day may not list the same exercise twice; the backend rejects the
+    // whole template for it, and defaulting every new row to exercises[0]
+    // walked straight into that on the second click.
+    const nextExercise = exercises.find((ex) => !alreadyUsed.has(ex.id));
+    if (!nextExercise) {
+      setError('Every exercise is already in this day.');
+      return;
+    }
     updated[workoutIndex].exercises.push({
-      exercise_id: exercises[0]?.id || 1,
+      exercise_id: nextExercise.id,
       order_index: updated[workoutIndex].exercises.length,
       target_sets: 3,
       weekly_set_increment: 0.5,
@@ -423,7 +434,7 @@ export default function Mesocycles() {
   const muscleGroups = [...new Set(exercises.map(ex => ex.muscle_group))].sort();
 
   if (loading) {
-    return <div className="p-8 text-gray-300 bg-gray-900 min-h-screen">Loading mesocycles...</div>;
+    return <div className="p-8 text-gray-300 bg-gray-900 min-h-screen">Loading templates...</div>;
   }
 
   return (
@@ -534,7 +545,7 @@ export default function Mesocycles() {
                           : 'bg-teal-600 hover:bg-teal-700 text-white'
                       }`}
                     >
-                      {hasActiveInstance ? 'Mesocycle Already Active' : 'Start Instance'}
+                      {hasActiveInstance ? 'Finish Your Current Mesocycle First' : 'Start Mesocycle'}
                     </button>
                     <button
                       onClick={(e) => {
@@ -678,7 +689,7 @@ export default function Mesocycles() {
                   {/* Start from Previous */}
                   {completedForTemplate.length > 0 && (
                     <div className="border-t border-gray-700 pt-4">
-                      <h3 className="text-sm font-medium text-gray-300 mb-3">Start from Previous Instance</h3>
+                      <h3 className="text-sm font-medium text-gray-300 mb-3">Start from a Previous Mesocycle</h3>
                       <p className="text-xs text-gray-400 mb-3">
                         Seed week 1 target weights and reps from a previous run of this template.
                       </p>
@@ -694,7 +705,7 @@ export default function Mesocycles() {
                             }}
                             className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
                           >
-                            <option value="">Select an instance...</option>
+                            <option value="">Select a mesocycle...</option>
                             {completedForTemplate
                               .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
                               .slice(0, 5)
@@ -732,7 +743,7 @@ export default function Mesocycles() {
                               ))}
                             </select>
                             <p className="text-xs text-gray-500 mt-1 italic">
-                              Week 1 target weights and reps are seeded from this week's results.
+                              Week 1 target weights and reps are seeded from the week you pick above.
                             </p>
                           </div>
                         )}
@@ -822,7 +833,7 @@ export default function Mesocycles() {
                 <div className="space-y-4 mb-6">
                   <div>
                     <label className="block text-gray-300 text-sm font-medium mb-2">
-                      Mesocycle Name *
+                      Template Name *
                     </label>
                     <input
                       type="text"

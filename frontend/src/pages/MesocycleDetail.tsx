@@ -117,7 +117,7 @@ export default function MesocycleDetail() {
         const exercisesData = await getExercises({ limit: 500 }, accessToken);
         setExercises(exercisesData);
       } catch {
-        alert('Failed to load exercises');
+        alert('Could not load the exercise list. Please try again.');
         return;
       }
     }
@@ -139,7 +139,7 @@ export default function MesocycleDetail() {
     // Validate here: there is no <form>, so the `required` attributes on these
     // inputs never run
     if (!editData.name.trim()) {
-      alert('Please enter a mesocycle name');
+      alert('Please enter a template name');
       return;
     }
     if (editTemplates.length === 0) {
@@ -185,7 +185,7 @@ export default function MesocycleDetail() {
       await loadMesocycle();
     } catch (err: any) {
       // Surface the reason — e.g. the template is locked while an instance runs
-      alert(err?.detail || 'Failed to save changes');
+      alert(err?.detail || 'Could not save your changes. Please try again.');
       console.error('Error saving mesocycle:', err);
     } finally {
       setSaving(false);
@@ -201,7 +201,7 @@ export default function MesocycleDetail() {
       await deleteMesocycle(parseInt(id), accessToken);
       navigate('/mesocycles');
     } catch (err) {
-      alert('Failed to delete mesocycle');
+      alert('Could not delete that template. Please try again.');
       console.error('Error deleting mesocycle:', err);
     }
   };
@@ -270,12 +270,21 @@ export default function MesocycleDetail() {
 
   const addExerciseToWorkout = (workoutIndex: number) => {
     const updated = [...editTemplates];
+    const alreadyUsed = new Set(updated[workoutIndex].exercises.map((e) => e.exercise_id));
+    // A day may not list the same exercise twice; the backend rejects the whole
+    // template for it, and defaulting every new row to exercises[0] walked
+    // straight into that on the second click.
+    const nextExercise = exercises.find((ex) => !alreadyUsed.has(ex.id));
+    if (!nextExercise) {
+      setError('Every exercise is already in this day.');
+      return;
+    }
     updated[workoutIndex] = {
       ...updated[workoutIndex],
       exercises: [
         ...updated[workoutIndex].exercises,
         {
-          exercise_id: exercises[0]?.id || 1,
+          exercise_id: nextExercise.id,
           order_index: updated[workoutIndex].exercises.length,
           target_sets: 3,
           weekly_set_increment: 0.5,
@@ -372,7 +381,7 @@ export default function MesocycleDetail() {
               <button
                 onClick={() => navigate('/mesocycles')}
                 className="text-gray-400 hover:text-white transition border border-gray-600 rounded-lg p-2 hover:border-gray-400"
-                title="Back to Mesocycles"
+                title="Back to Mesocycle Templates"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -512,7 +521,7 @@ export default function MesocycleDetail() {
         {/* Workout Templates */}
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-white">Workout Templates</h2>
+            <h2 className="text-2xl font-bold text-white">Training Days</h2>
             {editing && (
               <button
                 type="button"
@@ -528,7 +537,7 @@ export default function MesocycleDetail() {
             /* Edit mode - editable workout templates */
             editTemplates.length === 0 ? (
               <div className="bg-gray-800 rounded-lg shadow-xl p-6 text-center text-gray-400 border border-gray-700">
-                No workout templates. Click "+ Add Workout Day" to add one.
+                No training days yet. Click "+ Add Workout Day" to add one.
               </div>
             ) : (
               editTemplates.map((workout, dayIndex) => (
@@ -754,7 +763,7 @@ export default function MesocycleDetail() {
             /* View mode - read-only workout templates */
             mesocycle.workout_templates.length === 0 ? (
               <div className="bg-gray-800 rounded-lg shadow-xl p-6 text-center text-gray-400 border border-gray-700">
-                No workout templates defined
+                No training days yet
               </div>
             ) : (
               mesocycle.workout_templates.map((workout, index) => (

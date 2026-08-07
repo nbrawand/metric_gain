@@ -52,7 +52,7 @@ export const useAuthStore = create<AuthState>()(
         } catch (err) {
           const apiError = err as ApiError;
           set({
-            error: apiError.detail || 'Google login failed',
+            error: apiError.detail || 'Google sign-in failed. Please try again.',
             isLoading: false,
           });
           throw err;
@@ -124,13 +124,13 @@ export const useAuthStore = create<AuthState>()(
               // Refresh failed, logout
               get().logout();
               set({
-                error: 'Session expired. Please log in again.',
+                error: 'Your session has expired. Please sign in again.',
                 isLoading: false,
               });
             }
           } else {
             set({
-              error: apiError.detail || 'Failed to fetch user',
+              error: apiError.detail || 'Could not load your account. Please try again.',
               isLoading: false,
             });
           }

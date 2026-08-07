@@ -26,9 +26,14 @@ const MAX_SYNC_ATTEMPTS = 25;
 // account signing in on the same device must not sync — or discard — the
 // previous one's unsent sets. Entries with no owner predate this and are
 // treated as the current user's so nothing already queued is stranded.
+// When the user record hasn't loaded yet there is nobody to exclude, so every
+// entry counts as the current user's. Comparing against undefined instead hid
+// the whole queue, which let "Complete Workout" write zeros over queued sets.
 const currentUserId = () => useAuthStore.getState().user?.id;
-const belongsToCurrentUser = (item: PendingSetSave) =>
-  item.userId === undefined || item.userId === currentUserId();
+const belongsToCurrentUser = (item: PendingSetSave) => {
+  const userId = currentUserId();
+  return userId === undefined || item.userId === undefined || item.userId === userId;
+};
 
 interface OfflineSyncState {
   pendingItems: Record<string, PendingSetSave>;

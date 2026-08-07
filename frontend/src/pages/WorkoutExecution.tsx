@@ -9,6 +9,7 @@ import { getMesocycleInstance, updateMesocycleInstance, updateInstanceExerciseNo
 import { WorkoutSession, WorkoutSet, WorkoutSessionListItem } from '../types/workout_session';
 import { Exercise } from '../types/exercise';
 import { MesocycleInstance } from '../types/mesocycle';
+import { computeTargetRir } from '../utils/volume';
 
 // Local state for tracking input values before they're saved
 type SetInputValues = Record<number, { weight: string; reps: string }>;
@@ -294,7 +295,21 @@ export default function WorkoutExecution() {
       setLoading(true);
       const sessionData = await getWorkoutSession(parseInt(sessionId), accessToken);
       if (isStale()) return;
+
+      // Load the instance and its sessions before committing any of it. Showing
+      // the new session next to the previous one's instance pointed "Complete
+      // Workout" and "End Mesocycle" at the wrong mesocycle entirely.
+      const instanceData = await getMesocycleInstance(sessionData.mesocycle_instance_id, accessToken);
+      if (isStale()) return;
+      const sessions = await listWorkoutSessions(
+        { mesocycle_instance_id: sessionData.mesocycle_instance_id, limit: 500 },
+        accessToken
+      );
+      if (isStale()) return;
+
       setSession(sessionData);
+      setInstance(instanceData);
+      setAllSessions(sessions);
 
       // Sets saved while offline are only in the queue, not on the server yet.
       // Without folding them back in, a reload shows them unlogged at 0 and
@@ -317,26 +332,13 @@ export default function WorkoutExecution() {
         });
       }
 
-      // Load mesocycle instance data
-      const instanceData = await getMesocycleInstance(sessionData.mesocycle_instance_id, accessToken);
-      if (isStale()) return;
-      setInstance(instanceData);
-
-      // Load all sessions for this instance
-      const sessions = await listWorkoutSessions(
-        { mesocycle_instance_id: sessionData.mesocycle_instance_id, limit: 500 },
-        accessToken
-      );
-      if (isStale()) return;
-      setAllSessions(sessions);
-
       setError(null);
     } catch (err: any) {
       if (isStale()) return;
       setError(
         err?.status === 0
           ? "You're offline, so this workout can't be opened right now."
-          : 'Failed to load workout session'
+          : 'Could not load this workout. Please try again.'
       );
       console.error('Error loading workout session:', err);
     } finally {
@@ -356,6 +358,10 @@ export default function WorkoutExecution() {
         [field]: value,
       },
     }));
+
+    // A queued offline save holds the old numbers. Left in the queue it would
+    // drain later, overwrite what was just typed, and mark the set saved again.
+    if (session) removeForSet(session.id, setId);
 
     // Editing a saved set clears its check to show the change is unsaved. The
     // server keeps the last saved value until the user saves again — zeroing it
@@ -436,9 +442,7 @@ export default function WorkoutExecution() {
         setLoggedSetIds((prev) => new Set(prev).add(setId));
       } else {
         console.error('Error logging set:', err);
-        const detail = err?.detail || err?.message || 'Unknown error';
-        const errStatus = err?.status || err?.response?.status || '';
-        setError(`Save failed: ${detail}${errStatus ? ` (${errStatus})` : ''}`);
+        setError(err?.detail || 'Could not save that set. Please try again.');
       }
     } finally {
       setSavingSetIds((prev) => {
@@ -535,9 +539,10 @@ export default function WorkoutExecution() {
     if (unloggedSetIds.length > 0) {
       setSavingSetIds(new Set(unloggedSetIds));
 
-      try {
-        await Promise.all(
-          unloggedSetIds.map(async (setId) => {
+      // allSettled, not all: one failure used to leave every set that did save
+      // rendering as unsaved
+      const outcomes = await Promise.allSettled(
+        unloggedSetIds.map(async (setId) => {
             const weight = Math.max(0, parseFloat(inputValues[setId]?.weight || '0') || 0);
             const reps = Math.floor(Math.max(0, parseFloat(inputValues[setId]?.reps || '0') || 0));
             const setData = { weight, reps, skipped: (weight === 0 && reps === 0) ? 1 : 0 as 0 | 1 };
@@ -551,19 +556,21 @@ export default function WorkoutExecution() {
               }
             }
           })
-        );
-        setLoggedSetIds(prev => {
-          const next = new Set(prev);
-          unloggedSetIds.forEach(id => next.add(id));
-          return next;
-        });
-      } catch (err) {
-        console.error("Error saving sets:", err);
-        setSavingSetIds(new Set());
-        setError("Could not save some sets. Fix them individually, then finish again.");
+      );
+      setSavingSetIds(new Set());
+
+      const saved = unloggedSetIds.filter((_, i) => outcomes[i].status === 'fulfilled');
+      setLoggedSetIds(prev => {
+        const next = new Set(prev);
+        saved.forEach(id => next.add(id));
+        return next;
+      });
+
+      if (outcomes.some(o => o.status === 'rejected')) {
+        const failure = outcomes.find(o => o.status === 'rejected') as PromiseRejectedResult;
+        console.error('Error saving sets:', failure.reason);
+        setError('Could not save some sets. Fix them individually, then finish again.');
         return;
-      } finally {
-        setSavingSetIds(new Set());
       }
     }
 
@@ -641,12 +648,34 @@ export default function WorkoutExecution() {
     return foundSession?.id || null;
   };
 
+  // Typed-but-unsaved numbers only live in inputValues, and loading another
+  // session drops every entry that doesn't belong to it. Leaving silently threw
+  // the numbers away with nothing on screen to say so.
+  const hasUnsavedInput = (): boolean =>
+    !!session &&
+    session.workout_sets.some((s) => {
+      if (loggedSetIds.has(s.id)) return false;
+      const typed = inputValues[s.id];
+      if (!typed) return false;
+      const weight = parseFloat(typed.weight || '0') || 0;
+      const reps = parseFloat(typed.reps || '0') || 0;
+      return weight !== s.weight || reps !== s.reps;
+    });
+
   const handleCalendarCellClick = async (weekNum: number, dayNum: number) => {
     const sessId = getSessionId(weekNum, dayNum);
-    if (sessId) {
-      navigate(`/workout/${sessId}`);
+    if (!sessId || String(sessId) === sessionId) {
       setShowCalendar(false);
+      return;
     }
+    if (
+      hasUnsavedInput() &&
+      !confirm('This workout has weights or reps you have not saved yet. Leave anyway and lose them?')
+    ) {
+      return;
+    }
+    navigate(`/workout/${sessId}`);
+    setShowCalendar(false);
   };
 
   const getWeightRecommendation = (set: WorkoutSet): string => {
@@ -758,7 +787,6 @@ export default function WorkoutExecution() {
     const targetOrderIndex = exercises[targetIdx].orderIndex;
     const targetExerciseId = exercises[targetIdx].id;
 
-    const previousSession = session;
     // Swap order_index in local state immediately
     setSession(prev => {
       if (!prev) return prev;
@@ -783,10 +811,11 @@ export default function WorkoutExecution() {
       }));
     } catch (err: any) {
       console.error('Error reordering exercises:', err);
-      // Put the order back: leaving the optimistic swap on screen next to a
-      // failure message told the user two different things
-      setSession(previousSession);
+      // These are independent PATCHes, so some have already landed. Only the
+      // server knows the real order now — a local rollback would put an order
+      // on screen that isn't stored anywhere.
       setError(err?.detail || 'Could not reorder exercises. Please try again.');
+      await loadWorkoutSession();
     }
   };
 
@@ -837,7 +866,6 @@ export default function WorkoutExecution() {
       });
     });
 
-    const previousSession = session;
     // Update local state immediately
     setSession(prev => {
       if (!prev) return prev;
@@ -862,8 +890,8 @@ export default function WorkoutExecution() {
       ));
     } catch (err: any) {
       console.error('Error reordering muscle groups:', err);
-      setSession(previousSession);
       setError(err?.detail || 'Could not reorder muscle groups. Please try again.');
+      await loadWorkoutSession();
     }
   };
 
@@ -891,7 +919,7 @@ export default function WorkoutExecution() {
   if (!session || !instance || !mesocycle) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 px-6 text-center">
-        <p className="text-red-400">{error || "Workout not found"}</p>
+        <p className="text-red-400">{error || "This workout could not be opened"}</p>
         <div className="flex gap-3">
           <button
             onClick={() => loadWorkoutSession()}
@@ -1303,12 +1331,8 @@ export default function WorkoutExecution() {
                             {set.reps === 0 && (() => {
                               // Prefer the RIR stored on the set: that is the plan the
                               // backend generated, and recomputing it here can disagree.
-                              const totalWeeks = instanceWeeks;
-                              const weekRir = set.target_rir ?? (
-                                totalWeeks <= 1
-                                  ? 0
-                                  : Math.round(3 * (totalWeeks - session.week_number) / (totalWeeks - 1))
-                              );
+                              const weekRir =
+                                set.target_rir ?? computeTargetRir(session.week_number, instanceWeeks);
                               return (
                                 <div className="text-xs text-teal-400 text-center mt-1">
                                   {set.target_reps
@@ -1497,7 +1521,7 @@ export default function WorkoutExecution() {
 
               <div>
                 <p className="font-medium text-white mb-1">What is RIR?</p>
-                <p>3 RIR = stop when you think you can do only 3 more reps at the end of your set. 0 RIR = you couldn't do another rep. Each week the RIR drops so you gradually push harder.</p>
+                <p>3 RIR = stop when you think you can do only 3 more reps at the end of your set. 0 RIR = you couldn't do another rep. The RIR target steps down over the block, so you gradually push harder.</p>
               </div>
 
               <div>
@@ -1538,7 +1562,7 @@ export default function WorkoutExecution() {
 
               <div>
                 <p className="font-medium text-white mb-1">What is RIR?</p>
-                <p>3 RIR = stop when you think you can do only 3 more reps at the end of your set. 0 RIR = you couldn't do another rep. Each week the RIR drops so you gradually push harder.</p>
+                <p>3 RIR = stop when you think you can do only 3 more reps at the end of your set. 0 RIR = you couldn't do another rep. The RIR target steps down over the block, so you gradually push harder.</p>
               </div>
 
               <div>
@@ -1574,7 +1598,7 @@ export default function WorkoutExecution() {
             <div className="space-y-3 text-sm text-gray-300">
               <p>Tap the square to save your weight and reps to the server.</p>
               <p>A teal checkmark means the set is saved. Editing weight or reps clears the checkmark so you can re-save.</p>
-              <p>Pressing "Complete Workout" auto-saves any remaining unsaved sets before finishing.</p>
+              <p>Tapping "Complete Workout" auto-saves any remaining unsaved sets before finishing.</p>
             </div>
 
             <button

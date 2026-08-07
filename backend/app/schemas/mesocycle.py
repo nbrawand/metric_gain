@@ -15,7 +15,7 @@ class WorkoutExerciseBase(BaseModel):
     exercise_id: int
     order_index: int = Field(0, ge=0)
     target_sets: int = Field(3, ge=1, le=10)  # Week-1 starting sets
-    weekly_set_increment: float = Field(0.0, ge=0, le=3)  # Sets added per week
+    weekly_set_increment: float = Field(0.0, ge=0, le=2)  # Sets added per week
     target_reps_min: int = Field(8, ge=1, le=100)  # Default 8 reps
     target_reps_max: int = Field(12, ge=1, le=100)  # Default 12 reps
     starting_rir: int = Field(3, ge=0, le=5)  # Default 3 RIR

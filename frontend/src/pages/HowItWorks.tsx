@@ -37,7 +37,7 @@ export default function HowItWorks() {
             <div>
               <h3 className="text-white font-medium mb-1">Create a Mesocycle Template</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Go to the Mesocycles page and create a template. Choose how many days per week you would like to train and how many weeks the block will last, then assign exercises to each training day. For each exercise, set a starting set count and how many sets to add per week. Before confirming, review bar charts of your planned weekly volume per muscle group. You can start from a pre-built template or create your own.
+                Go to the Mesocycles page and create a template. Choose how many days per week you would like to train and how many weeks the block will last, then assign exercises to each training day. For each exercise, set a starting set count and the weekly increase. Before confirming, review bar charts of your planned weekly volume per muscle group. You can start from a pre-built template or create your own.
               </p>
             </div>
           </div>
@@ -46,9 +46,9 @@ export default function HowItWorks() {
           <div className="flex gap-4">
             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center text-white font-bold text-sm">2</div>
             <div>
-              <h3 className="text-white font-medium mb-1">Start an Instance</h3>
+              <h3 className="text-white font-medium mb-1">Start a Mesocycle</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Once your template is ready, start a mesocycle instance to generate your training schedule. Every session is created up front from your plan, with set counts increasing each week exactly as you configured.
+                Once your template is ready, start a mesocycle from it to generate your training schedule. Every session is created up front from your plan, with set counts increasing each week exactly as you configured.
               </p>
             </div>
           </div>
@@ -98,10 +98,10 @@ export default function HowItWorks() {
           Training in structured blocks helps ensure that each session has a clear purpose. It also helps balance training stimulus with recovery, reducing the risk of doing too little to see progress or too much to recover from.
         </p>
         <p className="text-gray-300 leading-relaxed mb-3">
-          Intensity also progresses across the mesocycle through RIR (Reps In Reserve) targets. Week one begins at 3 RIR, a moderate effort level that allows for technique focus and volume accumulation. Each subsequent week, the target RIR decreases, and by the final week the target reaches 0 RIR (failure).
+          Intensity also progresses across the mesocycle through RIR (Reps In Reserve) targets. Week one begins at 3 RIR, a moderate effort level that allows for technique focus and volume accumulation. Each week the target steps down toward 0 RIR (failure) in the final week. In longer blocks the same RIR carries across two weeks, since the ramp is spread evenly over however many weeks you chose.
         </p>
         <p className="text-gray-300 leading-relaxed">
-          Volume progresses the same way: each exercise starts at the set count you chose and increases by your chosen weekly amount, so each week builds on the last.
+          Volume progresses the same way: each exercise starts at the set count you chose and increases by your chosen weekly increase, so each week builds on the last.
         </p>
       </section>
 

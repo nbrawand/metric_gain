@@ -18,6 +18,7 @@ from app.utils.auth import (
     create_refresh_token,
     get_current_user,
 )
+from app.utils.db import apply_update
 
 router = APIRouter()
 
@@ -36,7 +37,7 @@ async def get_google_client_id():
 async def google_login(body: GoogleLoginBody, db: Session = Depends(get_db)):
     """Authenticate via Google OAuth id_token. Creates account on first login."""
     if not settings.GOOGLE_CLIENT_ID:
-        raise HTTPException(status_code=501, detail="Google login not configured")
+        raise HTTPException(status_code=501, detail="Google sign-in is not configured.")
 
     try:
         idinfo = google_id_token.verify_oauth2_token(
@@ -45,11 +46,11 @@ async def google_login(body: GoogleLoginBody, db: Session = Depends(get_db)):
             settings.GOOGLE_CLIENT_ID,
         )
     except ValueError:
-        raise HTTPException(status_code=401, detail="Invalid Google token")
+        raise HTTPException(status_code=401, detail="Google sign-in failed. Please try again.")
 
     email = idinfo.get("email")
     if not email:
-        raise HTTPException(status_code=401, detail="Google token missing email")
+        raise HTTPException(status_code=401, detail="Your Google account did not share an email address.")
 
     name = idinfo.get("name", "")
 
@@ -108,7 +109,7 @@ async def refresh_access_token(body: RefreshRequest, db: Session = Depends(get_d
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate refresh token",
+        detail="Your session has expired. Please sign in again.",
         headers={"WWW-Authenticate": "Bearer"},
     )
 
@@ -159,8 +160,7 @@ async def update_current_user(
     db: Session = Depends(get_db),
 ):
     """Update current authenticated user's profile fields."""
-    for field, value in updates.model_dump(exclude_unset=True).items():
-        setattr(current_user, field, value)
+    apply_update(current_user, updates.model_dump(exclude_unset=True))
     db.commit()
     db.refresh(current_user)
     return UserResponse.from_orm(current_user)

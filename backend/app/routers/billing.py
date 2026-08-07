@@ -68,13 +68,13 @@ async def create_checkout_session(
 ):
     """Create a Stripe Checkout session for subscription."""
     if not settings.STRIPE_SECRET_KEY:
-        raise HTTPException(status_code=501, detail="Stripe not configured")
+        raise HTTPException(status_code=501, detail="Payments are not configured.")
 
     # Checking out again would open a second subscription and orphan the first,
     # which keeps billing with no user attached to its webhooks
     if current_user.subscription_status == "active":
         raise HTTPException(
-            status_code=400, detail="You already have an active subscription"
+            status_code=400, detail="You already have an active subscription."
         )
 
     # Create Stripe Customer if none exists
@@ -196,9 +196,9 @@ async def create_portal_session(
 ):
     """Create a Stripe Customer Portal session for subscription management."""
     if not settings.STRIPE_SECRET_KEY:
-        raise HTTPException(status_code=501, detail="Stripe not configured")
+        raise HTTPException(status_code=501, detail="Payments are not configured.")
     if not current_user.stripe_customer_id:
-        raise HTTPException(status_code=400, detail="No billing account found")
+        raise HTTPException(status_code=400, detail="You don't have a subscription to manage yet.")
 
     portal_session = stripe.billing_portal.Session.create(
         customer=current_user.stripe_customer_id,
@@ -206,15 +206,3 @@ async def create_portal_session(
     )
 
     return {"url": portal_session.url}
-
-
-@router.get("/status")
-async def get_subscription_status(
-    current_user: User = Depends(get_current_user),
-):
-    """Return current subscription status."""
-    return {
-        "subscription_status": current_user.subscription_status,
-        "trial_ends_at": current_user.trial_ends_at.isoformat() if current_user.trial_ends_at else None,
-        "has_subscription": current_user.stripe_subscription_id is not None,
-    }

@@ -1,5 +1,5 @@
 /**
- * Home/Dashboard page - displayed after login
+ * Home page - displayed after sign-in
  */
 
 import { useEffect, useState } from 'react';
@@ -130,7 +130,7 @@ export function Home() {
               <li>Check out <Link to="/how-it-works" className="text-teal-400 font-medium hover:text-teal-300">How It Works</Link> to learn the basics</li>
               <li>Open the menu and choose <Link to="/mesocycles" className="text-teal-400 font-medium hover:text-teal-300">Mesocycles</Link></li>
               <li>Create a new mesocycle template with your workouts</li>
-              <li>Click Start Instance to begin training</li>
+              <li>Click Start Mesocycle to begin training</li>
               <li>Return here and click {activeInstance ? <a href="#" onClick={(e) => { e.preventDefault(); handleContinueMesocycle(); }} className="text-teal-400 font-medium hover:text-teal-300">Continue Mesocycle</a> : <span>Continue Mesocycle</span>} to log workouts</li>
             </ol>
           </div>
@@ -145,7 +145,7 @@ export function Home() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <dt className="text-gray-400">Account Status:</dt>
-                  <dd className="text-green-400">
+                  <dd className={user?.is_active ? 'text-green-400' : 'text-red-400'}>
                     {user?.is_active ? 'Active' : 'Inactive'}
                   </dd>
                 </div>
@@ -162,7 +162,7 @@ export function Home() {
                       const { url } = await createPortalSession(accessToken);
                       window.location.href = url;
                     } catch {
-                      alert('Failed to open billing portal.');
+                      alert('Could not open the billing portal. Please try again.');
                     }
                   }}
                   className="mt-3 w-full bg-gray-600 hover:bg-gray-500 text-gray-300 text-sm font-medium py-2 px-4 rounded-lg transition-colors"

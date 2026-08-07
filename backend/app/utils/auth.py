@@ -71,7 +71,7 @@ def decode_access_token(token: str) -> dict:
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+        detail="Your session has expired. Please sign in again.",
         headers={"WWW-Authenticate": "Bearer"},
     )
 
@@ -109,7 +109,7 @@ async def get_current_user(
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+        detail="Your session has expired. Please sign in again.",
         headers={"WWW-Authenticate": "Bearer"},
     )
 
@@ -128,7 +128,7 @@ async def get_current_user(
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is inactive"
+            detail="This account has been deactivated."
         )
 
     return user
@@ -150,7 +150,7 @@ async def require_active_subscription(
             return current_user
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="subscription_required",
+        detail="Your free trial has ended. Subscribe to keep training.",
     )
 
 

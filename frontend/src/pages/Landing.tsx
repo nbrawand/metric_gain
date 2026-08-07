@@ -21,7 +21,7 @@ export default function Landing() {
               Your plan. Your progress.
             </p>
             <p className="text-teal-200 max-w-2xl mb-8">
-              Strength Guider turns your training plan into guided workouts: you choose the volume and weekly ramp, and the app handles weight targets, RIR, and lays out every session for the whole block.
+              Strength Guider turns your training plan into guided workouts: you choose the volume and weekly increase, and the app handles weight targets, RIR, and lays out every session for the whole block.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
               <Link
@@ -246,6 +246,7 @@ export default function Landing() {
       {/* Bottom CTA */}
       <section className="py-16 px-4 text-center">
         <h2 className="text-2xl font-bold text-white mb-3">Ready to Train?</h2>
+        <p className="text-gray-400 mb-6">Free for 5 days, then $4.99/month. Cancel anytime.</p>
         <Link
           to="/login"
           className="bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 px-8 rounded-lg transition-colors text-lg"
@@ -255,7 +256,7 @@ export default function Landing() {
         <p className="text-gray-500 mt-4 text-sm">
           Already have an account?{' '}
           <Link to="/login" className="text-teal-400 hover:text-teal-300 transition-colors">
-            Log in
+            Sign in
           </Link>
         </p>
       </section>

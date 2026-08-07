@@ -11,6 +11,7 @@ from app.models.exercise import Exercise
 from app.models.user import User
 from app.schemas.exercise import ExerciseCreate, ExerciseResponse, ExerciseUpdate
 from app.utils.auth import get_current_user
+from app.utils.db import apply_update
 
 router = APIRouter()
 
@@ -88,14 +89,14 @@ async def get_exercise(
     if not exercise:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Exercise not found"
+            detail="Exercise not found."
         )
 
     # Check access permissions
     if exercise.is_custom and exercise.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have access to this custom exercise"
+            detail="You don't have access to that exercise."
         )
 
     return exercise
@@ -122,7 +123,7 @@ async def create_custom_exercise(
     if existing_exercise:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You already have a custom exercise with this name"
+            detail="You already have a custom exercise with that name."
         )
 
     # Create new custom exercise
@@ -157,26 +158,25 @@ async def update_custom_exercise(
     if not exercise:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Exercise not found"
+            detail="Exercise not found."
         )
 
     # Check if exercise is custom and belongs to current user
     if not exercise.is_custom:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot update default exercises"
+            detail="Stock exercises cannot be edited."
         )
 
     if exercise.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only update your own custom exercises"
+            detail="You can only edit your own custom exercises."
         )
 
     # Update exercise with provided fields
     update_data = exercise_data.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(exercise, field, value)
+    apply_update(exercise, update_data)
 
     db.commit()
     db.refresh(exercise)
@@ -201,20 +201,20 @@ async def delete_custom_exercise(
     if not exercise:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Exercise not found"
+            detail="Exercise not found."
         )
 
     # Check if exercise is custom and belongs to current user
     if not exercise.is_custom:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot delete default exercises"
+            detail="Stock exercises cannot be deleted."
         )
 
     if exercise.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only delete your own custom exercises"
+            detail="You can only delete your own custom exercises."
         )
 
     # Both references cascade, so deleting an exercise in use would take logged
@@ -229,7 +229,7 @@ async def delete_custom_exercise(
     if logged_sets or in_templates:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="This exercise is used in your workouts or templates and cannot be deleted",
+            detail="This exercise is used in your workouts or templates, so it cannot be deleted.",
         )
 
     db.delete(exercise)

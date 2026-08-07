@@ -15,7 +15,7 @@ export default function Subscribe() {
       const { url } = await createCheckoutSession(accessToken);
       window.location.href = url;
     } catch {
-      setError('Failed to start checkout. Please try again.');
+      setError('Could not start checkout. Please try again.');
       setLoading(false);
     }
   };
@@ -38,12 +38,13 @@ export default function Subscribe() {
         <div className="my-8">
           <span className="text-5xl font-bold text-white">$4.99</span>
           <span className="text-gray-400 text-lg">/month</span>
+          <p className="text-gray-400 text-sm mt-2">Free for 5 days, then $4.99/month. Cancel anytime.</p>
         </div>
 
         <ul className="text-left text-gray-300 space-y-3 mb-8">
           <li className="flex items-start gap-3">
             <span className="text-teal-400 mt-0.5">&#10003;</span>
-            <span>Plan your own volume: starting sets and a weekly ramp per exercise</span>
+            <span>Plan your own volume: starting sets and a weekly increase per exercise</span>
           </li>
           <li className="flex items-start gap-3">
             <span className="text-teal-400 mt-0.5">&#10003;</span>

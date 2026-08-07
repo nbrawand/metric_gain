@@ -21,6 +21,7 @@ from app.schemas.mesocycle import (
     WorkoutTemplateResponse,
 )
 from app.utils.auth import get_current_user
+from app.utils.db import apply_update
 
 router = APIRouter()
 
@@ -103,14 +104,14 @@ async def get_mesocycle(
 
     if not mesocycle:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle template not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle template not found."
         )
 
     # Check ownership (allow access to stock mesocycles)
     if mesocycle.user_id != current_user.id and not mesocycle.is_stock:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have access to this mesocycle",
+            detail="You don't have access to that mesocycle template.",
         )
 
     # Load exercise details for each workout exercise
@@ -168,14 +169,14 @@ async def create_mesocycle(
             if not exercise:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Exercise with ID {exercise_data.exercise_id} not found",
+                    detail="One of the selected exercises no longer exists.",
                 )
 
             # Check if custom exercise belongs to user
             if exercise.is_custom and exercise.user_id != current_user.id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"You don't have access to exercise with ID {exercise_data.exercise_id}",
+                    detail="You don't have access to one of the selected exercises.",
                 )
 
             workout_exercise = WorkoutExercise(
@@ -238,10 +239,10 @@ async def create_mesocycle_from_instance(
     ).first()
 
     if not instance:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle instance not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle not found.")
 
     if instance.status != "completed":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You can only create a template from a completed mesocycle")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You can only create a template from a completed mesocycle.")
 
     # Get the original template for exercise parameters (sets, reps, RIR)
     original_template = None
@@ -279,7 +280,7 @@ async def create_mesocycle_from_instance(
     if not latest_sessions:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No workout sessions found for this instance",
+            detail="That mesocycle has no workouts to copy.",
         )
 
     # Build the new template
@@ -387,27 +388,26 @@ async def update_mesocycle(
 
     if not mesocycle:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle template not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle template not found."
         )
 
     # Prevent editing of stock mesocycles
     if mesocycle.is_stock:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Stock mesocycles cannot be modified",
+            detail="Stock templates cannot be edited.",
         )
 
     # Check ownership
     if mesocycle.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only update your own mesocycles",
+            detail="You can only edit your own templates.",
         )
 
     # Update fields
     update_data = mesocycle_data.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(mesocycle, field, value)
+    apply_update(mesocycle, update_data)
 
     db.commit()
     db.refresh(mesocycle)
@@ -449,21 +449,21 @@ async def delete_mesocycle(
 
     if not mesocycle:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle template not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle template not found."
         )
 
     # Prevent deletion of stock mesocycles
     if mesocycle.is_stock:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Stock mesocycles cannot be deleted",
+            detail="Stock templates cannot be deleted.",
         )
 
     # Check ownership
     if mesocycle.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only delete your own mesocycles",
+            detail="You can only delete your own templates.",
         )
 
     # Block deletion if there are active instances
@@ -478,7 +478,7 @@ async def delete_mesocycle(
     if active_instances > 0:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Cannot delete this template while an instance of it is active. End the active mesocycle first.",
+            detail="You can't delete this template while a mesocycle from it is running. End that mesocycle first.",
         )
 
     db.delete(mesocycle)
@@ -505,21 +505,21 @@ async def add_workout_template(
 
     if not mesocycle:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle template not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle template not found."
         )
 
     # Prevent modifying stock mesocycles
     if mesocycle.is_stock:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Stock mesocycles cannot be modified",
+            detail="Stock templates cannot be edited.",
         )
 
     # Check ownership
     if mesocycle.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only modify your own mesocycles",
+            detail="You can only edit your own templates.",
         )
 
     # Create workout template
@@ -541,13 +541,13 @@ async def add_workout_template(
         if not exercise:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Exercise with ID {exercise_data.exercise_id} not found",
+                detail="One of the selected exercises no longer exists.",
             )
 
         if exercise.is_custom and exercise.user_id != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"You don't have access to exercise with ID {exercise_data.exercise_id}",
+                detail="You don't have access to one of the selected exercises.",
             )
 
         workout_exercise = WorkoutExercise(
@@ -597,19 +597,19 @@ async def replace_workout_templates(
 
     if not mesocycle:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle template not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle template not found."
         )
 
     if mesocycle.is_stock:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Stock mesocycles cannot be modified",
+            detail="Stock templates cannot be edited.",
         )
 
     if mesocycle.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only modify your own mesocycles",
+            detail="You can only edit your own templates.",
         )
 
     # Replacing the templates deletes them, and every session of a running
@@ -625,7 +625,7 @@ async def replace_workout_templates(
     if active_instances > 0:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Cannot edit workouts while an instance of this template is active. End the active mesocycle first.",
+            detail="You can't edit this template while a mesocycle from it is running. End that mesocycle first.",
         )
 
     # Rows are reused rather than deleted and recreated. Instances key their
@@ -669,12 +669,12 @@ async def replace_workout_templates(
             if not exercise:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Exercise with ID {exercise_data.exercise_id} not found",
+                    detail="One of the selected exercises no longer exists.",
                 )
             if exercise.is_custom and exercise.user_id != current_user.id:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"You don't have access to exercise with ID {exercise_data.exercise_id}",
+                    detail="You don't have access to one of the selected exercises.",
                 )
 
             fields = dict(

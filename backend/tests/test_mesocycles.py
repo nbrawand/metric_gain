@@ -208,7 +208,7 @@ def test_create_mesocycle_invalid_exercise(client, auth_headers):
     response = client.post("/v1/mesocycles/", json=mesocycle_data, headers=auth_headers)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert "not found" in response.json()["detail"].lower()
+    assert "no longer exists" in response.json()["detail"].lower()
 
 
 def test_list_mesocycles_with_data(client, auth_headers, sample_exercise_id):

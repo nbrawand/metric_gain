@@ -9,12 +9,17 @@ export interface ApiError {
   status: number;
 }
 
+// Shown whenever the request never reached the server. Call sites fall back to
+// their own wording when `detail` is empty, so this is the one place that gets
+// to describe a network failure.
+const OFFLINE_DETAIL = "You appear to be offline. Check your connection and try again.";
+
 /**
  * Parse an error response into an ApiError
  */
 function parseErrorResponse(response: Response, errorData?: unknown): ApiError {
   const error: ApiError = {
-    detail: 'An error occurred',
+    detail: '',
     status: response.status,
   };
 
@@ -168,7 +173,7 @@ async function fetchApi<T>(
   } catch {
     // Network error — server unreachable
     setServerReachable(false);
-    const error: ApiError = { detail: 'An error occurred', status: 0 };
+    const error: ApiError = { detail: OFFLINE_DETAIL, status: 0 };
     throw error;
   }
 
@@ -189,7 +194,7 @@ async function fetchApi<T>(
         // caller handle it as any other transient failure. Callers branch on
         // `status`, so nothing but an ApiError may leave here.
         setServerReachable(false);
-        const error: ApiError = { detail: 'An error occurred', status: 0 };
+        const error: ApiError = { detail: OFFLINE_DETAIL, status: 0 };
         throw error;
       }
       if (newToken) {

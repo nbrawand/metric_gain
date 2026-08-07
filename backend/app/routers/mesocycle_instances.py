@@ -21,6 +21,7 @@ from app.schemas.mesocycle import (
     MesocycleInstanceListResponse,
 )
 from app.utils.auth import get_current_user
+from app.utils.db import apply_update
 from app.services.progression import (
     compute_sets_for_week,
     compute_target_rir,
@@ -106,7 +107,7 @@ async def get_active_instance(
     if not instance:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No active mesocycle instance found"
+            detail="No active mesocycle found."
         )
 
     # Load template with workout templates
@@ -153,14 +154,14 @@ async def get_mesocycle_instance(
     if not instance:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Mesocycle instance not found"
+            detail="Mesocycle not found."
         )
 
     # Check ownership
     if instance.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have access to this mesocycle instance",
+            detail="You don't have access to that mesocycle.",
         )
 
     # Load template with workout templates
@@ -280,11 +281,18 @@ def _generate_sets_from_source(
 
             target_weight = None
             target_reps = fallback_set.target_reps if fallback_set else fallback_reps
-            if source_set:
-                if source_set.weight > 0:
-                    target_weight = source_set.weight
-                if source_set.reps > 0:
-                    target_reps = source_set.reps
+            if fallback_set and fallback_set.weight > 0:
+                # Progress off what was actually lifted, the same rule every
+                # other set-generating path uses. Taking the source weight raw
+                # gave one exercise two different targets in one session: the
+                # sets the source session had stayed flat, while the sets past
+                # its count fell through to the history lookup below and did
+                # get the bump.
+                target_weight, target_reps = compute_progression_targets(
+                    fallback_set.weight,
+                    fallback_set.reps if fallback_set.reps > 0 else None,
+                    target_reps,
+                )
 
             # Fallback to cascading lookup if source has no weight data
             if target_weight is None:
@@ -353,7 +361,7 @@ async def start_mesocycle_instance(
     """
     Start a new mesocycle instance from a template.
 
-    Creates all workout sessions upfront using the optimizer volume profile.
+    Creates every week x day workout session upfront from the template plan.
     Only one active instance is allowed per user at a time.
     """
     # Check if user already has an active instance
@@ -380,14 +388,14 @@ async def start_mesocycle_instance(
     if not template:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Mesocycle template not found"
+            detail="Mesocycle template not found."
         )
 
     # Allow starting from own templates or stock templates
     if template.user_id != current_user.id and not template.is_stock:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only start instances from your own templates or stock templates"
+            detail="You can only start your own templates or stock templates."
         )
 
     total_weeks = template.weeks
@@ -420,7 +428,7 @@ async def start_mesocycle_instance(
     if not workout_templates:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This template has no workouts. Add at least one before starting it.",
+            detail="This template has no workout days. Add at least one before starting it.",
         )
 
     # Create all workout sessions
@@ -520,14 +528,14 @@ async def update_mesocycle_instance(
     if not instance:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Mesocycle instance not found"
+            detail="Mesocycle not found."
         )
 
     # Check ownership
     if instance.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only update your own mesocycle instances"
+            detail="You can only change your own mesocycles."
         )
 
     # Update fields
@@ -551,8 +559,7 @@ async def update_mesocycle_instance(
             )
         instance.end_date = None
 
-    for field, value in update_data.items():
-        setattr(instance, field, value)
+    apply_update(instance, update_data)
 
     db.commit()
     db.refresh(instance)
@@ -609,13 +616,13 @@ async def update_exercise_notes(
     if not instance:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Mesocycle instance not found"
+            detail="Mesocycle not found."
         )
 
     if instance.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only update your own mesocycle instances"
+            detail="You can only change your own mesocycles."
         )
 
     # Load existing notes or start fresh
@@ -635,35 +642,3 @@ async def update_exercise_notes(
     db.refresh(instance)
 
     return notes_dict
-
-
-@router.delete("/{instance_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_mesocycle_instance(
-    instance_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Delete a mesocycle instance and all associated workout sessions.
-    """
-    instance = db.query(MesocycleInstance).filter(
-        MesocycleInstance.id == instance_id
-    ).first()
-
-    if not instance:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Mesocycle instance not found"
-        )
-
-    # Check ownership
-    if instance.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only delete your own mesocycle instances"
-        )
-
-    db.delete(instance)
-    db.commit()
-
-    return None

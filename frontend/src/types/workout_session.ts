@@ -27,9 +27,6 @@ export interface WorkoutSet {
 }
 
 /**
- * Data for creating a workout set
- */
-/**
  * Data for updating a workout set
  */
 export interface WorkoutSetUpdate {
@@ -85,9 +82,6 @@ export interface WorkoutSessionListItem {
   set_count: number;
 }
 
-/**
- * Data for creating a new workout session
- */
 /**
  * Data for updating an existing workout session
  */

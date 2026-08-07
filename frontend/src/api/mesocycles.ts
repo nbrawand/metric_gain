@@ -61,9 +61,6 @@ export async function deleteMesocycle(id: number, accessToken: string): Promise<
 }
 
 /**
- * Add a workout template to an existing mesocycle
- */
-/**
  * Replace all workout templates for a mesocycle
  */
 export async function replaceWorkoutTemplates(
@@ -146,6 +143,3 @@ export async function updateMesocycleInstance(
   return patch<MesocycleInstance>(`${INSTANCES_ENDPOINT}/${id}`, data, accessToken);
 }
 
-/**
- * Delete a mesocycle instance
- */

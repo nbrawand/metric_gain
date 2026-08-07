@@ -101,7 +101,7 @@ export default function Layout() {
       navigate('/');
     } catch (err) {
       console.error('Error ending mesocycle:', err);
-      alert('Failed to end mesocycle');
+      alert('Could not end that mesocycle. Please try again.');
     }
   };
 
@@ -185,7 +185,7 @@ export default function Layout() {
             <div className="px-4 pb-8 pt-4 border-t border-gray-700">
               {isAuthenticated ? (
                 <button onClick={handleLogout} className="w-full text-left text-lg text-red-400 hover:text-red-300 py-4 transition-colors">
-                  Logout
+                  Sign Out
                 </button>
               ) : (
                 <button onClick={() => handleNav('/login')} className="w-full text-left text-lg text-teal-400 hover:text-teal-300 py-4 transition-colors">

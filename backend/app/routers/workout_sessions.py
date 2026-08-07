@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 
@@ -23,13 +23,13 @@ from app.schemas.workout_session import (
     WorkoutSessionUpdate,
     WorkoutSessionResponse,
     WorkoutSessionListResponse,
-    WorkoutSetCreate,
     WorkoutSetUpdate,
     WorkoutSetResponse,
     SwapExerciseRequest,
     AddExerciseRequest,
 )
-from app.routers.auth import get_current_user
+from app.utils.auth import get_current_user
+from app.utils.db import apply_update
 
 
 router = APIRouter(prefix="/workout-sessions", tags=["workout-sessions"])
@@ -39,8 +39,8 @@ router = APIRouter(prefix="/workout-sessions", tags=["workout-sessions"])
 def list_workout_sessions(
     mesocycle_instance_id: int = None,
     status_filter: str = None,
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -105,7 +105,7 @@ def get_workout_session(
     if not workout_session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workout session not found"
+            detail="Workout not found."
         )
 
     # Refresh targets from previous data for in-progress sessions
@@ -195,12 +195,11 @@ def update_workout_session(
     if not workout_session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workout session not found"
+            detail="Workout not found."
         )
 
     update_data = session_update.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(workout_session, field, value)
+    apply_update(workout_session, update_data)
 
     # Timestamp completion, and clear it if the session is reopened so that
     # "most recently completed" ordering stays truthful
@@ -215,97 +214,7 @@ def update_workout_session(
     return workout_session
 
 
-@router.delete("/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_workout_session(
-    session_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Delete a workout session."""
-    workout_session = db.query(WorkoutSession).filter(
-        WorkoutSession.id == session_id,
-        WorkoutSession.user_id == current_user.id
-    ).first()
-
-    if not workout_session:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workout session not found"
-        )
-
-    db.delete(workout_session)
-    db.commit()
-    return None
-
-
 # Workout Set endpoints
-@router.post("/{session_id}/sets", response_model=WorkoutSetResponse, status_code=status.HTTP_201_CREATED)
-def add_workout_set(
-    session_id: int,
-    set_data: WorkoutSetCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Add a set to a workout session."""
-    # Verify the workout session exists and belongs to the current user
-    workout_session = db.query(WorkoutSession).filter(
-        WorkoutSession.id == session_id,
-        WorkoutSession.user_id == current_user.id
-    ).first()
-
-    if not workout_session:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workout session not found"
-        )
-
-    _reject_if_completed(workout_session)
-
-    # Without this the insert fails the foreign key on Postgres and surfaces as
-    # a 500 instead of a 404
-    exercise = db.query(Exercise).filter(Exercise.id == set_data.exercise_id).first()
-    if not exercise:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Exercise not found",
-        )
-
-    workout_set = WorkoutSet(
-        workout_session_id=session_id,
-        **set_data.model_dump()
-    )
-    db.add(workout_set)
-    db.commit()
-    db.refresh(workout_set)
-    return workout_set
-
-
-@router.get("/{session_id}/sets", response_model=List[WorkoutSetResponse])
-def list_workout_sets(
-    session_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """List all sets for a workout session."""
-    # Verify the workout session exists and belongs to the current user
-    workout_session = db.query(WorkoutSession).filter(
-        WorkoutSession.id == session_id,
-        WorkoutSession.user_id == current_user.id
-    ).first()
-
-    if not workout_session:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workout session not found"
-        )
-
-    workout_sets = db.query(WorkoutSet).filter(
-        WorkoutSet.workout_session_id == session_id
-    ).order_by(WorkoutSet.order_index, WorkoutSet.set_number).all()
-
-    return workout_sets
-
-
 @router.patch("/{session_id}/sets/{set_id}", response_model=WorkoutSetResponse)
 def update_workout_set(
     session_id: int,
@@ -324,7 +233,7 @@ def update_workout_set(
     if not workout_session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workout session not found"
+            detail="Workout not found."
         )
 
     workout_set = db.query(WorkoutSet).filter(
@@ -335,57 +244,14 @@ def update_workout_set(
     if not workout_set:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workout set not found"
+            detail="Set not found."
         )
 
-    update_data = set_update.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(workout_set, field, value)
+    apply_update(workout_set, set_update.model_dump(exclude_unset=True))
 
     db.commit()
     db.refresh(workout_set)
     return workout_set
-
-
-@router.delete("/{session_id}/sets/{set_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_workout_set(
-    session_id: int,
-    set_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Delete a set from a workout session."""
-    # Verify the workout session exists and belongs to the current user
-    workout_session = db.query(WorkoutSession).filter(
-        WorkoutSession.id == session_id,
-        WorkoutSession.user_id == current_user.id
-    ).first()
-
-    if not workout_session:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workout session not found"
-        )
-
-    # Deleting a set changes the shape of a finished workout. Editing one is
-    # deliberately still allowed: the offline queue can only replay weight and
-    # reps, and it may well drain after the session was completed.
-    _reject_if_completed(workout_session)
-
-    workout_set = db.query(WorkoutSet).filter(
-        WorkoutSet.id == set_id,
-        WorkoutSet.workout_session_id == session_id
-    ).first()
-
-    if not workout_set:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workout set not found"
-        )
-
-    db.delete(workout_set)
-    db.commit()
-    return None
 
 
 # Exercise Management endpoints (mid-workout swap/remove/add)
@@ -399,9 +265,30 @@ def _get_session_or_404(db, session_id: int, current_user: User) -> WorkoutSessi
     if not workout_session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Workout session not found",
+            detail="Workout not found.",
         )
     return workout_session
+
+
+def _get_exercise_or_404(db, exercise_id: int, current_user: User, label: str) -> Exercise:
+    """Get an exercise, rejecting another user's custom lift.
+
+    Without the ownership half of this check, dropping someone else's private
+    exercise id into a session echoed its full name and description back in the
+    response — the same leak GET /v1/exercises/{id} already refuses.
+    """
+    exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
+    if not exercise:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"{label} not found.",
+        )
+    if exercise.is_custom and exercise.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have access to that exercise.",
+        )
+    return exercise
 
 
 def _reject_if_completed(workout_session: WorkoutSession):
@@ -409,7 +296,7 @@ def _reject_if_completed(workout_session: WorkoutSession):
     if workout_session.status == "completed":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot modify a completed session",
+            detail="This workout is already finished. Reopen it to make changes.",
         )
 
 
@@ -431,13 +318,7 @@ def swap_exercise(
     workout_session = _get_session_or_404(db, session_id, current_user)
     _reject_if_completed(workout_session)
 
-    # Verify new exercise exists
-    new_exercise = db.query(Exercise).filter(Exercise.id == request.new_exercise_id).first()
-    if not new_exercise:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="New exercise not found",
-        )
+    _get_exercise_or_404(db, request.new_exercise_id, current_user, "New exercise")
 
     # Merging into an exercise already in the session would give it two runs of
     # set numbers, which corrupts set add/remove and next week's target matching
@@ -449,7 +330,7 @@ def swap_exercise(
         if already_present:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="That exercise is already in this session",
+                detail="That exercise is already in this workout.",
             )
 
     # Find all sets for the old exercise
@@ -461,7 +342,7 @@ def swap_exercise(
     if not old_sets:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Old exercise not found in this session",
+            detail="That exercise isn't in this workout.",
         )
 
     # Update all sets: swap exercise, reset performance data. Everything the
@@ -500,7 +381,7 @@ def remove_exercise(
     if deleted_count == 0:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Exercise not found in this session",
+            detail="That exercise isn't in this workout.",
         )
 
     db.commit()
@@ -518,13 +399,7 @@ def add_exercise(
     workout_session = _get_session_or_404(db, session_id, current_user)
     _reject_if_completed(workout_session)
 
-    # Verify exercise exists
-    exercise = db.query(Exercise).filter(Exercise.id == request.exercise_id).first()
-    if not exercise:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Exercise not found",
-        )
+    _get_exercise_or_404(db, request.exercise_id, current_user, "Exercise")
 
     # Reject if exercise already in session
     existing = db.query(WorkoutSet).filter(
@@ -534,7 +409,7 @@ def add_exercise(
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="That exercise is already in this session",
+            detail="That exercise is already in this workout.",
         )
 
     # Determine order_index: max existing + 100
@@ -548,6 +423,9 @@ def add_exercise(
         WorkoutTemplate.id == workout_session.workout_template_id
     ).first()
     total_weeks = template.mesocycle.weeks if (template and template.mesocycle) else 0
+    if not total_weeks and workout_session.mesocycle_instance:
+        # The template can be deleted mid-block, which nulls workout_template_id
+        total_weeks = workout_session.mesocycle_instance.template_weeks or 0
 
     num_sets = 3
     target_rir = 3
@@ -623,7 +501,7 @@ def add_set_to_exercise(
     if not existing_sets:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Exercise not found in this session",
+            detail="That exercise isn't in this workout.",
         )
 
     last_set = existing_sets[0]
@@ -672,13 +550,13 @@ def remove_set_from_exercise(
     if not existing_sets:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Exercise not found in this session",
+            detail="That exercise isn't in this workout.",
         )
 
     if len(existing_sets) <= 1:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot remove the last set",
+            detail="An exercise needs at least one set. Remove the exercise instead.",
         )
 
     db.delete(existing_sets[0])

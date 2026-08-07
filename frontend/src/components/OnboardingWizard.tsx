@@ -83,7 +83,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
               <p className="text-gray-300 text-sm leading-relaxed">
                 Go to <span className="text-teal-400 font-medium">Mesocycles</span> and
                 create a template — choose your training days, weeks, exercises,
-                and how sets ramp up each week.
+                and the weekly increase.
               </p>
             </div>
             <div className="flex gap-3">
@@ -91,7 +91,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
                 2
               </div>
               <p className="text-gray-300 text-sm leading-relaxed">
-                Click <span className="text-teal-400 font-medium">Start Instance</span> to
+                Click <span className="text-teal-400 font-medium">Start Mesocycle</span> to
                 begin your training block. The app will generate your full schedule
                 from your plan.
               </p>

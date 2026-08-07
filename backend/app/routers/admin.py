@@ -16,7 +16,7 @@ router = APIRouter()
 
 async def require_admin(current_user: User = Depends(get_current_user)) -> User:
     if not current_user.is_admin:
-        raise HTTPException(status_code=403, detail="Admin access required")
+        raise HTTPException(status_code=403, detail="Admin access required.")
     return current_user
 
 
@@ -39,7 +39,7 @@ async def grant_trial(
     """Grant or extend a user's trial by N days."""
     user = db.query(User).filter(User.email == body.email).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found.")
 
     if user.subscription_status == "active":
         # Flipping a paying customer to "trialing" leaves Stripe billing them
@@ -47,7 +47,7 @@ async def grant_trial(
         # when the granted trial runs out
         raise HTTPException(
             status_code=400,
-            detail="User has an active paid subscription; cancel it before granting a trial",
+            detail="This user has an active paid subscription; cancel it before granting a trial.",
         )
 
     now = datetime.now(timezone.utc)
@@ -73,7 +73,7 @@ async def set_subscription(
     """Manually set a user's subscription status."""
     user = db.query(User).filter(User.email == body.email).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found.")
 
     valid_statuses = ("active", "trialing", "canceled", "past_due", "none")
     if body.status not in valid_statuses:

@@ -29,7 +29,7 @@ function ConnectivityBanner() {
 
   return (
     <div className="fixed top-0 left-0 right-0 z-[100] bg-red-600 text-white text-center text-sm font-medium py-2 px-4">
-      Can't Reach Server
+      Can't reach the server
     </div>
   );
 }
@@ -140,7 +140,7 @@ function BillingSuccess() {
           disabled={confirming}
           className="inline-block bg-teal-600 hover:bg-teal-700 disabled:bg-teal-800 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors"
         >
-          Go to Dashboard
+          Go to Home
         </button>
       </div>
     </main>
@@ -151,7 +151,7 @@ function BillingCancel() {
   return (
     <main className="max-w-lg mx-auto px-4 py-16 text-center">
       <div className="bg-gray-800 rounded-2xl p-8">
-        <h1 className="text-2xl font-bold text-white mb-4">Checkout Canceled</h1>
+        <h1 className="text-2xl font-bold text-white mb-4">Checkout canceled</h1>
         <p className="text-gray-300 mb-6">No worries — you can subscribe whenever you're ready.</p>
         <a href="/subscribe" className="inline-block bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
           Back to Subscribe

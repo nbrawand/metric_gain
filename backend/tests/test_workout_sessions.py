@@ -227,24 +227,6 @@ def test_update_workout_session_status(client, auth_headers, sample_mesocycle_wi
     assert data["completed_at"] is not None
 
 
-def test_delete_workout_session(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
-    """Test deleting a workout session."""
-    instance = sample_mesocycle_instance
-
-    session_id = _session_detail(client, auth_headers, instance["id"], week=1, day=1)["id"]
-
-    # Delete session
-    response = client.delete(f"/v1/workout-sessions/{session_id}", headers=auth_headers)
-
-    assert response.status_code == status.HTTP_204_NO_CONTENT
-
-    # Verify it's gone
-    get_response = client.get(f"/v1/workout-sessions/{session_id}", headers=auth_headers)
-    assert get_response.status_code == status.HTTP_404_NOT_FOUND
-
-
-# Workout Set Tests
-
 def test_update_workout_set_weight_and_reps(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
     """Test updating weight and reps for a workout set."""
     instance = sample_mesocycle_instance
@@ -325,57 +307,6 @@ def test_update_workout_set_with_notes(client, auth_headers, sample_mesocycle_wi
     assert data["notes"] == "Felt heavy today, lower back tight"
 
 
-def test_add_workout_set_to_session(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance, sample_exercise_id):
-    """Test adding an additional workout set to a session."""
-    instance = sample_mesocycle_instance
-
-    session = _session_detail(client, auth_headers, instance["id"], week=1, day=1)
-    session_id = session["id"]
-    initial_set_count = len(session["workout_sets"])
-
-    # Add a new set
-    new_set_data = {
-        "exercise_id": sample_exercise_id,
-        "set_number": initial_set_count + 1,
-        "order_index": initial_set_count,
-        "weight": 0,
-        "reps": 0
-    }
-    response = client.post(
-        f"/v1/workout-sessions/{session_id}/sets",
-        json=new_set_data,
-        headers=auth_headers
-    )
-
-    assert response.status_code == status.HTTP_201_CREATED
-    data = response.json()
-
-    assert data["set_number"] == initial_set_count + 1
-    assert data["exercise_id"] == sample_exercise_id
-
-
-def test_delete_workout_set(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
-    """Test deleting a workout set."""
-    instance = sample_mesocycle_instance
-
-    session = _session_detail(client, auth_headers, instance["id"], week=1, day=1)
-    session_id = session["id"]
-    set_id = session["workout_sets"][0]["id"]
-
-    # Delete set
-    response = client.delete(
-        f"/v1/workout-sessions/{session_id}/sets/{set_id}",
-        headers=auth_headers
-    )
-
-    assert response.status_code == status.HTTP_204_NO_CONTENT
-
-    # Verify session still exists but has fewer sets
-    get_response = client.get(f"/v1/workout-sessions/{session_id}", headers=auth_headers)
-    updated_session = get_response.json()
-    assert len(updated_session["workout_sets"]) == len(session["workout_sets"]) - 1
-
-
 def test_access_workout_sessions_without_auth(client):
     """Test that workout session endpoints require authentication."""
     # Try to list sessions
@@ -429,7 +360,7 @@ def test_instance_pre_creates_sessions_with_planned_sets(client, auth_headers, s
         assert s["set_count"] == expected[s["day_number"]][s["week_number"]]
 
 
-def test_final_week_is_not_deload(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
+def test_final_week_follows_the_same_formula(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
     """The final week follows the same formula (no forced 1-set / 8-RIR deload)."""
     instance = sample_mesocycle_instance
     sessions = _sessions_for_instance(client, auth_headers, instance["id"])
@@ -576,9 +507,11 @@ def test_start_from_source_includes_exercises_the_source_never_ran(client, auth_
     assert counts.get(first_exercise) == 2
     assert counts.get(second_exercise) == 3
 
-    # The exercise the source ran is seeded with what was actually lifted
+    # The exercise the source ran progresses off what was actually lifted, and
+    # every one of its sets gets the same target — the sets past the source's
+    # count used to fall through to the history lookup and progress on their own
     seeded = [s for s in sets if s["exercise_id"] == first_exercise]
-    assert all(s["target_weight"] == 100 for s in seeded)
+    assert {s["target_weight"] for s in seeded} == {105.0}
     # The new exercise has no history to seed from, so it carries no weight target
     fresh = [s for s in sets if s["exercise_id"] == second_exercise]
     assert all(s["target_weight"] is None for s in fresh)
@@ -764,3 +697,80 @@ def test_an_untouched_week_does_not_freeze_later_targets(client, auth_headers, s
     week_three = _session_detail(client, auth_headers, instance["id"], week=3, day=1)
     targets = {s["target_weight"] for s in week_three["workout_sets"]}
     assert targets == {205}, f"expected targets off the last completed week, got {targets}"
+
+
+def test_cannot_pull_another_users_custom_exercise_into_a_session(
+    client, auth_headers, make_auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance
+):
+    """Add and swap must refuse someone else's private lift, not echo it back.
+
+    GET /v1/exercises/{id} already refuses, so without the same check here the
+    name and description of a private exercise leaked in the session response.
+    """
+    stranger = make_auth_headers("exercise_owner@example.com", "Exercise Owner")
+    private = client.post(
+        "/v1/exercises/",
+        json={
+            "name": "Private Rehab Protocol",
+            "muscle_group": "Back",
+            "equipment": "Cable",
+        },
+        headers=stranger,
+    )
+    assert private.status_code == status.HTTP_201_CREATED
+    private_id = private.json()["id"]
+
+    session = _session_detail(client, auth_headers, sample_mesocycle_instance["id"], week=1, day=1)
+    mine = session["workout_sets"][0]["exercise_id"]
+
+    assert client.post(
+        f"/v1/workout-sessions/{session['id']}/exercises/add",
+        json={"exercise_id": private_id},
+        headers=auth_headers,
+    ).status_code == status.HTTP_403_FORBIDDEN
+
+    assert client.post(
+        f"/v1/workout-sessions/{session['id']}/exercises/swap",
+        json={"old_exercise_id": mine, "new_exercise_id": private_id},
+        headers=auth_headers,
+    ).status_code == status.HTTP_403_FORBIDDEN
+
+    after = _session_detail(client, auth_headers, sample_mesocycle_instance["id"], week=1, day=1)
+    assert private_id not in {s["exercise_id"] for s in after["workout_sets"]}
+
+
+def test_explicit_null_in_a_partial_update_is_ignored(
+    client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance
+):
+    """A null for a NOT NULL column must not become an IntegrityError 500."""
+    session = _session_detail(client, auth_headers, sample_mesocycle_instance["id"], week=1, day=1)
+    set_id = session["workout_sets"][0]["id"]
+
+    client.patch(
+        f"/v1/workout-sessions/{session['id']}/sets/{set_id}",
+        json={"weight": 135, "reps": 8},
+        headers=auth_headers,
+    )
+
+    for body in ({"weight": None}, {"reps": None}, {"skipped": None}, {"order_index": None}):
+        response = client.patch(
+            f"/v1/workout-sessions/{session['id']}/sets/{set_id}",
+            json=body,
+            headers=auth_headers,
+        )
+        assert response.status_code == status.HTTP_200_OK, body
+        assert response.json()["weight"] == 135
+        assert response.json()["reps"] == 8
+
+    # A nullable column is still clearable
+    assert client.patch(
+        f"/v1/workout-sessions/{session['id']}/sets/{set_id}",
+        json={"rir": None},
+        headers=auth_headers,
+    ).json()["rir"] is None
+
+    assert client.patch(
+        f"/v1/workout-sessions/{session['id']}",
+        json={"status": None},
+        headers=auth_headers,
+    ).json()["status"] == "in_progress"

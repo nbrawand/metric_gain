@@ -223,7 +223,7 @@ export default function Terms() {
 
             <h3 className="text-lg font-semibold text-white mt-6 mb-3">Cancellation</h3>
             <p className="mb-4">
-              All purchases are non-refundable. You can cancel your subscription at any time from the Manage Subscription link on your home page. Your cancellation will take effect at the end of the current paid term. If you have any questions or are unsatisfied with our Services, please email us at{' '}
+              All purchases are non-refundable. You can cancel your subscription at any time from the Manage Subscription button on your Home page. Your cancellation will take effect at the end of the current paid term. If you have any questions or are unsatisfied with our Services, please email us at{' '}
               <a href="mailto:strengthguider@gmail.com" className="text-teal-400 hover:text-teal-300 transition-colors">
                 strengthguider@gmail.com
               </a>.
@@ -265,7 +265,7 @@ export default function Terms() {
               <li>Use a buying agent or purchasing agent to make purchases on the Services.</li>
               <li>Make any unauthorized use of the Services, including collecting usernames and/or email addresses of users by electronic or other means for the purpose of sending unsolicited email, or creating user accounts by automated means or under false pretenses.</li>
               <li>Use the Services as part of any effort to compete with us or otherwise use the Services and/or the Content for any revenue-generating endeavor or commercial enterprise.</li>
-              <li>Sell or otherwise transfer your profile.</li>
+              <li>Sell or otherwise transfer your account.</li>
             </ul>
           </section>
 
@@ -338,10 +338,10 @@ export default function Terms() {
           <section id="socialmedia">
             <h2 className="text-xl font-bold text-white mb-4">10. SOCIAL MEDIA</h2>
             <p className="mb-4">
-              As part of the functionality of the Services, you may link your account with online accounts you have with third-party service providers (each such account, a "Third-Party Account") by either: (1) providing your Third-Party Account login information through the Services; or (2) allowing us to access your Third-Party Account, as is permitted under the applicable terms and conditions that govern your use of each Third-Party Account.
+              As part of the functionality of the Services, you may link your account with online accounts you have with third-party service providers (each such account, a "Third-Party Account") by authorizing us to access that account through the provider's own sign-in flow. We never receive or store your password for a Third-Party Account.
             </p>
             <p className="mb-4">
-              You represent and warrant that you are entitled to disclose your Third-Party Account login information to us and/or grant us access to your Third-Party Account, without breach by you of any of the terms and conditions that govern your use of the applicable Third-Party Account, and without obligating us to pay any fees or making us subject to any usage limitations imposed by the third-party service provider of the Third-Party Account.
+              You represent and warrant that you are entitled to grant us access to your Third-Party Account, without breach by you of any of the terms and conditions that govern your use of the applicable Third-Party Account, and without obligating us to pay any fees or making us subject to any usage limitations imposed by the third-party service provider of the Third-Party Account.
             </p>
             <p className="mb-4">
               By granting us access to any Third-Party Accounts, you understand that (1) we may access, make available, and store (if applicable) any content that you have provided to and stored in your Third-Party Account (the "Social Network Content") so that it is available on and through the Services via your account, including without limitation any friend lists; and (2) we may submit to and receive from your Third-Party Account additional information to the extent you are notified when you link your account with the Third-Party Account.
@@ -350,7 +350,7 @@ export default function Terms() {
               Depending on the Third-Party Accounts you choose and subject to the privacy settings that you have set in such Third-Party Accounts, personally identifiable information that you post to your Third-Party Accounts may be available on and through your account on the Services. Please note that if a Third-Party Account or associated service becomes unavailable or our access to such Third-Party Account is terminated by the third-party service provider, then Social Network Content may no longer be available on and through the Services.
             </p>
             <p>
-              You will have the ability to disable the connection between your account on the Services and your Third-Party Accounts at any time. PLEASE NOTE THAT YOUR RELATIONSHIP WITH THE THIRD-PARTY SERVICE PROVIDERS ASSOCIATED WITH YOUR THIRD-PARTY ACCOUNTS IS GOVERNED SOLELY BY YOUR AGREEMENT(S) WITH SUCH THIRD-PARTY SERVICE PROVIDERS. We make no effort to review any Social Network Content for any purpose, including but not limited to, for accuracy, legality, or non-infringement, and we are not responsible for any Social Network Content. You acknowledge and agree that we may access your email address book associated with a Third-Party Account and your contacts list stored on your mobile device or tablet computer solely for purposes of identifying and informing you of those contacts who have also registered to use the Services. You can deactivate the connection between the Services and your Third-Party Account by contacting us using the contact information below or through your account settings (if applicable). We will attempt to delete any information stored on our servers that was obtained through such Third-Party Account, except the username and profile picture that became associated with your account.
+              You will have the ability to disable the connection between your account on the Services and your Third-Party Accounts at any time. PLEASE NOTE THAT YOUR RELATIONSHIP WITH THE THIRD-PARTY SERVICE PROVIDERS ASSOCIATED WITH YOUR THIRD-PARTY ACCOUNTS IS GOVERNED SOLELY BY YOUR AGREEMENT(S) WITH SUCH THIRD-PARTY SERVICE PROVIDERS. We make no effort to review any Social Network Content for any purpose, including but not limited to, for accuracy, legality, or non-infringement, and we are not responsible for any Social Network Content. You can deactivate the connection between the Services and your Third-Party Account by contacting us using the contact information below or through your account settings (if applicable). We will attempt to delete any information stored on our servers that was obtained through such Third-Party Account, except the username and profile picture that became associated with your account.
             </p>
           </section>
 
@@ -436,7 +436,7 @@ export default function Terms() {
 
             <h3 className="text-lg font-semibold text-white mt-6 mb-3">Binding Arbitration</h3>
             <p className="mb-4">
-              Any dispute arising out of or in connection with these Legal Terms, including any question regarding its existence, validity, or termination, shall be referred to and finally resolved by the International Commercial Arbitration Court under the European Arbitration Chamber (Belgium, Brussels, Avenue Louise, 146) according to the Rules of this ICAC, which, as a result of referring to it, is considered as the part of this clause. The number of arbitrators shall be two (2). The seat, or legal place, of arbitration shall be Douglas, Colorado. The language of the proceedings shall be English. The governing law of these Legal Terms shall be the substantive law of the State of Colorado.
+              Any dispute arising out of or in connection with these Legal Terms, including any question regarding its existence, validity, or termination, shall be referred to and finally resolved by the International Commercial Arbitration Court under the European Arbitration Chamber (Belgium, Brussels, Avenue Louise, 146) according to the Rules of this ICAC, which, as a result of referring to it, is considered as the part of this clause. The number of arbitrators shall be two (2). The seat, or legal place, of arbitration shall be Douglas County, Colorado. The language of the proceedings shall be English. The governing law of these Legal Terms shall be the substantive law of the State of Colorado.
             </p>
 
             <h3 className="text-lg font-semibold text-white mt-6 mb-3">Restrictions</h3>
