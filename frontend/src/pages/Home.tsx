@@ -154,15 +154,20 @@ export function Home() {
                   <dd className="text-gray-200">{user?.timezone}</dd>
                 </div>
               </dl>
-              {user?.subscription_status === 'active' && (
+              {/* Anyone who has ever checked out has a Stripe customer to
+                  manage. Gating this on "active" hid the portal from exactly
+                  the people who need it — a failed card or a cancellation. */}
+              {['active', 'past_due', 'canceled'].includes(user?.subscription_status ?? '') && (
                 <button
                   onClick={async () => {
                     if (!accessToken) return;
                     try {
                       const { url } = await createPortalSession(accessToken);
                       window.location.href = url;
-                    } catch {
-                      alert('Could not open the billing portal. Please try again.');
+                    } catch (err: any) {
+                      // Surface the reason — "no subscription to manage yet" and
+                      // "payments are not configured" need different responses
+                      alert(err?.detail || 'Could not open the billing portal. Please try again.');
                     }
                   }}
                   className="mt-3 w-full bg-gray-600 hover:bg-gray-500 text-gray-300 text-sm font-medium py-2 px-4 rounded-lg transition-colors"

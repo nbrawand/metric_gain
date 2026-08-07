@@ -1,11 +1,17 @@
 import { useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
-import { createCheckoutSession } from '../api/billing';
+import { createCheckoutSession, createPortalSession } from '../api/billing';
 
 export default function Subscribe() {
   const { accessToken, user } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // A failed payment locks the app, which lands the user here — and this is the
+  // only page they can reach. Checking out again would open a second
+  // subscription next to the one that needs a working card, so past_due gets
+  // the billing portal instead.
+  const paymentFailed = user?.subscription_status === 'past_due';
 
   const handleSubscribe = async () => {
     if (!accessToken) return;
@@ -14,8 +20,21 @@ export default function Subscribe() {
     try {
       const { url } = await createCheckoutSession(accessToken);
       window.location.href = url;
-    } catch {
-      setError('Could not start checkout. Please try again.');
+    } catch (err: any) {
+      setError(err?.detail || 'Could not start checkout. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  const handleManage = async () => {
+    if (!accessToken) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const { url } = await createPortalSession(accessToken);
+      window.location.href = url;
+    } catch (err: any) {
+      setError(err?.detail || 'Could not open the billing portal. Please try again.');
       setLoading(false);
     }
   };
@@ -28,7 +47,14 @@ export default function Subscribe() {
   return (
     <main className="max-w-lg mx-auto px-4 py-16">
       <div className="bg-gray-800 rounded-2xl p-8 text-center">
-        <h1 className="text-3xl font-bold text-white mb-2">Subscribe to Strength Guider</h1>
+        <h1 className="text-3xl font-bold text-white mb-2">
+          {paymentFailed ? 'Update Your Payment Method' : 'Subscribe to Strength Guider'}
+        </h1>
+        {paymentFailed && (
+          <p className="text-red-400 text-sm mb-4">
+            Your last payment did not go through. Update your card to get back to training.
+          </p>
+        )}
         {trialExpired && (
           <p className="text-red-400 text-sm mb-4">
             Your free trial has ended. Subscribe to continue.
@@ -65,15 +91,17 @@ export default function Subscribe() {
         )}
 
         <button
-          onClick={handleSubscribe}
+          onClick={paymentFailed ? handleManage : handleSubscribe}
           disabled={loading}
           className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors text-lg"
         >
-          {loading ? 'Redirecting...' : 'Subscribe Now'}
+          {loading ? 'Redirecting...' : paymentFailed ? 'Manage Subscription' : 'Subscribe Now'}
         </button>
 
         <p className="text-gray-500 text-xs mt-4">
-          Secure payment via Stripe. Cancel anytime.
+          {paymentFailed
+            ? 'Opens the Stripe billing portal, where you can update your card or cancel.'
+            : 'Secure payment via Stripe. Cancel anytime.'}
         </p>
       </div>
     </main>

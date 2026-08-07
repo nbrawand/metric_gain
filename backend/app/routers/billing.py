@@ -67,15 +67,28 @@ async def create_checkout_session(
     db: Session = Depends(get_db),
 ):
     """Create a Stripe Checkout session for subscription."""
-    if not settings.STRIPE_SECRET_KEY:
-        raise HTTPException(status_code=501, detail="Payments are not configured.")
-
+    # State guards come before the config check so the endpoint answers the same
+    # way whatever the deployment holds — "you already have a subscription" is
+    # true regardless of whether Stripe keys happen to be loaded.
     # Checking out again would open a second subscription and orphan the first,
     # which keeps billing with no user attached to its webhooks
     if current_user.subscription_status == "active":
         raise HTTPException(
             status_code=400, detail="You already have an active subscription."
         )
+    # past_due is the same trap: the subscription still exists and only needs a
+    # working card, so this user belongs in the billing portal, not in checkout
+    if current_user.subscription_status == "past_due":
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Your subscription is still open — its last payment failed. "
+                "Use Manage Subscription to update your card."
+            ),
+        )
+
+    if not settings.STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=501, detail="Payments are not configured.")
 
     # Create Stripe Customer if none exists
     if not current_user.stripe_customer_id:
@@ -195,10 +208,10 @@ async def create_portal_session(
     current_user: User = Depends(get_current_user),
 ):
     """Create a Stripe Customer Portal session for subscription management."""
-    if not settings.STRIPE_SECRET_KEY:
-        raise HTTPException(status_code=501, detail="Payments are not configured.")
     if not current_user.stripe_customer_id:
         raise HTTPException(status_code=400, detail="You don't have a subscription to manage yet.")
+    if not settings.STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=501, detail="Payments are not configured.")
 
     portal_session = stripe.billing_portal.Session.create(
         customer=current_user.stripe_customer_id,
