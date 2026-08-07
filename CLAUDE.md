@@ -272,6 +272,23 @@ Before this it could not have gated anything.
     writes a new comment. Every step verified locally before committing,
     including that the em dash check actually fails when one is present.
 
+[ ] Check whether the Stripe webhook is currently failing in production, and
+replay anything that did. `stripe` was the only unpinned dependency and Render
+installs requirements.txt on every build, so builds since 2026-03-26 could have
+picked up stripe 15.0.0, where `StripeObject` stopped subclassing `dict` and
+every `.get()` in `routers/billing.py` raises. Now pinned to 14.4.1, so the
+next deploy is safe either way, but that does not undo events already dropped.
+Stripe Dashboard, Developers, Webhooks, look at the delivery attempts: 500s
+mean it happened. Stripe retries for about three days, so anything older than
+that is gone and the affected subscriptions need reconciling by hand. Worst
+case is a `checkout.session.completed` that never landed, which is a customer
+who paid and never got access.
+
+[ ] Rewrite `routers/billing.py` off `.get()` and `isinstance(x, dict)` so the
+stripe pin can move past 15. Small surface: `_id_of`, `_invoice_subscription_id`
+and the event handler body. Until then the pin is load bearing and the comment
+in requirements.txt says so.
+
 [ ] Promote the CSP from report-only. It protects nothing today. Needs one real
 sign-in with the browser console open to catch what Google's GSI widget
 actually reaches for, then swap the header name, steps in `frontend/CSP.md`.
