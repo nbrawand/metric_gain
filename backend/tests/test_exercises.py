@@ -232,7 +232,9 @@ def test_access_exercises_without_auth(client):
     """Test that accessing exercises without authentication fails."""
     response = client.get("/v1/exercises/")
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    # 401: no credentials presented. 403 is reserved for a signed-in user who
+    # lacks a subscription or admin rights.
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 def test_list_exercises_with_pagination(client, auth_headers):

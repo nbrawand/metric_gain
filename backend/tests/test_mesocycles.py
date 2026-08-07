@@ -609,7 +609,9 @@ def test_access_mesocycles_without_auth(client):
     """Test that accessing mesocycles without authentication fails."""
     response = client.get("/v1/mesocycles/")
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    # 401: no credentials presented. 403 is reserved for a signed-in user who
+    # lacks a subscription or admin rights.
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 def test_create_mesocycle_invalid_weeks(client, auth_headers, sample_exercise_id):

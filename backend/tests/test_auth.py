@@ -23,8 +23,10 @@ def test_google_login_rejects_an_invalid_token(client):
 
 
 def test_current_user_requires_a_token(client):
+    """401, not 403: nothing was presented, so nothing was refused."""
     response = client.get("/v1/auth/users/me")
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
 def test_current_user_rejects_an_invalid_token(client):

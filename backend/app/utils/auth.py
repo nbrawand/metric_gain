@@ -12,8 +12,11 @@ from app.config import settings
 from app.database import get_db
 from app.models.user import User
 
-# HTTP Bearer token security
-security = HTTPBearer()
+# auto_error=False so a missing Authorization header lands in get_current_user
+# rather than being turned into HTTPBearer's default 403. "No credentials" is
+# 401 — 403 means "authenticated, but not allowed", which is what the admin and
+# subscription guards return, and the two should not be indistinguishable.
+security = HTTPBearer(auto_error=False)
 
 
 def as_utc(value: Optional[datetime]) -> Optional[datetime]:
@@ -105,7 +108,7 @@ def decode_access_token(token: str) -> dict:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db)
 ) -> User:
     """
@@ -114,20 +117,27 @@ async def get_current_user(
     Validates the JWT token and retrieves the user from the database.
 
     Args:
-        credentials: HTTP Bearer token from request header
+        credentials: HTTP Bearer token from request header, None if absent
         db: Database session
 
     Returns:
         User object of authenticated user
 
     Raises:
-        HTTPException: If token is invalid or user not found
+        HTTPException: 401 if the token is missing, invalid or expired
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Your session has expired. Please sign in again.",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated. Please sign in.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     token = credentials.credentials
     payload = decode_access_token(token)

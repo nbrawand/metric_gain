@@ -574,3 +574,31 @@ def test_a_failed_admin_action_writes_no_audit_row(
         headers=admin_headers,
     ).json()
     assert log == []
+
+
+def test_missing_and_insufficient_credentials_are_distinguishable(
+    client, make_auth_headers
+):
+    """401 means "who are you", 403 means "not you".
+
+    HTTPBearer's default turned a missing header into 403, which made an
+    unauthenticated caller indistinguishable from a signed-in one who lacked
+    rights — and stopped the frontend from trying a token refresh, because it
+    only refreshes on 401.
+    """
+    anonymous = client.get("/v1/auth/users/me")
+    assert anonymous.status_code == 401
+    assert anonymous.headers["WWW-Authenticate"] == "Bearer"
+
+    # Signed in, but not an admin: genuinely forbidden
+    headers = make_auth_headers("plain_person@example.com", "Plain")
+    forbidden = client.get("/v1/admin/users", headers=headers)
+    assert forbidden.status_code == 403
+
+
+def test_malformed_authorization_header_is_401(client, test_db):
+    for value in ("", "Bearer", "Basic abc123", "NotBearer xyz"):
+        response = client.get(
+            "/v1/auth/users/me", headers={"Authorization": value}
+        )
+        assert response.status_code == 401, f"{value!r} returned {response.status_code}"

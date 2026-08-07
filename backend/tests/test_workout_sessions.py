@@ -311,11 +311,11 @@ def test_access_workout_sessions_without_auth(client):
     """Test that workout session endpoints require authentication."""
     # Try to list sessions
     response = client.get("/v1/workout-sessions/")
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     # Try to get session
     response = client.get("/v1/workout-sessions/1")
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 def test_workout_session_isolation_between_users(client, auth_headers, make_auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
