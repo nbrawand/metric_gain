@@ -21,7 +21,7 @@ export default function Landing() {
               Your plan. Your progress.
             </p>
             <p className="text-teal-200 max-w-2xl mb-8">
-              Strength Guider turns your training plan into guided workouts: you choose the volume and weekly increase, and the app handles weight targets, RIR, and lays out every session for the whole block.
+              Strength Guider turns your training plan into guided workouts: it handles weight targets, RIR, and set counts that adjust from what you actually lift, and lays out every session for the whole block. It works in the gym with no signal at all.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
               <Link
@@ -118,19 +118,19 @@ export default function Landing() {
             </p>
           </div>
 
-          {/* Stays on Your Plan */}
+          {/* Works Offline */}
           <div
-            onClick={() => navigate('/how-it-works#volume-model')}
+            onClick={() => navigate('/how-it-works#offline')}
             className="bg-gray-800 rounded-lg border border-gray-700 p-6 cursor-pointer transition-all duration-200 hover:scale-105 hover:border-teal-600 hover:shadow-lg hover:shadow-teal-900/30"
           >
             <div className="w-10 h-10 rounded-full bg-teal-600 flex items-center justify-center mb-4">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636a9 9 0 010 12.728m-12.728 0a9 9 0 010-12.728m9.9 9.9a5 5 0 010-7.072m-7.072 0a5 5 0 010 7.072M13 12a1 1 0 11-2 0 1 1 0 012 0z" />
               </svg>
             </div>
-            <h3 className="text-white font-semibold text-lg mb-2">Stays on Your Plan</h3>
+            <h3 className="text-white font-semibold text-lg mb-2">Works Without Signal</h3>
             <p className="text-gray-400 text-sm leading-relaxed">
-              Add or remove sets mid-workout when you need to — future sessions stay on the plan you reviewed. Weight targets still progress automatically from what you actually lifted.
+              Basements, car parks, and gyms with no bars of reception. Log every set as normal — nothing blocks on the network, and your sets sync themselves the moment you are back online.
             </p>
           </div>
 

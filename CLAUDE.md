@@ -114,13 +114,10 @@ without being a reason to churn.
     decrementing counter). The "No timer here on purpose" copy is now the
     softer "that judgement is the default here".
 
-[ ] Plate calculator and warmup-set guidance. Both are recurring complaints
+[x] Plate calculator and warmup-set guidance. Both are recurring complaints
 about RP; both are self-contained and need no backend work.
-
-[ ] Exercise demo media. RP ships 250+ technique videos. Do not try to match
-that — producing and hosting them is a cost we can't amortize. Link out to a
-reputable demo per exercise instead; `exercises` already has a `description`
-column and adding a `demo_url` is cheap.
+    Tap a target weight in a workout to get plates per side and a warmup ramp.
+    Unit-aware, and honest when no plate combination hits the target exactly.
 
 [x] Bodypart-specialization templates (chest focus, arm focus, glute focus).
 RP has 100+ templates against our 10 — the answer is a strong builder plus a
@@ -133,8 +130,11 @@ research item above; do them together.
 
 ### Marketing, not code
 
-[ ] Say "works offline" on the landing page. Neither `Landing.tsx` nor
+[x] Say "works offline" on the landing page. Neither `Landing.tsx` nor
 `HowItWorks.tsx` mentions it at all today, and it is our one clear head-to-head
 win: RP has no offline mode and their top App Store complaint is verbatim
 "needs to work without internet." We already have the sync queue and it's
 hardened.
+    Hero mentions it, a landing card replaces "Stays on Your Plan" (whose claim
+    stopped being true once mid-workout edits started carrying forward), and
+    How It Works gains an offline section.

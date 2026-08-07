@@ -12,6 +12,7 @@ import { MesocycleInstance } from '../types/mesocycle';
 import { computeTargetRir } from '../utils/volume';
 import { weightUnitFromPreferences, weightUnitLabel, restTimerFromPreferences } from '../utils/units';
 import RestTimer from '../components/RestTimer';
+import LoadingHelper from '../components/LoadingHelper';
 
 // Local state for tracking input values before they're saved
 type SetInputValues = Record<number, { weight: string; reps: string }>;
@@ -22,7 +23,10 @@ export default function WorkoutExecution() {
   const { accessToken, user } = useAuthStore();
   // Weights are stored in whatever unit the lifter logs in, so this is
   // only a label — there is nothing to convert on the way out.
-  const unitLabel = weightUnitLabel(weightUnitFromPreferences(user?.preferences));
+  const weightUnit = weightUnitFromPreferences(user?.preferences);
+  const unitLabel = weightUnitLabel(weightUnit);
+  // Which target weight the plate/warmup helper is open for, if any
+  const [loadingHelper, setLoadingHelper] = useState<{ weight: number; name: string } | null>(null);
   const restTimer = restTimerFromPreferences(user?.preferences);
   // Bumped on each logged set to restart the countdown. Zero means the timer
   // has never run this session, so nothing is shown.
@@ -1046,6 +1050,14 @@ export default function WorkoutExecution() {
           </button>
         </div>
       )}
+      {loadingHelper && (
+        <LoadingHelper
+          weight={loadingHelper.weight}
+          unit={weightUnit}
+          exerciseName={loadingHelper.name}
+          onClose={() => setLoadingHelper(null)}
+        />
+      )}
       {restTimer.enabled && (
         <RestTimer
           startToken={restToken}
@@ -1430,7 +1442,19 @@ export default function WorkoutExecution() {
                             />
                             {recommendation && (
                               <div className="text-xs text-teal-400 text-center mt-1">
-                                {recommendation}
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setLoadingHelper({
+                                      weight: set.target_weight!,
+                                      name: exerciseName,
+                                    })
+                                  }
+                                  className="underline decoration-dotted underline-offset-2 hover:text-teal-300"
+                                  title="Plates and warmup sets"
+                                >
+                                  {recommendation}
+                                </button>
                               </div>
                             )}
                           </div>

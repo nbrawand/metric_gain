@@ -105,6 +105,22 @@ export default function HowItWorks() {
         </p>
       </section>
 
+      {/* Offline */}
+      <section id="offline" className="bg-gray-800 rounded-lg p-6 scroll-mt-16">
+        <h2 className="text-xl font-semibold text-teal-400 mb-3">Training Without Signal</h2>
+        <p className="text-gray-300 leading-relaxed mb-3">
+          Gyms are full of basements and car parks. Strength Guider keeps working with no
+          connection at all: your whole block is created up front, so every session and
+          every target is already on the device before you get there.
+        </p>
+        <p className="text-gray-300 leading-relaxed">
+          Log sets exactly as normal. Anything that cannot reach the server is queued on
+          the device and sent the moment you are back online, so nothing you record is
+          waiting on a network you do not have. A banner tells you when the server is
+          unreachable, rather than letting you guess.
+        </p>
+      </section>
+
       {/* Progress */}
       <section id="progress" className="bg-gray-800 rounded-lg p-6 scroll-mt-16">
         <h2 className="text-xl font-semibold text-teal-400 mb-3">Seeing Your Progress</h2>
