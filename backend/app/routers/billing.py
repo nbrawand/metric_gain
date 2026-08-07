@@ -11,6 +11,7 @@ from app.config import settings
 from app.database import get_db
 from app.models.user import User
 from app.utils.auth import get_current_user
+from app.utils.ratelimit import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +63,9 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 @router.post("/create-checkout-session")
+@limiter.limit("10/minute")
 async def create_checkout_session(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -204,7 +207,9 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
 
 
 @router.post("/create-portal-session")
+@limiter.limit("10/minute")
 async def create_portal_session(
+    request: Request,
     current_user: User = Depends(get_current_user),
 ):
     """Create a Stripe Customer Portal session for subscription management."""

@@ -136,9 +136,19 @@ async def get_current_user(
     if user_id_str is None:
         raise credentials_exception
 
+    # A signed token with a non-numeric subject would otherwise blow up as a 500
+    try:
+        user_id = int(user_id_str)
+    except (TypeError, ValueError):
+        raise credentials_exception
+
     # Get user from database
-    user = db.query(User).filter(User.id == int(user_id_str)).first()
+    user = db.query(User).filter(User.id == user_id).first()
     if user is None:
+        raise credentials_exception
+
+    # Tokens minted before the user's last revocation are dead
+    if payload.get("tv", 0) != user.token_version:
         raise credentials_exception
 
     if not user.is_active:

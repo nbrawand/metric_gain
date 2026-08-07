@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from jose import jwt
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
@@ -19,12 +19,23 @@ from app.utils.auth import (
     get_current_user,
 )
 from app.utils.db import apply_update
+from app.utils.ratelimit import limiter
 
 router = APIRouter()
 
 
 class GoogleLoginBody(BaseModel):
     id_token: str
+
+
+def _token_data(user: User) -> dict:
+    """Claims every token for this user carries.
+
+    `tv` pins the token to the user's current token_version so that signing out
+    (or an admin revoking) can invalidate it — a plain JWT is otherwise good
+    until it expires no matter what happens to the account.
+    """
+    return {"sub": str(user.id), "email": user.email, "tv": user.token_version}
 
 
 @router.get("/google-client-id")
@@ -34,7 +45,10 @@ async def get_google_client_id():
 
 
 @router.post("/google", response_model=AuthResponse)
-async def google_login(body: GoogleLoginBody, db: Session = Depends(get_db)):
+@limiter.limit("20/minute")
+async def google_login(
+    request: Request, body: GoogleLoginBody, db: Session = Depends(get_db)
+):
     """Authenticate via Google OAuth id_token. Creates account on first login."""
     if not settings.GOOGLE_CLIENT_ID:
         raise HTTPException(status_code=501, detail="Google sign-in is not configured.")
@@ -51,6 +65,15 @@ async def google_login(body: GoogleLoginBody, db: Session = Depends(get_db)):
     email = idinfo.get("email")
     if not email:
         raise HTTPException(status_code=401, detail="Your Google account did not share an email address.")
+
+    # Accounts are matched purely on the email address, so an unverified one is
+    # an account takeover: anyone who can get Google to mint a token carrying
+    # someone else's address would land in that person's account.
+    if not idinfo.get("email_verified"):
+        raise HTTPException(
+            status_code=401,
+            detail="Your Google email address is not verified. Verify it with Google, then try again.",
+        )
 
     name = idinfo.get("name", "")
 
@@ -77,7 +100,7 @@ async def google_login(body: GoogleLoginBody, db: Session = Depends(get_db)):
     user.last_login = datetime.utcnow()
     db.commit()
 
-    token_data = {"sub": str(user.id), "email": user.email}
+    token_data = _token_data(user)
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
 
@@ -93,11 +116,15 @@ class RefreshRequest(BaseModel):
 
 
 @router.post("/refresh")
-async def refresh_access_token(body: RefreshRequest, db: Session = Depends(get_db)):
+@limiter.limit("30/minute")
+async def refresh_access_token(
+    request: Request, body: RefreshRequest, db: Session = Depends(get_db)
+):
     """
     Refresh access token using refresh token.
 
     Args:
+        request: Incoming request (used for rate limiting)
         body: JSON body containing refresh_token
         db: Database session
 
@@ -129,14 +156,35 @@ async def refresh_access_token(body: RefreshRequest, db: Session = Depends(get_d
         if not user or not user.is_active:
             raise credentials_exception
 
+        # A revoked refresh token must not be able to mint fresh access tokens
+        if payload.get("tv", 0) != user.token_version:
+            raise credentials_exception
+
         # Create new access token
-        token_data = {"sub": str(user.id), "email": user.email}
-        new_access_token = create_access_token(token_data)
+        new_access_token = create_access_token(_token_data(user))
 
         return {"access_token": new_access_token, "token_type": "bearer"}
 
     except Exception:
         raise credentials_exception
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Revoke every token issued to the caller.
+
+    Signing out was previously client-side only: the browser dropped its copy
+    while the tokens stayed valid for the rest of their lifetime — 90 minutes
+    for an access token, 7 days for a refresh token. This makes the tokens
+    themselves dead, which is what someone signing out on a shared or lost
+    device is asking for. It signs the account out everywhere, on purpose.
+    """
+    current_user.token_version += 1
+    db.commit()
+    return None
 
 
 @router.get("/users/me", response_model=UserResponse)

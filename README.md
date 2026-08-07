@@ -189,6 +189,22 @@ CORS_ORIGINS=http://localhost:5173
 VITE_API_URL=http://localhost:8000
 ```
 
+### Production notes
+
+Setting `ENVIRONMENT=production` changes behaviour deliberately:
+
+- `/docs`, `/redoc` and `/openapi.json` are disabled.
+- Responses carry `Strict-Transport-Security`.
+- The app **refuses to start** if `SECRET_KEY` is a placeholder or shorter than
+  32 characters, or if `CORS_ORIGINS` contains `*`. Both are silent
+  vulnerabilities otherwise — a guessable signing key lets anyone forge a token,
+  and wildcard CORS with credentials enabled lets any site read a signed-in
+  user's data.
+
+Security headers for the deployed frontend live in `frontend/vercel.json`. The
+CSP there is **report-only** and not yet protecting anything — see
+[frontend/CSP.md](frontend/CSP.md) for what has to happen before it is enforced.
+
 ## License
 
 MIT

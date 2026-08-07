@@ -60,6 +60,17 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
+        const { accessToken } = get();
+
+        // Tell the server to revoke the tokens before dropping our copy.
+        // Fire-and-forget: the local sign-out must happen either way, and this
+        // is also called from the 401 path where the token is already dead.
+        if (accessToken) {
+          authApi.revokeTokens(accessToken).catch(() => {
+            /* already signing out locally */
+          });
+        }
+
         set({
           user: null,
           accessToken: null,

@@ -234,10 +234,31 @@ async def delete_custom_exercise(
     from app.models.mesocycle import WorkoutExercise
     from app.models.workout_session import WorkoutSet
 
-    logged_sets = db.query(WorkoutSet).filter(WorkoutSet.exercise_id == exercise_id).count()
-    in_templates = db.query(WorkoutExercise).filter(
-        WorkoutExercise.exercise_id == exercise_id
-    ).count()
+    # Scoped to this user's own rows. Counting every row in the table let another
+    # account's reference to the exercise block the owner from ever deleting it,
+    # with nothing in the UI to explain why.
+    from app.models.workout_session import WorkoutSession
+    from app.models.mesocycle import Mesocycle, WorkoutTemplate
+
+    logged_sets = (
+        db.query(WorkoutSet)
+        .join(WorkoutSession, WorkoutSet.workout_session_id == WorkoutSession.id)
+        .filter(
+            WorkoutSet.exercise_id == exercise_id,
+            WorkoutSession.user_id == current_user.id,
+        )
+        .count()
+    )
+    in_templates = (
+        db.query(WorkoutExercise)
+        .join(WorkoutTemplate, WorkoutExercise.workout_template_id == WorkoutTemplate.id)
+        .join(Mesocycle, WorkoutTemplate.mesocycle_id == Mesocycle.id)
+        .filter(
+            WorkoutExercise.exercise_id == exercise_id,
+            Mesocycle.user_id == current_user.id,
+        )
+        .count()
+    )
     if logged_sets or in_templates:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

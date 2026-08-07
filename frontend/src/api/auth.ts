@@ -2,7 +2,7 @@
  * Authentication API client
  */
 
-import { get, post } from './client';
+import { API_BASE_URL, get, post } from './client';
 import type {
   AuthResponse,
   TokenResponse,
@@ -32,6 +32,25 @@ export async function refreshToken(
   refreshTokenStr: string
 ): Promise<TokenResponse> {
   return post<TokenResponse>(`${AUTH_BASE}/refresh`, { refresh_token: refreshTokenStr });
+}
+
+/**
+ * Revoke every token issued to the signed-in user.
+ *
+ * Clearing local state alone left the tokens usable until they expired, so the
+ * server has to be told. Best-effort: if the call fails we still sign out
+ * locally rather than trapping someone in a session they asked to leave.
+ *
+ * Deliberately a raw fetch rather than the shared client: on a 401 the client
+ * would try to refresh and, failing that, call logout again — and logout is
+ * what called this.
+ */
+export async function revokeTokens(accessToken: string): Promise<void> {
+  await fetch(`${API_BASE_URL}${AUTH_BASE}/logout`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+    keepalive: true,
+  });
 }
 
 /**

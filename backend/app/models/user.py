@@ -25,6 +25,11 @@ class User(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     is_admin = Column(Boolean, default=False, nullable=False)
 
+    # Bumped to invalidate every token already issued to this user. JWTs are
+    # self-contained, so without this a leaked access or refresh token stays
+    # usable for its full lifetime and signing out cannot take it back.
+    token_version = Column(Integer, default=0, nullable=False, server_default="0")
+
     # Subscription
     stripe_customer_id = Column(String(255), nullable=True)
     stripe_subscription_id = Column(String(255), nullable=True)

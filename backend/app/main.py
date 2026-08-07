@@ -1,19 +1,31 @@
 """Main FastAPI application."""
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.errors import RateLimitExceeded
+from slowapi import _rate_limit_exceeded_handler
+
 from app.config import settings
 from app.utils.auth import require_active_subscription
+from app.utils.ratelimit import limiter
 
+
+# The interactive docs publish every route, schema and field name in the app.
+# There is no reason to hand that to the internet in production.
+_docs_enabled = not settings.is_production
 
 # Create FastAPI app
 app = FastAPI(
     title="Strength Guider API",
     description="Plan a training block, then train it with guided weight and RIR targets",
     version="0.1.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url="/docs" if _docs_enabled else None,
+    redoc_url="/redoc" if _docs_enabled else None,
+    openapi_url="/openapi.json" if _docs_enabled else None,
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Configure CORS
 app.add_middleware(
@@ -25,6 +37,21 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    """Attach baseline security headers to every API response."""
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    # The API serves JSON, never a document worth framing
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    if settings.is_production:
+        response.headers.setdefault(
+            "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+        )
+    return response
+
+
 @app.get("/")
 async def root():
     """Root endpoint - API information."""
@@ -32,7 +59,7 @@ async def root():
         "name": "Strength Guider API",
         "version": "0.1.0",
         "status": "running",
-        "docs": "/docs",
+        "docs": "/docs" if _docs_enabled else None,
     }
 
 

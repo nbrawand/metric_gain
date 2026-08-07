@@ -30,6 +30,32 @@ class SetSubscriptionRequest(BaseModel):
     status: str  # "active", "trialing", "canceled", "none"
 
 
+class RevokeSessionsRequest(BaseModel):
+    email: EmailStr
+
+
+@router.post("/revoke-sessions")
+async def revoke_sessions(
+    body: RevokeSessionsRequest,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
+):
+    """Invalidate every token issued to a user.
+
+    The lever to pull when an account is reported compromised. Without it the
+    only options were to wait out the token lifetimes or deactivate the account
+    outright, which also locks out the legitimate owner.
+    """
+    user = db.query(User).filter(User.email == body.email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    user.token_version += 1
+    db.commit()
+
+    return {"email": user.email, "sessions_revoked": True}
+
+
 @router.post("/grant-trial")
 async def grant_trial(
     body: GrantTrialRequest,
