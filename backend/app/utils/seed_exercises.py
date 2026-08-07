@@ -579,7 +579,12 @@ DEFAULT_EXERCISES = [
         "equipment": "Cable Machine",
     },
     {
-        "name": "Cable Kickback",
+        # Renamed from "Cable Kickback", which collided with the triceps
+        # exercise of that name 200 lines up. seed_exercises dedupes on name, so
+        # the triceps one won and this glute exercise has never been inserted
+        # into any database. Only this side is renamed: the triceps row already
+        # exists live and may be referenced by user templates and logged sets.
+        "name": "Cable Glute Kickback",
         "description": "Glute isolation with a cable attached at the ankle",
         "muscle_group": "Glutes",
         "equipment": "Cable Machine",
@@ -717,6 +722,177 @@ DEFAULT_EXERCISES = [
         "description": "Anti-extension core exercise performed lying on back",
         "muscle_group": "Core",
         "equipment": "Bodyweight",
+    },
+
+    # ==================== Additions ====================
+    # Weighted towards the groups the library was thinnest on: calves had 4
+    # entries, forearms 3 and traps 2, which is not enough to build a block
+    # around or to swap within when a machine is taken.
+
+    # --- Calves ---
+    {
+        "name": "Single-Leg Calf Raise",
+        "description": "Calf raise performed one leg at a time to even out side-to-side differences",
+        "muscle_group": "Calves",
+        "equipment": "Bodyweight",
+    },
+    {
+        "name": "Smith Machine Calf Raise",
+        "description": "Standing calf raise with the bar fixed in a Smith machine for balance",
+        "muscle_group": "Calves",
+        "equipment": "Smith Machine",
+    },
+    {
+        "name": "Tibialis Raise",
+        "description": "Trains the shin, the antagonist to the calf; commonly used for ankle health",
+        "muscle_group": "Calves",
+        "equipment": "Bodyweight",
+    },
+
+    # --- Forearms ---
+    {
+        "name": "Reverse Curl",
+        "description": "Overhand curl targeting the brachioradialis and forearm extensors",
+        "muscle_group": "Forearms",
+        "equipment": "Barbell",
+    },
+    {
+        "name": "Hammer Cable Curl",
+        "description": "Neutral-grip cable curl emphasising the brachioradialis",
+        "muscle_group": "Forearms",
+        "equipment": "Cable Machine",
+    },
+    {
+        "name": "Wrist Roller",
+        "description": "Rolling a weighted cord up and down a bar for forearm endurance",
+        "muscle_group": "Forearms",
+        "equipment": "Other",
+    },
+    {
+        "name": "Plate Pinch Hold",
+        "description": "Pinching plates together for time to train grip",
+        "muscle_group": "Forearms",
+        "equipment": "Plate",
+    },
+
+    # --- Traps ---
+    {
+        "name": "Trap Bar Shrug",
+        "description": "Shrug with a trap bar, which keeps the load in line with the body",
+        "muscle_group": "Traps",
+        "equipment": "Trap Bar",
+    },
+    {
+        "name": "Cable Shrug",
+        "description": "Shrug against a cable stack for constant tension through the range",
+        "muscle_group": "Traps",
+        "equipment": "Cable Machine",
+    },
+    {
+        "name": "Machine Shrug",
+        "description": "Shrug performed on a fixed machine",
+        "muscle_group": "Traps",
+        "equipment": "Machine",
+    },
+    {
+        "name": "Prone Y-Raise",
+        "description": "Face-down raise in a Y shape, targeting the lower and middle traps",
+        "muscle_group": "Traps",
+        "equipment": "Dumbbell",
+    },
+
+    # --- Glutes ---
+    {
+        "name": "Single-Leg Hip Thrust",
+        "description": "Hip thrust driven through one leg at a time",
+        "muscle_group": "Glutes",
+        "equipment": "Bodyweight",
+    },
+    {
+        "name": "Seated Hip Abduction",
+        "description": "Machine abduction training the gluteus medius",
+        "muscle_group": "Glutes",
+        "equipment": "Machine",
+    },
+    {
+        "name": "Reverse Hyperextension",
+        "description": "Hip extension against resistance with the torso supported",
+        "muscle_group": "Glutes",
+        "equipment": "Machine",
+    },
+    {
+        "name": "45-Degree Back Extension",
+        "description": "Hip hinge on a 45-degree bench, loading glutes and hamstrings",
+        "muscle_group": "Glutes",
+        "equipment": "Bodyweight",
+    },
+
+    # --- Back ---
+    {
+        "name": "Straight-Arm Pulldown",
+        "description": "Cable pulldown with straight arms, isolating the lats without the biceps",
+        "muscle_group": "Back",
+        "equipment": "Cable Machine",
+    },
+    {
+        "name": "Inverted Row",
+        "description": "Bodyweight row under a fixed bar; scales by changing body angle",
+        "muscle_group": "Back",
+        "equipment": "Bodyweight",
+    },
+    {
+        "name": "Seal Row",
+        "description": "Row lying face-down on a raised bench, removing all body English",
+        "muscle_group": "Back",
+        "equipment": "Barbell",
+    },
+
+    # --- Shoulders ---
+    {
+        "name": "Cable Rear Delt Fly",
+        "description": "Rear delt fly across the body on cables, holding tension at the stretch",
+        "muscle_group": "Shoulders",
+        "equipment": "Cable Machine",
+    },
+    {
+        "name": "Landmine Press",
+        "description": "Angled press with one end of a barbell fixed at floor level",
+        "muscle_group": "Shoulders",
+        "equipment": "Barbell",
+    },
+
+    # --- Quadriceps ---
+    {
+        "name": "Belt Squat",
+        "description": "Squat loaded from the hips, keeping the load off the spine",
+        "muscle_group": "Quadriceps",
+        "equipment": "Machine",
+    },
+    {
+        "name": "Reverse Lunge",
+        "description": "Lunge stepping backwards, usually easier on the knees than a forward lunge",
+        "muscle_group": "Quadriceps",
+        "equipment": "Dumbbell",
+    },
+
+    # --- Core ---
+    {
+        "name": "Hanging Knee Raise",
+        "description": "Knee raise from a hang; the regression from a straight-leg raise",
+        "muscle_group": "Core",
+        "equipment": "Pull-up Bar",
+    },
+    {
+        "name": "Side Plank",
+        "description": "Isometric hold on one forearm, training the obliques",
+        "muscle_group": "Core",
+        "equipment": "Bodyweight",
+    },
+    {
+        "name": "Machine Crunch",
+        "description": "Weighted crunch on a fixed machine, easy to load progressively",
+        "muscle_group": "Core",
+        "equipment": "Machine",
     },
 ]
 

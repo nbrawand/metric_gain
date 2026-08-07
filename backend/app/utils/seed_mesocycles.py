@@ -651,17 +651,357 @@ GLUTE_FOCUSED_UPPER_LOWER_TEMPLATE = {
     ],
 }
 
+# The library covered 2/3-day full body, 4-day upper/lower, 5-day and 6-day
+# splits, but had no single-rotation PPL — the most commonly recommended split
+# at 3 days — no chest/back + shoulders/arms + legs arrangement, no 4-day full
+# body, and nothing for someone training with dumbbells only. The last two are
+# the bodypart-specialisation blocks; a glute-focused one already exists.
+
+THREE_DAY_PPL_TEMPLATE = {
+    "name": "3-Day Push Pull Legs",
+    "description": "One rotation of push, pull and legs per week. The same split as the 6-day version at half the frequency — the usual recommendation for three training days, and a good step up from full body.",
+    "weeks": 6,
+    "days_per_week": 3,
+    "workouts": [
+        {
+            "name": "Push",
+            "description": "Chest, shoulders and triceps",
+            "exercises": [
+                {"name": "Barbell Bench Press", "sets": 3, "reps_min": 6, "reps_max": 10},
+                {"name": "Incline Dumbbell Press", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Dumbbell Shoulder Press", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Cable Lateral Raise", "sets": 3, "reps_min": 12, "reps_max": 20},
+                {"name": "Tricep Pushdown (Rope)", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Cable Overhead Tricep Extension (Rope)", "sets": 2, "reps_min": 10, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Pull",
+            "description": "Back, rear delts and biceps",
+            "exercises": [
+                {"name": "Pull-ups", "sets": 3, "reps_min": 6, "reps_max": 12},
+                {"name": "Barbell Row", "sets": 3, "reps_min": 6, "reps_max": 10},
+                {"name": "Seated Cable Row", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Face Pulls", "sets": 3, "reps_min": 12, "reps_max": 20},
+                {"name": "Barbell Curl", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Hammer Curl", "sets": 2, "reps_min": 10, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Legs",
+            "description": "Quads, hamstrings, glutes and calves",
+            "exercises": [
+                {"name": "Barbell Squat", "sets": 3, "reps_min": 6, "reps_max": 10},
+                {"name": "Romanian Deadlift", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Leg Press", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Lying Leg Curl", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Standing Calf Raise", "sets": 4, "reps_min": 10, "reps_max": 20},
+                {"name": "Hanging Leg Raise", "sets": 3, "reps_min": 10, "reps_max": 20},
+            ],
+        },
+    ],
+}
+
+CHEST_BACK_ARMS_LEGS_TEMPLATE = {
+    "name": "Chest & Back / Shoulders & Arms / Legs",
+    "description": "Classic golden-era arrangement: opposing muscle groups paired in one session, run twice a week. Pairs push with pull so each keeps working while the other recovers within the session.",
+    "weeks": 6,
+    "days_per_week": 6,
+    "workouts": [
+        {
+            "name": "Chest & Back 1",
+            "description": "Opposing pairs, alternated",
+            "exercises": [
+                {"name": "Barbell Bench Press", "sets": 3, "reps_min": 6, "reps_max": 10},
+                {"name": "Barbell Row", "sets": 3, "reps_min": 6, "reps_max": 10},
+                {"name": "Incline Dumbbell Press", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Lat Pulldown", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Dumbbell Fly", "sets": 2, "reps_min": 12, "reps_max": 15},
+                {"name": "Straight-Arm Pulldown", "sets": 2, "reps_min": 12, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Shoulders & Arms 1",
+            "description": "Delts, biceps and triceps",
+            "exercises": [
+                {"name": "Overhead Press", "sets": 3, "reps_min": 6, "reps_max": 10},
+                {"name": "Lateral Raise", "sets": 3, "reps_min": 12, "reps_max": 20},
+                {"name": "Reverse Pec Deck", "sets": 3, "reps_min": 12, "reps_max": 20},
+                {"name": "Barbell Curl", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Skull Crushers", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Cable Curl", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Tricep Pushdown (Rope)", "sets": 2, "reps_min": 10, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Legs 1",
+            "description": "Quad-led lower body",
+            "exercises": [
+                {"name": "Barbell Squat", "sets": 3, "reps_min": 6, "reps_max": 10},
+                {"name": "Romanian Deadlift", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Leg Extension", "sets": 3, "reps_min": 12, "reps_max": 15},
+                {"name": "Lying Leg Curl", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Standing Calf Raise", "sets": 4, "reps_min": 10, "reps_max": 20},
+            ],
+        },
+        {
+            "name": "Chest & Back 2",
+            "description": "Opposing pairs, different angles",
+            "exercises": [
+                {"name": "Incline Barbell Bench Press", "sets": 3, "reps_min": 6, "reps_max": 10},
+                {"name": "Chest-Supported Row", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Dips", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Chin-ups", "sets": 3, "reps_min": 6, "reps_max": 12},
+                {"name": "Pec Deck", "sets": 2, "reps_min": 12, "reps_max": 15},
+                {"name": "Seal Row", "sets": 2, "reps_min": 10, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Shoulders & Arms 2",
+            "description": "Delts, biceps and triceps (variation)",
+            "exercises": [
+                {"name": "Dumbbell Shoulder Press", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Cable Lateral Raise", "sets": 3, "reps_min": 12, "reps_max": 20},
+                {"name": "Cable Rear Delt Fly", "sets": 3, "reps_min": 12, "reps_max": 20},
+                {"name": "Incline Dumbbell Curl", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Close-Grip Bench Press", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Preacher Curl", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Overhead Tricep Extension", "sets": 2, "reps_min": 10, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Legs 2",
+            "description": "Posterior-chain-led lower body",
+            "exercises": [
+                {"name": "Front Squat", "sets": 3, "reps_min": 6, "reps_max": 10},
+                {"name": "Hip Thrust", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Bulgarian Split Squat", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Seated Leg Curl", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Seated Calf Raise", "sets": 4, "reps_min": 10, "reps_max": 20},
+            ],
+        },
+    ],
+}
+
+FOUR_DAY_FULL_BODY_TEMPLATE = {
+    "name": "4-Day Full Body",
+    "description": "Every muscle group four times a week at low per-session volume. Rotates the main lift each day so nothing is hammered twice in a row. Completes the full body range alongside the 2 and 3-day versions.",
+    "weeks": 6,
+    "days_per_week": 4,
+    "workouts": [
+        {
+            "name": "Full Body A",
+            "description": "Squat-led",
+            "exercises": [
+                {"name": "Barbell Squat", "sets": 3, "reps_min": 6, "reps_max": 10},
+                {"name": "Barbell Bench Press", "sets": 3, "reps_min": 6, "reps_max": 10},
+                {"name": "Seated Cable Row", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Lateral Raise", "sets": 2, "reps_min": 12, "reps_max": 20},
+                {"name": "Standing Calf Raise", "sets": 3, "reps_min": 10, "reps_max": 20},
+            ],
+        },
+        {
+            "name": "Full Body B",
+            "description": "Hinge-led",
+            "exercises": [
+                {"name": "Romanian Deadlift", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Lat Pulldown", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Dumbbell Shoulder Press", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Leg Extension", "sets": 3, "reps_min": 12, "reps_max": 15},
+                {"name": "Barbell Curl", "sets": 2, "reps_min": 8, "reps_max": 12},
+            ],
+        },
+        {
+            "name": "Full Body C",
+            "description": "Press-led",
+            "exercises": [
+                {"name": "Incline Dumbbell Press", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Leg Press", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Chest-Supported Row", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Lying Leg Curl", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Tricep Pushdown (Rope)", "sets": 2, "reps_min": 10, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Full Body D",
+            "description": "Pull-led",
+            "exercises": [
+                {"name": "Pull-ups", "sets": 3, "reps_min": 6, "reps_max": 12},
+                {"name": "Bulgarian Split Squat", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Machine Chest Press", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Face Pulls", "sets": 3, "reps_min": 12, "reps_max": 20},
+                {"name": "Hanging Knee Raise", "sets": 3, "reps_min": 10, "reps_max": 20},
+            ],
+        },
+    ],
+}
+
+DUMBBELL_ONLY_TEMPLATE = {
+    "name": "Dumbbell Only Full Body",
+    "description": "3-day full body using nothing but dumbbells and a bench. For home gyms and hotel gyms, and the counterpart to the machine-only beginner block.",
+    "weeks": 6,
+    "days_per_week": 3,
+    "workouts": [
+        {
+            "name": "Dumbbell Full Body A",
+            "description": "Push emphasis",
+            "exercises": [
+                {"name": "Goblet Squat", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Dumbbell Bench Press", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Dumbbell Row", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Dumbbell Shoulder Press", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Dumbbell Curl", "sets": 2, "reps_min": 10, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Dumbbell Full Body B",
+            "description": "Hinge emphasis",
+            "exercises": [
+                {"name": "Dumbbell Romanian Deadlift", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Incline Dumbbell Press", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Chest-Supported Row", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Lateral Raise", "sets": 3, "reps_min": 12, "reps_max": 20},
+                {"name": "Overhead Tricep Extension", "sets": 2, "reps_min": 10, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Dumbbell Full Body C",
+            "description": "Single-leg emphasis",
+            "exercises": [
+                {"name": "Bulgarian Split Squat", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Dumbbell Fly", "sets": 3, "reps_min": 12, "reps_max": 15},
+                {"name": "Prone Y-Raise", "sets": 3, "reps_min": 12, "reps_max": 20},
+                {"name": "Reverse Lunge", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Hammer Curl", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Single-Leg Calf Raise", "sets": 3, "reps_min": 10, "reps_max": 20},
+            ],
+        },
+    ],
+}
+
+CHEST_FOCUS_TEMPLATE = {
+    "name": "Chest Focus Upper/Lower",
+    "description": "4-day upper/lower with extra chest volume and angles, holding everything else at maintenance. Run one specialisation block at a time — the extra volume is only affordable because the rest is trimmed.",
+    "weeks": 6,
+    "days_per_week": 4,
+    "workouts": [
+        {
+            "name": "Upper (Chest Emphasis) 1",
+            "description": "Chest first, while fresh",
+            "exercises": [
+                {"name": "Barbell Bench Press", "sets": 4, "reps_min": 6, "reps_max": 10},
+                {"name": "Incline Dumbbell Press", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Cable Fly", "sets": 3, "reps_min": 12, "reps_max": 15},
+                {"name": "Lat Pulldown", "sets": 2, "reps_min": 8, "reps_max": 12},
+                {"name": "Lateral Raise", "sets": 2, "reps_min": 12, "reps_max": 20},
+                {"name": "Tricep Pushdown (Rope)", "sets": 2, "reps_min": 10, "reps_max": 15},
+            ],
+        },
+        {
+            "name": "Lower 1",
+            "description": "Maintenance lower body",
+            "exercises": [
+                {"name": "Barbell Squat", "sets": 3, "reps_min": 6, "reps_max": 10},
+                {"name": "Romanian Deadlift", "sets": 2, "reps_min": 8, "reps_max": 12},
+                {"name": "Leg Extension", "sets": 2, "reps_min": 12, "reps_max": 15},
+                {"name": "Standing Calf Raise", "sets": 3, "reps_min": 10, "reps_max": 20},
+            ],
+        },
+        {
+            "name": "Upper (Chest Emphasis) 2",
+            "description": "Different angles, incline led",
+            "exercises": [
+                {"name": "Incline Barbell Bench Press", "sets": 4, "reps_min": 6, "reps_max": 10},
+                {"name": "Dips", "sets": 3, "reps_min": 8, "reps_max": 12},
+                {"name": "Pec Deck", "sets": 3, "reps_min": 12, "reps_max": 15},
+                {"name": "Chest-Supported Row", "sets": 2, "reps_min": 8, "reps_max": 12},
+                {"name": "Reverse Pec Deck", "sets": 2, "reps_min": 12, "reps_max": 20},
+                {"name": "Barbell Curl", "sets": 2, "reps_min": 8, "reps_max": 12},
+            ],
+        },
+        {
+            "name": "Lower 2",
+            "description": "Maintenance lower body (variation)",
+            "exercises": [
+                {"name": "Leg Press", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Lying Leg Curl", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Hip Thrust", "sets": 2, "reps_min": 8, "reps_max": 12},
+                {"name": "Seated Calf Raise", "sets": 3, "reps_min": 10, "reps_max": 20},
+            ],
+        },
+    ],
+}
+
+ARM_FOCUS_TEMPLATE = {
+    "name": "Arm Focus Upper/Lower",
+    "description": "4-day upper/lower with direct arm work on every upper day and compounds trimmed to make room. Run one specialisation block at a time.",
+    "weeks": 6,
+    "days_per_week": 4,
+    "workouts": [
+        {
+            "name": "Upper (Arm Emphasis) 1",
+            "description": "Arms trained first while fresh",
+            "exercises": [
+                {"name": "Barbell Curl", "sets": 4, "reps_min": 8, "reps_max": 12},
+                {"name": "Close-Grip Bench Press", "sets": 4, "reps_min": 8, "reps_max": 12},
+                {"name": "Incline Dumbbell Curl", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Cable Overhead Tricep Extension (Rope)", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Lat Pulldown", "sets": 2, "reps_min": 8, "reps_max": 12},
+                {"name": "Machine Chest Press", "sets": 2, "reps_min": 8, "reps_max": 12},
+            ],
+        },
+        {
+            "name": "Lower 1",
+            "description": "Maintenance lower body",
+            "exercises": [
+                {"name": "Barbell Squat", "sets": 3, "reps_min": 6, "reps_max": 10},
+                {"name": "Romanian Deadlift", "sets": 2, "reps_min": 8, "reps_max": 12},
+                {"name": "Leg Extension", "sets": 2, "reps_min": 12, "reps_max": 15},
+                {"name": "Standing Calf Raise", "sets": 3, "reps_min": 10, "reps_max": 20},
+            ],
+        },
+        {
+            "name": "Upper (Arm Emphasis) 2",
+            "description": "Different grips and angles",
+            "exercises": [
+                {"name": "Hammer Curl", "sets": 4, "reps_min": 10, "reps_max": 15},
+                {"name": "Skull Crushers", "sets": 4, "reps_min": 8, "reps_max": 12},
+                {"name": "Preacher Curl", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Tricep Pushdown (V-Bar)", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Reverse Curl", "sets": 2, "reps_min": 12, "reps_max": 15},
+                {"name": "Seated Cable Row", "sets": 2, "reps_min": 8, "reps_max": 12},
+            ],
+        },
+        {
+            "name": "Lower 2",
+            "description": "Maintenance lower body (variation)",
+            "exercises": [
+                {"name": "Leg Press", "sets": 3, "reps_min": 10, "reps_max": 15},
+                {"name": "Seated Leg Curl", "sets": 2, "reps_min": 10, "reps_max": 15},
+                {"name": "Bulgarian Split Squat", "sets": 2, "reps_min": 8, "reps_max": 12},
+                {"name": "Seated Calf Raise", "sets": 3, "reps_min": 10, "reps_max": 20},
+            ],
+        },
+    ],
+}
+
 STOCK_TEMPLATES = [
     PUSH_PULL_LEGS_TEMPLATE,
+    THREE_DAY_PPL_TEMPLATE,
     TWO_DAY_FULL_BODY_TEMPLATE,
     THREE_DAY_FULL_BODY_TEMPLATE,
+    FOUR_DAY_FULL_BODY_TEMPLATE,
     FOUR_DAY_UPPER_LOWER_TEMPLATE,
     FIVE_DAY_LPPLU_TEMPLATE,
+    CHEST_BACK_ARMS_LEGS_TEMPLATE,
     BEGINNER_STRENGTH_TEMPLATE,
     BEGINNER_MACHINE_TEMPLATE,
     BEGINNER_UPPER_LOWER_3DAY_TEMPLATE,
+    DUMBBELL_ONLY_TEMPLATE,
     BRO_SPLIT_TEMPLATE,
     GLUTE_FOCUSED_UPPER_LOWER_TEMPLATE,
+    CHEST_FOCUS_TEMPLATE,
+    ARM_FOCUS_TEMPLATE,
 ]
 
 

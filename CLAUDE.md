@@ -4,7 +4,7 @@ check it off the list
 [x] make the days collapsable during the mesocycle creation screen
 [x] When a user adds, removes, swaps an exercise during a workout, the same day
 of future weeks in the mesocycle should keep those changes.
-[ ] Go online and do research for missing mesocycle templates if you find
+[x] Go online and do research for missing mesocycle templates if you find
 reputable ones then add them to the library. Do the same for the exercise
 library.
 
@@ -93,10 +93,14 @@ that — producing and hosting them is a cost we can't amortize. Link out to a
 reputable demo per exercise instead; `exercises` already has a `description`
 column and adding a `demo_url` is cheap.
 
-[ ] Bodypart-specialization templates (chest focus, arm focus, glute focus).
+[x] Bodypart-specialization templates (chest focus, arm focus, glute focus).
 RP has 100+ templates against our 10 — the answer is a strong builder plus a
 handful of good blocks, not 100 we can't maintain. Overlaps with the template
 research item above; do them together.
+    Done with the template research item: Chest Focus Upper/Lower and Arm Focus
+    Upper/Lower added (Glute & Lower Body Focus already existed). Both hold
+    everything outside the focus at maintenance rather than adding volume on
+    top, and say so in the description. Library is now 16 templates.
 
 ### Marketing, not code
 
