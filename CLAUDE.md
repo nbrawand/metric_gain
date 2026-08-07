@@ -265,6 +265,18 @@ visit. SEO and content-marketing value going unused.
 
 ## Open
 
+[x] Every route except `/` returned 404 on direct navigation in production.
+Found while checking the SEO work had actually deployed: `/how-it-works`,
+`/privacy`, `/terms` and `/login` all 404, and only `/` served the app. Vercel
+serves `dist` statically and `frontend/vercel.json` had no SPA fallback, so any
+path without a matching file fell through. Installed users never saw it,
+because the service worker's `navigateFallback` answers navigations from cache,
+which is exactly why it went unnoticed. Anyone following a shared link, and
+every crawler reading the sitemap that was just published, got a 404. Fixed
+with a rewrite to `/index.html`, excluding `/assets/` so a stale client asking
+for a deleted chunk still gets a real 404 rather than HTML.
+
+
 [x] Self-service account deletion and data export. Writing the privacy policy
 made this concrete: there is no endpoint for either, so the policy has to
 promise both by email. Most privacy regimes expect a user to be able to delete
