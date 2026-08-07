@@ -217,6 +217,21 @@ async def delete_custom_exercise(
             detail="You can only delete your own custom exercises"
         )
 
+    # Both references cascade, so deleting an exercise in use would take logged
+    # sets and template entries down with it
+    from app.models.mesocycle import WorkoutExercise
+    from app.models.workout_session import WorkoutSet
+
+    logged_sets = db.query(WorkoutSet).filter(WorkoutSet.exercise_id == exercise_id).count()
+    in_templates = db.query(WorkoutExercise).filter(
+        WorkoutExercise.exercise_id == exercise_id
+    ).count()
+    if logged_sets or in_templates:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This exercise is used in your workouts or templates and cannot be deleted",
+        )
+
     db.delete(exercise)
     db.commit()
 

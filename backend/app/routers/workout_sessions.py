@@ -95,6 +95,43 @@ def create_workout_session(
     current_user: User = Depends(get_current_user),
 ):
     """Create a new workout session and auto-generate sets from template."""
+    from app.models.mesocycle import Mesocycle, MesocycleInstance
+
+    # The instance must be the caller's, and the template must belong to it —
+    # otherwise the generated sets would expose another user's plan.
+    instance = db.query(MesocycleInstance).filter(
+        MesocycleInstance.id == session_data.mesocycle_instance_id,
+        MesocycleInstance.user_id == current_user.id,
+    ).first()
+    if not instance:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Mesocycle instance not found",
+        )
+
+    template = db.query(WorkoutTemplate).filter(
+        WorkoutTemplate.id == session_data.workout_template_id
+    ).first()
+    if not template or (
+        instance.mesocycle_template_id is not None
+        and template.mesocycle_id != instance.mesocycle_template_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workout template not found for this mesocycle instance",
+        )
+
+    if session_data.source_instance_id is not None:
+        source_owned = db.query(MesocycleInstance).filter(
+            MesocycleInstance.id == session_data.source_instance_id,
+            MesocycleInstance.user_id == current_user.id,
+        ).first()
+        if not source_owned:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Source mesocycle instance not found",
+            )
+
     # Create the workout session (exclude source fields not in DB model)
     workout_session = WorkoutSession(
         user_id=current_user.id,
@@ -102,11 +139,6 @@ def create_workout_session(
     )
     db.add(workout_session)
     db.flush()  # Get the session ID without committing
-
-    # Fetch the workout template to get exercises
-    template = db.query(WorkoutTemplate).filter(
-        WorkoutTemplate.id == session_data.workout_template_id
-    ).first()
 
     total_weeks = template.mesocycle.weeks if (template and template.mesocycle) else 0
 
@@ -532,6 +564,15 @@ def add_workout_set(
             detail="Workout session not found"
         )
 
+    # Without this the insert fails the foreign key on Postgres and surfaces as
+    # a 500 instead of a 404
+    exercise = db.query(Exercise).filter(Exercise.id == set_data.exercise_id).first()
+    if not exercise:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Exercise not found",
+        )
+
     workout_set = WorkoutSet(
         workout_session_id=session_id,
         **set_data.model_dump()
@@ -695,6 +736,19 @@ def swap_exercise(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="New exercise not found",
         )
+
+    # Merging into an exercise already in the session would give it two runs of
+    # set numbers, which corrupts set add/remove and next week's target matching
+    if request.new_exercise_id != request.old_exercise_id:
+        already_present = db.query(WorkoutSet).filter(
+            WorkoutSet.workout_session_id == session_id,
+            WorkoutSet.exercise_id == request.new_exercise_id,
+        ).first()
+        if already_present:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="That exercise is already in this session",
+            )
 
     # Find all sets for the old exercise
     old_sets = db.query(WorkoutSet).filter(

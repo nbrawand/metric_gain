@@ -21,8 +21,10 @@ interface OfflineSyncState {
 
   enqueue: (sessionId: number, setId: number, data: WorkoutSetUpdate) => void;
   remove: (key: string) => void;
+  removeForSet: (sessionId: number, setId: number) => void;
   drainQueue: (accessToken: string) => Promise<{ syncedSetIds: number[] }>;
   getPendingSetIds: (sessionId: number) => Set<number>;
+  getPendingForSession: (sessionId: number) => PendingSetSave[];
   hasPending: () => boolean;
 }
 
@@ -49,6 +51,8 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
         });
       },
 
+      removeForSet: (sessionId, setId) => get().remove(`${sessionId}:${setId}`),
+
       drainQueue: async (accessToken) => {
         const state = get();
         if (state.syncInProgress) return { syncedSetIds: [] };
@@ -65,13 +69,16 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
             get().remove(key);
             syncedSetIds.push(item.setId);
           } catch (err: any) {
-            if (err?.status === 0) {
-              // Still offline — stop draining, leave remaining items
-              break;
+            const status = err?.status;
+            // Only drop work the server can never accept. Anything else — no
+            // connection, an expired token, a 500 or a proxy error mid-deploy —
+            // must keep the sets queued, or the whole workout is lost.
+            if (status === 400 || status === 404 || status === 422) {
+              console.warn(`Offline sync: dropping rejected item ${key}`, err);
+              get().remove(key);
+              continue;
             }
-            // Server error (404, 422, etc.) — remove stale item
-            console.warn(`Offline sync: removing stale item ${key}`, err);
-            get().remove(key);
+            break;
           }
         }
 
@@ -89,6 +96,9 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
         }
         return ids;
       },
+
+      getPendingForSession: (sessionId) =>
+        Object.values(get().pendingItems).filter((item) => item.sessionId === sessionId),
 
       hasPending: () => Object.keys(get().pendingItems).length > 0,
     }),

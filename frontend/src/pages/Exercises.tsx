@@ -24,6 +24,8 @@ export function Exercises() {
   // Create exercise modal
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  // Kept separate from `error`, which renders behind the modal overlay
+  const [createError, setCreateError] = useState<string | null>(null);
   const [createFormData, setCreateFormData] = useState<ExerciseCreate>({
     name: '',
     description: '',
@@ -48,7 +50,9 @@ export function Exercises() {
           {
             search: searchTerm || undefined,
             muscle_group: selectedMuscleGroup || undefined,
-            include_custom: !showCustomOnly,
+            // Custom exercises are filtered in below; excluding them here left
+            // "custom only" with nothing to show
+            include_custom: true,
             limit: 500,
           },
           accessToken
@@ -70,7 +74,7 @@ export function Exercises() {
     if (!accessToken) return;
 
     setIsCreating(true);
-    setError(null);
+    setCreateError(null);
 
     try {
       await createExercise(createFormData, accessToken);
@@ -78,7 +82,7 @@ export function Exercises() {
       setCreateFormData({ name: '', description: '', muscle_group: '', equipment: '' });
       loadData(); // Reload exercises
     } catch (err: any) {
-      setError(err.detail || 'Failed to create exercise');
+      setCreateError(err.detail || 'Failed to create exercise');
     } finally {
       setIsCreating(false);
     }
@@ -105,7 +109,10 @@ export function Exercises() {
             <h1 className="text-2xl font-bold text-white">Exercise Library</h1>
             <div className="flex items-center gap-3">
               <button
-                onClick={() => setShowCreateModal(true)}
+                onClick={() => {
+                  setCreateError(null);
+                  setShowCreateModal(true);
+                }}
                 className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors text-sm sm:text-base w-full sm:w-auto"
               >
                 + Create Custom Exercise
@@ -236,6 +243,12 @@ export function Exercises() {
           <div className="bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
             <h2 className="text-2xl font-bold text-white mb-4">Create Custom Exercise</h2>
 
+            {createError && (
+              <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded mb-4 text-sm">
+                {createError}
+              </div>
+            )}
+
             <form onSubmit={handleCreateExercise}>
               <FormInput
                 id="name"
@@ -323,7 +336,10 @@ export function Exercises() {
                 </Button>
                 <button
                   type="button"
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={() => {
+                    setCreateError(null);
+                    setShowCreateModal(false);
+                  }}
                   className="flex-1 px-4 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
                 >
                   Cancel

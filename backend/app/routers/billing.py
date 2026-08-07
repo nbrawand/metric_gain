@@ -1,6 +1,7 @@
 """Billing endpoints — Stripe subscription management."""
 
 import logging
+from typing import Optional
 
 import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -14,6 +15,48 @@ from app.utils.auth import get_current_user
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _id_of(value):
+    """Stripe fields are either an id string or an expanded object."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        return value.get("id")
+    return None
+
+
+def _invoice_subscription_id(invoice) -> Optional[str]:
+    """Pull the subscription id out of an invoice across Stripe API versions.
+
+    Recent versions moved it from `invoice.subscription` to
+    `invoice.parent.subscription_details.subscription`.
+    """
+    subscription_id = _id_of(invoice.get("subscription"))
+    if subscription_id:
+        return subscription_id
+
+    parent = invoice.get("parent") or {}
+    details = parent.get("subscription_details") or {}
+    subscription_id = _id_of(details.get("subscription"))
+    if subscription_id:
+        return subscription_id
+
+    for line in (invoice.get("lines") or {}).get("data") or []:
+        line_parent = (line.get("parent") or {}).get("subscription_item_details") or {}
+        subscription_id = _id_of(line_parent.get("subscription")) or _id_of(line.get("subscription"))
+        if subscription_id:
+            return subscription_id
+    return None
+
+
+def _find_user_by_subscription(db: Session, subscription_id: Optional[str]):
+    """Look up the subscriber, never matching on a missing id."""
+    if not subscription_id:
+        return None
+    return db.query(User).filter(
+        User.stripe_subscription_id == subscription_id
+    ).first()
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -69,7 +112,13 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     if event_type == "checkout.session.completed":
         customer_id = data.get("customer")
         subscription_id = data.get("subscription")
-        user = db.query(User).filter(User.stripe_customer_id == customer_id).first()
+        # Never look a user up by a missing id: `column == None` compiles to
+        # IS NULL and would match an arbitrary user who has no id stored
+        user = (
+            db.query(User).filter(User.stripe_customer_id == customer_id).first()
+            if customer_id
+            else None
+        )
         # Fallback: look up by email from checkout session
         if not user:
             customer_email = (data.get("customer_details") or {}).get("email")
@@ -89,28 +138,47 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     elif event_type in ("customer.subscription.updated", "customer.subscription.deleted"):
         subscription_id = data.get("id")
         stripe_status = data.get("status")
-        user = db.query(User).filter(
-            User.stripe_subscription_id == subscription_id
-        ).first()
+        user = _find_user_by_subscription(db, subscription_id)
         if user:
             status_map = {
                 "active": "active",
+                "trialing": "trialing",
                 "past_due": "past_due",
                 "canceled": "canceled",
                 "unpaid": "canceled",
                 "incomplete_expired": "canceled",
             }
-            user.subscription_status = status_map.get(stripe_status, "canceled")
-            db.commit()
+            mapped = status_map.get(stripe_status)
+            if mapped is None:
+                # Statuses like paused/incomplete are not a cancellation;
+                # downgrading on them would lock a paying customer out
+                logger.warning(
+                    "Unhandled stripe subscription status=%s for subscription=%s",
+                    stripe_status, subscription_id,
+                )
+            else:
+                user.subscription_status = mapped
+                db.commit()
+        else:
+            logger.error("Webhook %s: no user for subscription=%s", event_type, subscription_id)
 
     elif event_type == "invoice.payment_failed":
-        subscription_id = data.get("subscription")
-        user = db.query(User).filter(
-            User.stripe_subscription_id == subscription_id
-        ).first()
+        subscription_id = _invoice_subscription_id(data)
+        user = _find_user_by_subscription(db, subscription_id)
+        if not user:
+            customer_id = data.get("customer")
+            if customer_id:
+                user = db.query(User).filter(
+                    User.stripe_customer_id == customer_id
+                ).first()
         if user:
             user.subscription_status = "past_due"
             db.commit()
+        else:
+            logger.error(
+                "Webhook invoice.payment_failed: no user for subscription=%s customer=%s",
+                subscription_id, data.get("customer"),
+            )
 
     return {"status": "ok"}
 

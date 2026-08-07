@@ -62,8 +62,11 @@ class TestComputeProgressionTargets:
         assert weight == 105
         assert reps == 8
 
-    def test_no_weight_movement_bumps_reps(self):
-        # 60 + max(1.5, 2.5) = 62.5 rounds back to 60, so reps bump instead
-        weight, reps = compute_progression_targets(60, 10, 12)
-        assert weight == 60
-        assert reps == 11
+    def test_round_weights_still_progress(self):
+        # The +2.5 bump lands exactly on a half step for any weight ending in
+        # 0; rounding it down would stall the target at the same weight block
+        # after block.
+        for prev in (60, 80, 100):
+            weight, reps = compute_progression_targets(prev, 10, 12)
+            assert weight == prev + 5
+            assert reps == 10

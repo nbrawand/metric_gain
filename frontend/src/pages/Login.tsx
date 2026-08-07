@@ -46,7 +46,9 @@ export function Login() {
               />
             </div>
           ) : (
-            <p className="text-gray-400 text-center text-sm">Loading sign-in...</p>
+            <p className="text-gray-400 text-center text-sm">
+              Sign-in is unavailable right now. Please check your connection and reload.
+            </p>
           )}
       </div>
     </div>

@@ -75,8 +75,11 @@ export default function Mesocycles() {
     loadData();
   }, []);
 
-  // Initialize workout templates when days_per_week changes
+  // Build the day cards when the create modal opens and whenever days_per_week
+  // changes. Keying this on days_per_week alone left the modal empty on every
+  // reopen, since resetForm puts days_per_week back to its default.
   useEffect(() => {
+    if (!showCreateModal) return;
     if (pendingTemplatesRef.current) {
       setWorkoutTemplates(pendingTemplatesRef.current);
       pendingTemplatesRef.current = null;
@@ -92,7 +95,7 @@ export default function Mesocycles() {
       });
     }
     setWorkoutTemplates(newTemplates);
-  }, [mesocycleData.days_per_week]);
+  }, [mesocycleData.days_per_week, showCreateModal]);
 
   const loadData = async () => {
     if (!accessToken) return;
@@ -292,6 +295,8 @@ export default function Mesocycles() {
     setWorkoutTemplates([]);
     setCollapsedDays(new Set());
     setCreateStep('build');
+    // Otherwise an abandoned copy repopulates the next template the user builds
+    pendingTemplatesRef.current = null;
   };
 
   const handleReviewPlan = () => {
@@ -299,6 +304,10 @@ export default function Mesocycles() {
     // cannot report a constraint violation on an input it cannot focus.
     if (!mesocycleData.name.trim()) {
       alert('Please enter a mesocycle name');
+      return;
+    }
+    if (workoutTemplates.length === 0) {
+      alert('Please add at least one training day');
       return;
     }
     if (workoutTemplates.some(w => !w.name.trim())) {
@@ -683,7 +692,16 @@ export default function Mesocycles() {
                               className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
                             >
                               <option value="">Select a week...</option>
-                              {Array.from({ length: startingMesocycle.weeks }, (_, i) => i + 1).map(w => (
+                              {/* Weeks come from the source run, not the template,
+                                  which may have been shortened since */}
+                              {Array.from(
+                                {
+                                  length:
+                                    completedForTemplate.find(i => i.id === selectedSourceInstance)
+                                      ?.template_weeks || startingMesocycle.weeks,
+                                },
+                                (_, i) => i + 1
+                              ).map(w => (
                                 <option key={w} value={w}>Week {w}</option>
                               ))}
                             </select>

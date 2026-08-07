@@ -145,8 +145,9 @@ export default function MesocycleDetail() {
 
       setEditing(false);
       await loadMesocycle();
-    } catch (err) {
-      alert('Failed to save changes');
+    } catch (err: any) {
+      // Surface the reason — e.g. the template is locked while an instance runs
+      alert(err?.detail || 'Failed to save changes');
       console.error('Error saving mesocycle:', err);
     } finally {
       setSaving(false);
@@ -175,8 +176,29 @@ export default function MesocycleDetail() {
     setEditTemplates(updated);
   };
 
+  // Sessions are generated one per workout day, so the count has to track the
+  // day cards — storing a days/week that disagrees with them just misreports
+  // the template.
+  const setDaysPerWeek = (days: number) => {
+    setEditData((prev) => ({ ...prev, days_per_week: days }));
+    setEditTemplates((prev) => {
+      if (days === prev.length) return prev;
+      if (days < prev.length) return prev.slice(0, days);
+      const next = [...prev];
+      while (next.length < days) {
+        next.push({
+          name: `Day ${next.length + 1} Workout`,
+          description: '',
+          order_index: next.length,
+          exercises: [],
+        });
+      }
+      return next;
+    });
+  };
+
   const addWorkoutTemplate = () => {
-    setEditTemplates([
+    const updated = [
       ...editTemplates,
       {
         name: `Day ${editTemplates.length + 1} Workout`,
@@ -184,7 +206,9 @@ export default function MesocycleDetail() {
         order_index: editTemplates.length,
         exercises: [],
       },
-    ]);
+    ];
+    setEditTemplates(updated);
+    setEditData((prev) => ({ ...prev, days_per_week: updated.length }));
   };
 
   const removeWorkoutTemplate = (index: number) => {
@@ -193,6 +217,7 @@ export default function MesocycleDetail() {
     // Fix order indices
     updated.forEach((wt, i) => (wt.order_index = i));
     setEditTemplates(updated);
+    setEditData((prev) => ({ ...prev, days_per_week: Math.max(1, updated.length) }));
   };
 
   const addExerciseToWorkout = (workoutIndex: number) => {
@@ -383,7 +408,7 @@ export default function MesocycleDetail() {
                   <label className="block text-gray-300 text-sm font-medium mb-2">Days/Week *</label>
                   <select
                     value={editData.days_per_week}
-                    onChange={(e) => setEditData({ ...editData, days_per_week: parseInt(e.target.value) })}
+                    onChange={(e) => setDaysPerWeek(parseInt(e.target.value))}
                     className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   >
                     {[1, 2, 3, 4, 5, 6, 7].map((n) => (

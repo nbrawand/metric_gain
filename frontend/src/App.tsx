@@ -143,6 +143,7 @@ function AppRoutes() {
 function App() {
   const logout = useAuthStore((s) => s.logout);
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
+  const [configLoaded, setConfigLoaded] = useState(false);
 
   // Wire the API client to the auth store so token refresh updates in-memory state
   useEffect(() => {
@@ -152,26 +153,51 @@ function App() {
     );
   }, [logout]);
 
-  // Fetch Google Client ID from backend
+  // Fetch Google Client ID from backend. Retried, because giving up on one
+  // failed request used to leave the sign-in button stuck on "Loading" forever.
   useEffect(() => {
-    getGoogleClientId()
-      .then((res) => {
+    let cancelled = false;
+
+    const load = async (attempt = 0) => {
+      try {
+        const res = await getGoogleClientId();
+        if (cancelled) return;
         if (res.client_id) setGoogleClientId(res.client_id);
-      })
-      .catch(() => {});
+        setConfigLoaded(true);
+      } catch (err) {
+        if (cancelled) return;
+        if (attempt < 3) {
+          setTimeout(() => load(attempt + 1), 1000 * 2 ** attempt);
+          return;
+        }
+        console.error('Could not load the Google sign-in configuration', err);
+        setConfigLoaded(true);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  if (googleClientId) {
+  // Wait for the config before mounting the routes: swapping the provider in
+  // afterwards remounts the whole tree and refires every request on the page.
+  if (!configLoaded) {
     return (
-      <GoogleOAuthProvider clientId={googleClientId}>
-        <GoogleAuthContext.Provider value={true}>
-          <AppRoutes />
-        </GoogleAuthContext.Provider>
-      </GoogleOAuthProvider>
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <p className="text-gray-400">Loading...</p>
+      </div>
     );
   }
 
-  return <AppRoutes />;
+  return (
+    <GoogleOAuthProvider clientId={googleClientId ?? ''}>
+      <GoogleAuthContext.Provider value={!!googleClientId}>
+        <AppRoutes />
+      </GoogleAuthContext.Provider>
+    </GoogleOAuthProvider>
+  );
 }
 
 export default App;

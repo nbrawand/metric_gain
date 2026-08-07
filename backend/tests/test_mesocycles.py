@@ -642,3 +642,53 @@ def test_create_mesocycle_invalid_weeks(client, auth_headers, sample_exercise_id
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
+
+
+def test_cannot_replace_workouts_while_an_instance_is_active(client, auth_headers, sample_exercise_id):
+    """Replacing workouts deletes them, which would detach a running instance's sessions."""
+    mesocycle = client.post(
+        "/v1/mesocycles/",
+        json={
+            "name": "Active Block",
+            "weeks": 4,
+            "days_per_week": 1,
+            "workout_templates": [
+                {
+                    "name": "Day 1",
+                    "order_index": 0,
+                    "exercises": [
+                        {
+                            "exercise_id": sample_exercise_id,
+                            "order_index": 0,
+                            "target_sets": 3,
+                            "target_reps_min": 8,
+                            "target_reps_max": 12,
+                        }
+                    ],
+                }
+            ],
+        },
+        headers=auth_headers,
+    ).json()
+
+    started = client.post(
+        "/v1/mesocycle-instances/",
+        json={"mesocycle_template_id": mesocycle["id"]},
+        headers=auth_headers,
+    )
+    assert started.status_code == status.HTTP_201_CREATED
+
+    response = client.put(
+        f"/v1/mesocycles/{mesocycle['id']}/workout-templates",
+        json=[{"name": "Renamed Day", "order_index": 0, "exercises": []}],
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_409_CONFLICT
+
+    # Sessions still point at their plan
+    sessions = client.get(
+        f"/v1/workout-sessions/?mesocycle_instance_id={started.json()['id']}",
+        headers=auth_headers,
+    ).json()
+    assert sessions
+    assert all(s["workout_template_id"] is not None for s in sessions)

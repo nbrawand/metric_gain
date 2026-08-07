@@ -584,6 +584,22 @@ async def replace_workout_templates(
             detail="You can only modify your own mesocycles",
         )
 
+    # Replacing the templates deletes them, and every session of a running
+    # instance points at those rows — they would be detached from their plan
+    active_instances = (
+        db.query(MesocycleInstance)
+        .filter(
+            MesocycleInstance.mesocycle_template_id == mesocycle_id,
+            MesocycleInstance.status == "active",
+        )
+        .count()
+    )
+    if active_instances > 0:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot edit workouts while an instance of this template is active. End the active mesocycle first.",
+        )
+
     # Delete all existing workout templates (cascades to exercises)
     db.query(WorkoutExercise).filter(
         WorkoutExercise.workout_template_id.in_(

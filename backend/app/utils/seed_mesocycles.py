@@ -91,30 +91,48 @@ PUSH_PULL_LEGS_TEMPLATE = {
 
 
 def _set_workout_exercises(db: Session, workout_template: WorkoutTemplate, exercise_list: list) -> None:
-    """Replace all exercises on a workout template with the given list."""
-    # Delete existing exercises
-    db.query(WorkoutExercise).filter(
-        WorkoutExercise.workout_template_id == workout_template.id
-    ).delete()
+    """Update a workout template's exercises in place to match the given list.
 
-    # Create new exercises
-    for exercise_idx, exercise_data in enumerate(exercise_list):
+    Rows are reused by position rather than deleted and recreated: instances
+    key their per-exercise note overrides by workout_exercise_id, and new ids
+    on every seed run would orphan every note a user has written.
+    """
+    existing = (
+        db.query(WorkoutExercise)
+        .filter(WorkoutExercise.workout_template_id == workout_template.id)
+        .order_by(WorkoutExercise.order_index)
+        .all()
+    )
+
+    kept = 0
+    for exercise_data in exercise_list:
         exercise = get_exercise_by_name(db, exercise_data["name"])
         if not exercise:
             print(f"  Warning: Exercise '{exercise_data['name']}' not found, skipping")
             continue
 
-        db.add(WorkoutExercise(
-            workout_template_id=workout_template.id,
+        fields = dict(
             exercise_id=exercise.id,
-            order_index=exercise_idx,
+            order_index=kept,
             target_sets=exercise_data["sets"],
             weekly_set_increment=exercise_data.get("increment", 0.5),
             target_reps_min=exercise_data["reps_min"],
             target_reps_max=exercise_data["reps_max"],
             starting_rir=3,
             ending_rir=0,
-        ))
+        )
+
+        if kept < len(existing):
+            workout_exercise = existing[kept]
+            for field, value in fields.items():
+                setattr(workout_exercise, field, value)
+        else:
+            db.add(WorkoutExercise(workout_template_id=workout_template.id, **fields))
+        kept += 1
+
+    # Drop any trailing rows the template no longer has
+    for workout_exercise in existing[kept:]:
+        db.delete(workout_exercise)
 
 
 def _update_stock_mesocycle(db: Session, existing: Mesocycle, template: dict) -> None:
@@ -382,9 +400,9 @@ FIVE_DAY_LPPLU_TEMPLATE = {
 
 BEGINNER_STRENGTH_TEMPLATE = {
     "name": "Beginner Strength",
-    "description": "Compound-focused 3-day program inspired by Starting Strength and StrongLifts. Builds a foundation with barbell movements and simple linear progression. Ideal for true beginners learning the big lifts.",
+    "description": "Compound-focused program inspired by Starting Strength and StrongLifts, alternating two barbell sessions. Builds a foundation with simple linear progression. Ideal for true beginners learning the big lifts.",
     "weeks": 5,
-    "days_per_week": 3,
+    "days_per_week": 2,
     "workouts": [
         {
             "name": "Workout A",
@@ -646,6 +664,14 @@ def seed_mesocycles(db: Session) -> None:
     If it doesn't exist, creates it.
     """
     for template in STOCK_TEMPLATES:
+        # Instances get one session per workout, so a days_per_week that
+        # disagrees with the workout count is shown to users but never honored
+        if template["days_per_week"] != len(template["workouts"]):
+            print(
+                f"  Warning: '{template['name']}' claims {template['days_per_week']} days/week "
+                f"but defines {len(template['workouts'])} workouts"
+            )
+
         existing = db.query(Mesocycle).filter(
             Mesocycle.is_stock == 1,
             Mesocycle.name == template["name"],

@@ -70,6 +70,16 @@ export function Home() {
 
   const mesocycle = activeInstance?.mesocycle_template;
 
+  // Take the week from the next workout due rather than dividing completed
+  // workouts by days/week: sessions can be done out of order, and the division
+  // ran past the end of the block once everything was finished.
+  const completedCount = workoutSessions.filter(s => s.status === 'completed').length;
+  const totalWeeks = activeInstance?.template_weeks || mesocycle?.weeks || 0;
+  const nextUnfinished = workoutSessions
+    .filter(s => s.status !== 'completed')
+    .sort((a, b) => a.week_number - b.week_number || a.day_number - b.day_number)[0];
+  const currentWeek = Math.min(nextUnfinished?.week_number ?? totalWeeks, totalWeeks);
+
   const handleOnboardingComplete = async () => {
     setShowOnboarding(false);
     try {
@@ -94,9 +104,9 @@ export function Home() {
                   {mesocycle.name}
                 </h2>
                 <p className="text-teal-100 text-sm sm:text-base">
-                  Week {Math.floor(workoutSessions.filter(s => s.status === 'completed').length / mesocycle.days_per_week) + 1} of {mesocycle.weeks}
+                  Week {currentWeek} of {totalWeeks}
                   {' • '}
-                  {workoutSessions.filter(s => s.status === 'completed').length} workouts completed
+                  {completedCount} workouts completed
                 </p>
               </div>
               <button

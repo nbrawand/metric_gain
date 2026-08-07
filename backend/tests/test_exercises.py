@@ -260,3 +260,43 @@ def test_list_exercises_with_pagination(client, auth_headers):
     # Should get different exercises
     if len(data1) == 5 and len(data2) > 0:
         assert data1[0]["id"] != data2[0]["id"]
+
+
+def test_cannot_delete_a_custom_exercise_that_is_in_use(client, auth_headers):
+    """Deleting an in-use exercise would cascade away logged sets and template rows."""
+    exercise = client.post(
+        "/v1/exercises/",
+        json={"name": "In Use Lift", "muscle_group": "Chest", "equipment": "Barbell"},
+        headers=auth_headers,
+    ).json()
+
+    client.post(
+        "/v1/mesocycles/",
+        json={
+            "name": "Uses The Lift",
+            "weeks": 4,
+            "days_per_week": 1,
+            "workout_templates": [
+                {
+                    "name": "Day 1",
+                    "order_index": 0,
+                    "exercises": [
+                        {
+                            "exercise_id": exercise["id"],
+                            "order_index": 0,
+                            "target_sets": 3,
+                            "target_reps_min": 8,
+                            "target_reps_max": 12,
+                        }
+                    ],
+                }
+            ],
+        },
+        headers=auth_headers,
+    )
+
+    response = client.delete(f"/v1/exercises/{exercise['id']}", headers=auth_headers)
+    assert response.status_code == status.HTTP_409_CONFLICT
+
+    still_there = client.get(f"/v1/exercises/{exercise['id']}", headers=auth_headers)
+    assert still_there.status_code == status.HTTP_200_OK

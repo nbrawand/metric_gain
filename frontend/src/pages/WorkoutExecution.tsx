@@ -62,7 +62,7 @@ export default function WorkoutExecution() {
   const [completingWorkout, setCompletingWorkout] = useState(false);
 
   // Offline sync
-  const { enqueue, remove, drainQueue, getPendingSetIds, hasPending } = useOfflineSyncStore();
+  const { enqueue, remove, removeForSet, drainQueue, getPendingSetIds, getPendingForSession, hasPending } = useOfflineSyncStore();
   const [serverReachable, setServerReachableState] = useState(getServerReachable);
 
   useEffect(() => {
@@ -237,6 +237,31 @@ export default function WorkoutExecution() {
       let updated: WorkoutSession;
       if (showExercisePicker === 'swap' && swapTargetExerciseId !== null) {
         updated = await swapExercise(session.id, swapTargetExerciseId, newExerciseId, accessToken);
+
+        // The swap reuses the same set rows with the performance cleared, so
+        // the old exercise's checkmarks, typed numbers and any queued offline
+        // saves have to go with it — otherwise the new exercise looks already
+        // logged and gets stored as 0 x 0.
+        const swappedSetIds = updated.workout_sets
+          .filter((s) => s.exercise_id === newExerciseId)
+          .map((s) => s.id);
+        setLoggedSetIds((prev) => {
+          const next = new Set(prev);
+          swappedSetIds.forEach((id) => next.delete(id));
+          return next;
+        });
+        setInputValues((prev) => {
+          const next = { ...prev };
+          swappedSetIds.forEach((id) => {
+            const swappedSet = updated.workout_sets.find((s) => s.id === id);
+            next[id] = {
+              weight: (swappedSet?.weight ?? 0).toString(),
+              reps: (swappedSet?.reps ?? 0).toString(),
+            };
+          });
+          return next;
+        });
+        swappedSetIds.forEach((id) => removeForSet(session.id, id));
       } else {
         updated = await addExercise(session.id, newExerciseId, accessToken);
       }
@@ -258,7 +283,27 @@ export default function WorkoutExecution() {
       setLoading(true);
       const sessionData = await getWorkoutSession(parseInt(sessionId), accessToken);
       setSession(sessionData);
-      setLoggedSetIds(new Set(sessionData.workout_sets.filter(s => s.skipped || s.weight > 0 || s.reps > 0).map(s => s.id)));
+
+      // Sets saved while offline are only in the queue, not on the server yet.
+      // Without folding them back in, a reload shows them unlogged at 0 and
+      // completing the workout would overwrite the queued values with zeros.
+      const pending = getPendingForSession(sessionData.id);
+      setLoggedSetIds(new Set([
+        ...sessionData.workout_sets.filter(s => s.skipped || s.weight > 0 || s.reps > 0).map(s => s.id),
+        ...pending.map(item => item.setId),
+      ]));
+      if (pending.length > 0) {
+        setInputValues((prev) => {
+          const next = { ...prev };
+          for (const item of pending) {
+            next[item.setId] = {
+              weight: String(item.data.weight ?? 0),
+              reps: String(item.data.reps ?? 0),
+            };
+          }
+          return next;
+        });
+      }
 
       // Load mesocycle instance data
       const instanceData = await getMesocycleInstance(sessionData.mesocycle_instance_id, accessToken);
@@ -293,18 +338,15 @@ export default function WorkoutExecution() {
       },
     }));
 
-    // If set was logged, mark as unlogged and reset on server
+    // Editing a saved set clears its check to show the change is unsaved. The
+    // server keeps the last saved value until the user saves again — zeroing it
+    // here would throw away real data the moment they touch the field.
     if (loggedSetIds.has(setId)) {
       setLoggedSetIds((prev) => {
         const next = new Set(prev);
         next.delete(setId);
         return next;
       });
-      // Reset backend data (fire-and-forget) so the set is treated as never logged
-      if (accessToken && session) {
-        updateWorkoutSet(session.id, setId, { weight: 0, reps: 0, skipped: 0 }, accessToken)
-          .catch((err) => console.error('Error resetting set:', err));
-      }
     }
 
     // Also update local session state for immediate UI feedback
@@ -364,6 +406,9 @@ export default function WorkoutExecution() {
 
     try {
       await updateWorkoutSet(session.id, setId, setData, accessToken);
+      // Drop any older queued value for this set, or the next drain would
+      // overwrite what was just saved with what the user already replaced
+      removeForSet(session.id, setId);
       setLoggedSetIds((prev) => new Set(prev).add(setId));
     } catch (err: any) {
       if (err?.status === 0) {
@@ -780,7 +825,10 @@ export default function WorkoutExecution() {
     );
   }
 
-  if (error || !session || !instance || !mesocycle) {
+  // Only a failure to load at all can replace the screen. A failed save must
+  // stay a banner: the user's typed sets live in component state, and swapping
+  // the page out for an error message would strand them mid-workout.
+  if (!session || !instance || !mesocycle) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-red-600">{error || 'Workout not found'}</div>
@@ -790,6 +838,17 @@ export default function WorkoutExecution() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white pb-20">
+      {error && (
+        <div className="bg-red-900/80 border-b border-red-500 px-4 py-3 flex items-start justify-between gap-3">
+          <p className="text-sm text-red-100">{error}</p>
+          <button
+            onClick={() => setError(null)}
+            className="text-red-200 hover:text-white text-sm font-medium shrink-0"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       {/* Header */}
       <div className="bg-gray-800 p-4 sticky top-0 z-10 shadow-lg">
         <div className="flex items-center justify-between">

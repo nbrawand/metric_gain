@@ -11,8 +11,13 @@ from sqlalchemy.orm import Session
 
 
 def round_to_nearest_5(value: float) -> float:
-    """Round a weight to the nearest 5 (e.g. 0, 5, 10, 15, ...)."""
-    return round(value / 5) * 5
+    """Round a weight to the nearest 5 (e.g. 0, 5, 10, 15, ...), halves up.
+
+    Half-up matters: a +2.5 bump on any weight ending in 0 lands exactly on a
+    half step, and Python's banker's rounding would send it back down, stalling
+    the weight target forever (100 -> 102.5 -> 100).
+    """
+    return int(value / 5 + 0.5) * 5
 
 
 def compute_sets_for_week(target_sets: int, increment: float, week: int) -> int:
@@ -33,7 +38,9 @@ def compute_target_rir(week: int, total_weeks: int) -> int:
     """
     if total_weeks <= 1:
         return 0
-    return int(3 * (total_weeks - week) / (total_weeks - 1) + 0.5)
+    # Clamped because a week outside the block would otherwise produce a
+    # negative RIR, which the response schema rejects once it is stored.
+    return max(0, min(3, int(3 * (total_weeks - week) / (total_weeks - 1) + 0.5)))
 
 
 def compute_progression_targets(

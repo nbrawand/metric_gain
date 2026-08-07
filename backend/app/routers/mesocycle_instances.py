@@ -528,6 +528,20 @@ async def update_mesocycle_instance(
     if update_data.get("status") in ["completed", "abandoned"]:
         instance.end_date = date.today()
 
+    # Reopening an instance must not leave the user with two active blocks
+    if update_data.get("status") == "active" and instance.status != "active":
+        other_active = db.query(MesocycleInstance).filter(
+            MesocycleInstance.user_id == current_user.id,
+            MesocycleInstance.status == "active",
+            MesocycleInstance.id != instance.id,
+        ).first()
+        if other_active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You already have an active mesocycle. End it before reopening this one.",
+            )
+        instance.end_date = None
+
     for field, value in update_data.items():
         setattr(instance, field, value)
 

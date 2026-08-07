@@ -732,3 +732,82 @@ def test_start_from_source_includes_exercises_the_source_never_ran(client, auth_
     # The new exercise has no history to seed from, so it carries no weight target
     fresh = [s for s in sets if s["exercise_id"] == second_exercise]
     assert all(s["target_weight"] is None for s in fresh)
+
+
+# Guards on session and set mutation
+
+def test_cannot_create_session_in_another_users_instance(
+    client, auth_headers, make_auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance
+):
+    """A session request must not be able to reach into someone else's instance."""
+    intruder = make_auth_headers("session_intruder@example.com", "Intruder")
+    response = client.post(
+        "/v1/workout-sessions/",
+        json={
+            "mesocycle_instance_id": sample_mesocycle_instance["id"],
+            "workout_template_id": sample_mesocycle_with_workouts["workout_templates"][0]["id"],
+            "workout_date": str(date.today()),
+            "week_number": 1,
+            "day_number": 1,
+        },
+        headers=intruder,
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_swapping_onto_an_exercise_already_present_is_rejected(
+    client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance
+):
+    """Merging two exercises into one would give it two runs of set numbers."""
+    exercises = client.get("/v1/exercises/", headers=auth_headers).json()
+    session = next(
+        s for s in _sessions_for_instance(client, auth_headers, sample_mesocycle_instance["id"])
+        if s["week_number"] == 1 and s["day_number"] == 1
+    )
+    detail = client.get(f"/v1/workout-sessions/{session['id']}", headers=auth_headers).json()
+    existing_exercise = detail["workout_sets"][0]["exercise_id"]
+    other_exercise = next(e["id"] for e in exercises if e["id"] != existing_exercise)
+
+    added = client.post(
+        f"/v1/workout-sessions/{session['id']}/exercises/add",
+        json={"exercise_id": other_exercise},
+        headers=auth_headers,
+    )
+    assert added.status_code == status.HTTP_200_OK
+
+    response = client.post(
+        f"/v1/workout-sessions/{session['id']}/exercises/swap",
+        json={"old_exercise_id": other_exercise, "new_exercise_id": existing_exercise},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    # Set numbering is intact: each exercise still has its own 1..n run
+    after = client.get(f"/v1/workout-sessions/{session['id']}", headers=auth_headers).json()
+    per_exercise = {}
+    for workout_set in after["workout_sets"]:
+        per_exercise.setdefault(workout_set["exercise_id"], []).append(workout_set["set_number"])
+    for numbers in per_exercise.values():
+        assert sorted(numbers) == list(range(1, len(numbers) + 1))
+
+
+def test_adding_a_set_for_an_unknown_exercise_is_rejected(
+    client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance
+):
+    """An unknown exercise id must 404 rather than violate the foreign key."""
+    session = next(
+        s for s in _sessions_for_instance(client, auth_headers, sample_mesocycle_instance["id"])
+        if s["week_number"] == 1 and s["day_number"] == 1
+    )
+    response = client.post(
+        f"/v1/workout-sessions/{session['id']}/sets",
+        json={
+            "exercise_id": 999999,
+            "set_number": 1,
+            "order_index": 0,
+            "weight": 100,
+            "reps": 10,
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
