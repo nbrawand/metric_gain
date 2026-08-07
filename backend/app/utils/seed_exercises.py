@@ -798,7 +798,7 @@ DEFAULT_EXERCISES = [
         "name": "Prone Y-Raise",
         "description": "Face-down raise in a Y shape, targeting the lower and middle traps",
         "muscle_group": "Traps",
-        "equipment": "Dumbbell",
+        "equipment": "Dumbbells",
     },
 
     # --- Glutes ---
@@ -872,7 +872,7 @@ DEFAULT_EXERCISES = [
         "name": "Reverse Lunge",
         "description": "Lunge stepping backwards, usually easier on the knees than a forward lunge",
         "muscle_group": "Quadriceps",
-        "equipment": "Dumbbell",
+        "equipment": "Dumbbells",
     },
 
     # --- Core ---

@@ -12,8 +12,10 @@ from app.database import get_db
 from app.models.workout_session import WorkoutSession, WorkoutSet
 from app.models.exercise import Exercise
 from app.models.user import User
-from app.models.mesocycle import WorkoutTemplate
+from app.models.mesocycle import WorkoutExercise, WorkoutTemplate
 from app.services.progression import (
+    DEFAULT_INCREMENT,
+    increment_for_equipment,
     compute_sets_for_week,
     compute_target_rir,
     compute_progression_targets,
@@ -133,8 +135,22 @@ def get_workout_session(
                 for ps in prev_sets:
                     prev_map.setdefault(ps.exercise_id, []).append(ps)
 
+        # The plan's rep range is the ceiling double progression works up to;
+        # without it a held weight would keep asking for one more rep forever
+        rep_ceilings = {}
+        if workout_session.workout_template_id:
+            planned = db.query(WorkoutExercise).filter(
+                WorkoutExercise.workout_template_id == workout_session.workout_template_id
+            ).all()
+            rep_ceilings = {pe.exercise_id: pe.target_reps_max for pe in planned}
+
         dirty = False
         for ws in workout_session.workout_sets:
+            # ws.exercise is already joined-loaded, so this costs no query
+            increment = increment_for_equipment(
+                ws.exercise.equipment if ws.exercise else None
+            )
+            rep_ceiling = rep_ceilings.get(ws.exercise_id)
             prev_exercise_sets = prev_map.get(ws.exercise_id)
             prev_set = None
             if prev_exercise_sets:
@@ -146,6 +162,8 @@ def get_workout_session(
                     prev_set.weight,
                     prev_set.reps if prev_set.reps > 0 else None,
                     ws.target_reps,
+                    increment=increment,
+                    rep_ceiling=rep_ceiling,
                 )
             elif ws.target_weight is None or prev_session is not None:
                 # No matching set last week. This is the normal case for the
@@ -159,7 +177,9 @@ def get_workout_session(
                     current_day=workout_session.day_number,
                 )
                 new_target, new_reps = compute_progression_targets(
-                    hist_weight, hist_reps, ws.target_reps
+                    hist_weight, hist_reps, ws.target_reps,
+                    increment=increment,
+                    rep_ceiling=rep_ceiling,
                 )
             else:
                 continue
@@ -430,8 +450,13 @@ def _add_exercise_sets(
         current_day=workout_session.day_number,
     )
     fallback_reps = planned_entries[0].target_reps_max if planned_entries else None
+    exercise_row = db.query(Exercise).filter(Exercise.id == exercise_id).first()
     target_weight, target_reps = compute_progression_targets(
-        prev_weight, prev_reps, fallback_reps
+        prev_weight, prev_reps, fallback_reps,
+        increment=increment_for_equipment(
+            exercise_row.equipment if exercise_row else None
+        ),
+        rep_ceiling=fallback_reps,
     )
 
     for set_num in range(1, num_sets + 1):

@@ -23,6 +23,8 @@ from app.schemas.mesocycle import (
 from app.utils.auth import get_current_user
 from app.utils.db import apply_update
 from app.services.progression import (
+    DEFAULT_INCREMENT,
+    increments_for_exercises,
     compute_sets_for_week,
     compute_target_rir,
     compute_progression_targets,
@@ -207,6 +209,10 @@ def _generate_sets_for_session(
     """
     target_rir = compute_target_rir(week_number, total_weeks)
 
+    increments = increments_for_exercises(
+        db, [te.exercise_id for te in workout_template.exercises]
+    )
+
     for template_exercise in workout_template.exercises:
         num_sets = compute_sets_for_week(
             template_exercise.target_sets,
@@ -223,6 +229,8 @@ def _generate_sets_for_session(
         )
         hist_target_weight, hist_target_reps = compute_progression_targets(
             prev_weight, prev_reps, template_exercise.target_reps_max,
+            increment=increments.get(template_exercise.exercise_id, DEFAULT_INCREMENT),
+            rep_ceiling=template_exercise.target_reps_max,
         )
 
         for set_num in range(1, num_sets + 1):
@@ -263,13 +271,23 @@ def _generate_sets_from_source(
         WorkoutSet.workout_session_id == source_session.id
     ).order_by(WorkoutSet.order_index, WorkoutSet.set_number).all()
 
+    increments = increments_for_exercises(
+        db,
+        [te.exercise_id for te in workout_template.exercises]
+        + [ss.exercise_id for ss in source_sets],
+    )
+
     source_by_exercise = OrderedDict()
     for ss in source_sets:
         source_by_exercise.setdefault(ss.exercise_id, []).append(ss)
 
     target_rir = compute_target_rir(week_number, total_weeks)
 
-    def _create_sets(exercise_id, num_sets, order_base, fallback_reps, source_exercise_sets):
+    def _create_sets(
+        exercise_id, num_sets, order_base, fallback_reps, source_exercise_sets,
+        rep_ceiling=None,
+    ):
+        increment = increments.get(exercise_id, DEFAULT_INCREMENT)
         for set_num in range(1, num_sets + 1):
             source_set = None
             fallback_set = None
@@ -292,6 +310,8 @@ def _generate_sets_from_source(
                     fallback_set.weight,
                     fallback_set.reps if fallback_set.reps > 0 else None,
                     target_reps,
+                    increment=increment,
+                    rep_ceiling=rep_ceiling,
                 )
 
             # Fallback to cascading lookup if source has no weight data
@@ -305,6 +325,8 @@ def _generate_sets_from_source(
                 if prev_weight is not None:
                     target_weight, target_reps = compute_progression_targets(
                         prev_weight, prev_reps, target_reps,
+                        increment=increment,
+                        rep_ceiling=rep_ceiling,
                     )
                 elif prev_reps is not None and target_reps is None:
                     target_reps = prev_reps
@@ -333,6 +355,7 @@ def _generate_sets_from_source(
             template_exercise.order_index * 100,
             template_exercise.target_reps_max,
             source_by_exercise.get(template_exercise.exercise_id),
+            rep_ceiling=template_exercise.target_reps_max,
         )
 
     # Anything the source ran that the template dropped goes after the plan

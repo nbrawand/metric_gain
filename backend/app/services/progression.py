@@ -10,14 +10,77 @@ from typing import Optional, Tuple
 from sqlalchemy.orm import Session
 
 
-def round_to_nearest_5(value: float) -> float:
-    """Round a weight to the nearest 5 (e.g. 0, 5, 10, 15, ...), halves up.
+# Smallest weight change that is actually loadable, by equipment. Matched as
+# lowercase substrings against Exercise.equipment, which is freeform text and
+# often a combination ("Barbell/Dumbbells", "Cable Machine/Band"), so the first
+# match wins and order matters: the finer increment is listed first, because a
+# combination is only as fine as its finest option.
+#
+# Everything in a commercial gym lands on 5 lb — the smallest plate pair is
+# 2 x 2.5, dumbbells step in 5s, and selectorised stacks in 5s or 10s. The
+# exceptions are lifts loaded by a single plate or by adding weight to
+# bodyweight, where a lone 2.5 is loadable.
+DEFAULT_INCREMENT = 5.0
+_EQUIPMENT_INCREMENTS = (
+    ("bodyweight", 2.5),
+    ("pull-up bar", 2.5),
+    ("parallel bars", 2.5),
+    ("plate", 2.5),
+    ("ab wheel", 2.5),
+    ("medicine ball", 2.5),
+    ("band", 2.5),
+    ("other", 2.5),
+)
 
-    Half-up matters: a +2.5 bump on any weight ending in 0 lands exactly on a
-    half step, and Python's banker's rounding would send it back down, stalling
-    the weight target forever (100 -> 102.5 -> 100).
+
+def increment_for_equipment(equipment: Optional[str]) -> float:
+    """The smallest weight step this equipment can actually be loaded with."""
+    if not equipment:
+        return DEFAULT_INCREMENT
+    text = equipment.lower()
+    for keyword, increment in _EQUIPMENT_INCREMENTS:
+        if keyword in text:
+            return increment
+    return DEFAULT_INCREMENT
+
+
+def round_to_increment(value: float, increment: float) -> float:
+    """Round a weight to the nearest loadable step, halves up.
+
+    Half-up matters: a target landing exactly between two steps would go back
+    down under Python's banker's rounding and stall the weight forever.
     """
-    return int(value / 5 + 0.5) * 5
+    if increment <= 0:
+        return value
+    rounded = int(value / increment + 0.5) * increment
+    # 2.5 * 41 style products carry float noise; weights are never finer than
+    # a tenth of a pound
+    return round(rounded, 2)
+
+
+def round_to_nearest_5(value: float) -> float:
+    """Round a weight to the nearest 5 (e.g. 0, 5, 10, 15, ...), halves up."""
+    return round_to_increment(value, 5.0)
+
+
+def increments_for_exercises(db: Session, exercise_ids) -> dict:
+    """Map exercise id -> loadable increment, in one query.
+
+    Batched because set generation runs per exercise per day per week; looking
+    equipment up one row at a time turned starting a 6x6 block into hundreds of
+    extra round trips.
+    """
+    from app.models.exercise import Exercise
+
+    ids = {i for i in exercise_ids if i is not None}
+    if not ids:
+        return {}
+    rows = (
+        db.query(Exercise.id, Exercise.equipment)
+        .filter(Exercise.id.in_(ids))
+        .all()
+    )
+    return {row[0]: increment_for_equipment(row[1]) for row in rows}
 
 
 def compute_sets_for_week(target_sets: int, increment: float, week: int) -> int:
@@ -43,32 +106,64 @@ def compute_target_rir(week: int, total_weeks: int) -> int:
     return max(0, min(3, int(3 * (total_weeks - week) / (total_weeks - 1) + 0.5)))
 
 
+WEEKLY_INCREASE = 0.025
+
+
 def compute_progression_targets(
     prev_weight: Optional[float],
     prev_reps: Optional[int],
     fallback_reps: Optional[int],
+    increment: float = DEFAULT_INCREMENT,
+    rep_ceiling: Optional[int] = None,
 ) -> Tuple[Optional[float], Optional[int]]:
     """Progressive-overload targets from the last performance.
 
-    Aim for +2.5% weight (min 2.5) rounded to the nearest 5; if rounding
-    doesn't move the weight, keep it and target one more rep instead.
+    Aim for +2.5%, rounded to the nearest step the equipment can be loaded
+    with. When the percentage is too small to move a full step, hold the weight
+    and ask for one more rep instead — double progression — until reps reach the
+    top of the range, at which point the weight goes up one step and reps reset.
+
+    There used to be a `min 2.5` floor under the percentage, which made every
+    jump a full +5 lb no matter the lift: 15 -> 20 is +33% and unachievable
+    week after week, while 225 -> 230 is +2.2%. That is backwards, and the
+    floor is what caused it — the percentage is the driver, the increment is
+    only the resolution it gets rounded to.
+
     Returns (target_weight, target_reps).
     """
     target_weight = None
     target_reps = fallback_reps
+
     if prev_weight is not None:
-        increase = max(prev_weight * 0.025, 2.5)
-        target_weight = round_to_nearest_5(prev_weight + increase)
-        if target_weight <= prev_weight:
-            target_weight = prev_weight
+        target_weight = round_to_increment(
+            prev_weight * (1 + WEEKLY_INCREASE), increment
+        )
+
+        if target_weight > prev_weight:
+            # The percentage cleared a full step: take the weight, hold reps
             if prev_reps is not None:
-                target_reps = prev_reps + 1
-            elif target_reps is not None:
-                target_reps = target_reps + 1
-        elif prev_reps is not None:
-            target_reps = prev_reps
+                target_reps = prev_reps
+        else:
+            # Too small to move a step. Add a rep instead, and once the rep
+            # range is exhausted convert that progress into the next step up.
+            target_weight = prev_weight
+            current_reps = prev_reps if prev_reps is not None else target_reps
+            if current_reps is not None:
+                if rep_ceiling is not None and current_reps >= rep_ceiling:
+                    target_weight = round_to_increment(
+                        prev_weight + increment, increment
+                    )
+                    # Hold at the top of the range rather than continuing to
+                    # climb: asking for more reps *and* more weight in the same
+                    # week is two progressions at once. This is the only place a
+                    # light lift takes a large percentage jump, and it happens
+                    # once the rep range is exhausted rather than every week.
+                    target_reps = rep_ceiling
+                else:
+                    target_reps = current_reps + 1
     elif prev_reps is not None:
         target_reps = prev_reps
+
     return target_weight, target_reps
 
 

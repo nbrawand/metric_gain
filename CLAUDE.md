@@ -23,7 +23,7 @@ logged sets already measure objectively. Don't copy the survey.
 
 ### Correctness — the current plan is wrong
 
-[ ] Size the weight jump to the lift instead of always rounding up to the next
+[x] Size the weight jump to the lift instead of always rounding up to the next
 multiple of 5. `compute_progression_targets` in
 `backend/app/services/progression.py` advertises +2.5% but the `min 2.5` floor
 plus `round_to_nearest_5` makes every jump +5 lb. Measured: 15->20 (+33%),

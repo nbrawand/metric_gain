@@ -511,7 +511,20 @@ def test_start_from_source_includes_exercises_the_source_never_ran(client, auth_
     # every one of its sets gets the same target — the sets past the source's
     # count used to fall through to the history lookup and progress on their own
     seeded = [s for s in sets if s["exercise_id"] == first_exercise]
-    assert {s["target_weight"] for s in seeded} == {105.0}
+    # 100 lifted -> +2.5% = 102.5, rounded to what this exercise can be loaded
+    # with. The point of the assertion is that all of its sets share one target;
+    # they used to disagree, because the sets past the source's count fell
+    # through to the history lookup and progressed on their own.
+    from app.services.progression import compute_progression_targets, increment_for_equipment
+    equipment = next(
+        e["equipment"]
+        for e in client.get("/v1/exercises/?limit=500", headers=auth_headers).json()
+        if e["id"] == first_exercise
+    )
+    expected, _ = compute_progression_targets(
+        100, 10, 12, increment=increment_for_equipment(equipment), rep_ceiling=12
+    )
+    assert {s["target_weight"] for s in seeded} == {expected}
     # The new exercise has no history to seed from, so it carries no weight target
     fresh = [s for s in sets if s["exercise_id"] == second_exercise]
     assert all(s["target_weight"] is None for s in fresh)
