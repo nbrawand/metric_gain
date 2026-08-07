@@ -227,8 +227,11 @@ export default function Mesocycles() {
     }
 
     try {
-      // Create instance — backend now creates all sessions upfront
-      const today = new Date().toISOString().split('T')[0];
+      // Create instance — backend now creates all sessions upfront.
+      // Built from local date parts, not toISOString: that converts to UTC, so
+      // starting a block on a weekday evening west of UTC dated it tomorrow.
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const instanceData: import('../types/mesocycle').MesocycleInstanceCreate = {
         mesocycle_template_id: mesocycle.id,
         start_date: today,

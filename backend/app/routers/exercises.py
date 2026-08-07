@@ -62,10 +62,22 @@ async def get_muscle_groups(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Get list of unique muscle groups from all exercises.
+    Get list of unique muscle groups from the exercises this user can see.
     """
-    # Query distinct muscle groups from all exercises
-    result = db.query(Exercise.muscle_group).distinct().order_by(Exercise.muscle_group).all()
+    # Scoped to the same rows list_exercises returns. Querying every row leaked
+    # the muscle group names other users had typed on their private exercises.
+    result = (
+        db.query(Exercise.muscle_group)
+        .filter(
+            or_(
+                Exercise.is_custom == False,  # noqa: E712 - SQL comparison
+                Exercise.user_id == current_user.id,
+            )
+        )
+        .distinct()
+        .order_by(Exercise.muscle_group)
+        .all()
+    )
 
     # Extract muscle group names from result tuples
     muscle_groups = [row[0] for row in result if row[0]]

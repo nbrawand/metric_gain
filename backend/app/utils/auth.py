@@ -1,6 +1,6 @@
 """Authentication utilities for JWT tokens."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import Depends, HTTPException, status
@@ -14,6 +14,22 @@ from app.models.user import User
 
 # HTTP Bearer token security
 security = HTTPBearer()
+
+
+def as_utc(value: Optional[datetime]) -> Optional[datetime]:
+    """Normalize a stored timestamp to an aware UTC datetime.
+
+    Timestamps come back aware from Postgres and naive from SQLite, and the two
+    cannot be compared to each other. Converting (rather than stamping the tz
+    on with replace()) matters when the connection's TimeZone is not UTC:
+    replace() kept the wall-clock reading and silently shifted the instant by
+    the offset, which moved trial expiry by hours.
+    """
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -138,15 +154,12 @@ async def require_active_subscription(
     current_user: User = Depends(get_current_user),
 ) -> User:
     """Dependency that checks the user has an active subscription or valid trial."""
-    from datetime import datetime, timezone as tz
-
     sub_status = current_user.subscription_status
     if sub_status == "active":
         return current_user
     if sub_status == "trialing":
-        if current_user.trial_ends_at and current_user.trial_ends_at.replace(
-            tzinfo=tz.utc
-        ) > datetime.now(tz.utc):
+        trial_ends_at = as_utc(current_user.trial_ends_at)
+        if trial_ends_at and trial_ends_at > datetime.now(timezone.utc):
             return current_user
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,

@@ -771,3 +771,160 @@ def test_a_workout_cannot_list_the_same_exercise_twice(client, auth_headers, sam
         headers=auth_headers,
     )
     assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+def _block_with_active_instance(client, headers, exercise_id, name="Running Block"):
+    """Create a 1-day template and start an instance from it."""
+    mesocycle = client.post(
+        "/v1/mesocycles/",
+        json={
+            "name": name,
+            "weeks": 4,
+            "days_per_week": 1,
+            "workout_templates": [
+                {
+                    "name": "Day 1",
+                    "order_index": 0,
+                    "exercises": [
+                        {
+                            "exercise_id": exercise_id,
+                            "order_index": 0,
+                            "target_sets": 3,
+                            "target_reps_min": 8,
+                            "target_reps_max": 12,
+                        }
+                    ],
+                }
+            ],
+        },
+        headers=headers,
+    ).json()
+
+    started = client.post(
+        "/v1/mesocycle-instances/",
+        json={"mesocycle_template_id": mesocycle["id"]},
+        headers=headers,
+    )
+    assert started.status_code == status.HTTP_201_CREATED
+    return mesocycle, started.json()
+
+
+def test_cannot_add_a_day_while_an_instance_is_active(client, auth_headers, sample_exercise_id):
+    """A day added mid-block has no sessions, so the block can never complete."""
+    mesocycle, instance = _block_with_active_instance(client, auth_headers, sample_exercise_id)
+
+    response = client.post(
+        f"/v1/mesocycles/{mesocycle['id']}/workout-templates",
+        json={
+            "name": "Day 2",
+            "order_index": 1,
+            "exercises": [
+                {
+                    "exercise_id": sample_exercise_id,
+                    "order_index": 0,
+                    "target_sets": 3,
+                    "target_reps_min": 8,
+                    "target_reps_max": 12,
+                }
+            ],
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_409_CONFLICT
+
+    # The template still describes exactly what the instance was built from
+    detail = client.get(f"/v1/mesocycles/{mesocycle['id']}", headers=auth_headers).json()
+    assert len(detail["workout_templates"]) == 1
+
+
+def test_cannot_change_block_length_while_an_instance_is_active(
+    client, auth_headers, sample_exercise_id
+):
+    """weeks/days_per_week define the session grid the instance already has."""
+    mesocycle, instance = _block_with_active_instance(client, auth_headers, sample_exercise_id)
+
+    sessions_before = client.get(
+        f"/v1/workout-sessions/?mesocycle_instance_id={instance['id']}",
+        headers=auth_headers,
+    ).json()
+
+    assert client.put(
+        f"/v1/mesocycles/{mesocycle['id']}",
+        json={"weeks": 12},
+        headers=auth_headers,
+    ).status_code == status.HTTP_409_CONFLICT
+
+    assert client.put(
+        f"/v1/mesocycles/{mesocycle['id']}",
+        json={"days_per_week": 5},
+        headers=auth_headers,
+    ).status_code == status.HTTP_409_CONFLICT
+
+    unchanged = client.get(f"/v1/mesocycles/{mesocycle['id']}", headers=auth_headers).json()
+    assert unchanged["weeks"] == 4
+    assert unchanged["days_per_week"] == 1
+    assert len(sessions_before) == 4
+
+
+def test_can_rename_a_template_while_an_instance_is_active(
+    client, auth_headers, sample_exercise_id
+):
+    """Only the shape is frozen — renaming a running block stays allowed."""
+    mesocycle, _ = _block_with_active_instance(client, auth_headers, sample_exercise_id)
+
+    response = client.put(
+        f"/v1/mesocycles/{mesocycle['id']}",
+        json={"name": "Renamed Mid Block", "description": "still fine"},
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["name"] == "Renamed Mid Block"
+
+    # Re-sending the same week count is not a change, so it must not 409
+    assert client.put(
+        f"/v1/mesocycles/{mesocycle['id']}",
+        json={"name": "Renamed Again", "weeks": 4, "days_per_week": 1},
+        headers=auth_headers,
+    ).status_code == status.HTTP_200_OK
+
+
+def test_workout_templates_and_exercises_come_back_in_plan_order(
+    client, auth_headers, sample_exercise_id
+):
+    """Clients read day plans positionally, so order_index must drive the array."""
+    exercises = client.get("/v1/exercises/?limit=5", headers=auth_headers).json()
+    ex_a, ex_b, ex_c = [e["id"] for e in exercises[:3]]
+
+    def entry(exercise_id, order_index):
+        return {
+            "exercise_id": exercise_id,
+            "order_index": order_index,
+            "target_sets": 3,
+            "target_reps_min": 8,
+            "target_reps_max": 12,
+        }
+
+    # Days and exercises submitted out of order
+    mesocycle = client.post(
+        "/v1/mesocycles/",
+        json={
+            "name": "Out Of Order",
+            "weeks": 4,
+            "days_per_week": 3,
+            "workout_templates": [
+                {"name": "Third", "order_index": 2, "exercises": [entry(ex_c, 0)]},
+                {"name": "First", "order_index": 0, "exercises": [
+                    entry(ex_c, 2), entry(ex_a, 0), entry(ex_b, 1),
+                ]},
+                {"name": "Second", "order_index": 1, "exercises": [entry(ex_b, 0)]},
+            ],
+        },
+        headers=auth_headers,
+    ).json()
+
+    detail = client.get(f"/v1/mesocycles/{mesocycle['id']}", headers=auth_headers).json()
+    assert [w["name"] for w in detail["workout_templates"]] == ["First", "Second", "Third"]
+    assert [e["order_index"] for e in detail["workout_templates"][0]["exercises"]] == [0, 1, 2]
+    assert [e["exercise_id"] for e in detail["workout_templates"][0]["exercises"]] == [
+        ex_a, ex_b, ex_c,
+    ]

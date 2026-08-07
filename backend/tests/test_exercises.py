@@ -300,3 +300,30 @@ def test_cannot_delete_a_custom_exercise_that_is_in_use(client, auth_headers):
 
     still_there = client.get(f"/v1/exercises/{exercise['id']}", headers=auth_headers)
     assert still_there.status_code == status.HTTP_200_OK
+
+
+def test_muscle_groups_exclude_other_users_custom_exercises(client, make_auth_headers):
+    """The muscle group a user types on a private exercise is private too."""
+    owner = make_auth_headers("mg_owner@example.com", "MG Owner")
+    other = make_auth_headers("mg_other@example.com", "MG Other")
+
+    created = client.post(
+        "/v1/exercises/",
+        json={"name": "Owner Only Lift", "muscle_group": "Owner Private Group"},
+        headers=owner,
+    )
+    assert created.status_code == status.HTTP_201_CREATED
+
+    assert "Owner Private Group" in client.get(
+        "/v1/exercises/muscle-groups", headers=owner
+    ).json()
+    assert "Owner Private Group" not in client.get(
+        "/v1/exercises/muscle-groups", headers=other
+    ).json()
+
+
+def test_muscle_groups_still_include_default_exercises(client, auth_headers):
+    """Scoping the query must not hide the stock library."""
+    groups = client.get("/v1/exercises/muscle-groups", headers=auth_headers).json()
+    assert len(groups) > 0
+    assert groups == sorted(groups)

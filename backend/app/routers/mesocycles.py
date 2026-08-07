@@ -44,6 +44,31 @@ def _reject_duplicate_exercises(workout_data) -> None:
         seen.add(exercise_data.exercise_id)
 
 
+def _reject_if_instance_active(db: Session, mesocycle_id: int, action: str) -> None:
+    """Refuse structural edits to a template a running mesocycle is built on.
+
+    A running instance's sessions were generated from this template's shape:
+    one session per workout template per week. Changing that shape mid-block
+    leaves the instance with sessions that no longer match the plan the client
+    reads back, so the block can never finish.
+    """
+    active_instances = (
+        db.query(MesocycleInstance)
+        .filter(
+            MesocycleInstance.mesocycle_template_id == mesocycle_id,
+            MesocycleInstance.status == "active",
+        )
+        .count()
+    )
+    if active_instances > 0:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"You can't {action} this template while a mesocycle from it "
+                "is running. End that mesocycle first."
+            ),
+        )
+
 
 @router.get("/", response_model=List[MesocycleListResponse])
 async def list_mesocycles(
@@ -407,6 +432,18 @@ async def update_mesocycle(
 
     # Update fields
     update_data = mesocycle_data.model_dump(exclude_unset=True)
+
+    # Renaming is always safe, but week and day counts define the shape the
+    # running instance's sessions were generated from. Changing those made the
+    # client compute a workout total the instance can never reach.
+    changes_shape = any(
+        value != getattr(mesocycle, field)
+        for field, value in update_data.items()
+        if field in ("weeks", "days_per_week")
+    )
+    if changes_shape:
+        _reject_if_instance_active(db, mesocycle_id, "change the length of")
+
     apply_update(mesocycle, update_data)
 
     db.commit()
@@ -467,19 +504,7 @@ async def delete_mesocycle(
         )
 
     # Block deletion if there are active instances
-    active_instances = (
-        db.query(MesocycleInstance)
-        .filter(
-            MesocycleInstance.mesocycle_template_id == mesocycle_id,
-            MesocycleInstance.status == "active",
-        )
-        .count()
-    )
-    if active_instances > 0:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="You can't delete this template while a mesocycle from it is running. End that mesocycle first.",
-        )
+    _reject_if_instance_active(db, mesocycle_id, "delete")
 
     db.delete(mesocycle)
     db.commit()
@@ -521,6 +546,11 @@ async def add_workout_template(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only edit your own templates.",
         )
+
+    # Adding a day gives the template more workouts than the running instance
+    # has sessions, so its calendar grows a row nothing can fill and the block
+    # never reaches the workout count that marks it complete
+    _reject_if_instance_active(db, mesocycle_id, "add a day to")
 
     # Create workout template
     workout_template = WorkoutTemplate(
@@ -612,21 +642,9 @@ async def replace_workout_templates(
             detail="You can only edit your own templates.",
         )
 
-    # Replacing the templates deletes them, and every session of a running
+    # Replacing the templates rewrites them, and every session of a running
     # instance points at those rows — they would be detached from their plan
-    active_instances = (
-        db.query(MesocycleInstance)
-        .filter(
-            MesocycleInstance.mesocycle_template_id == mesocycle_id,
-            MesocycleInstance.status == "active",
-        )
-        .count()
-    )
-    if active_instances > 0:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="You can't edit this template while a mesocycle from it is running. End that mesocycle first.",
-        )
+    _reject_if_instance_active(db, mesocycle_id, "edit")
 
     # Rows are reused rather than deleted and recreated. Instances key their
     # per-exercise note overrides by workout_exercise_id, so recreating the

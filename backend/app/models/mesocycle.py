@@ -35,7 +35,15 @@ class Mesocycle(Base):
 
     # Relationships
     user = relationship("User", back_populates="mesocycles")
-    workout_templates = relationship("WorkoutTemplate", back_populates="mesocycle", cascade="all, delete-orphan")
+    # Ordered because clients read the day plan positionally: day_number N is
+    # the Nth workout template. Without this the rows arrive in whatever order
+    # the database returns them, which need not be plan order after an edit.
+    workout_templates = relationship(
+        "WorkoutTemplate",
+        back_populates="mesocycle",
+        cascade="all, delete-orphan",
+        order_by="WorkoutTemplate.order_index",
+    )
     instances = relationship("MesocycleInstance", back_populates="mesocycle_template")
 
     def __repr__(self):
@@ -106,7 +114,12 @@ class WorkoutTemplate(Base):
 
     # Relationships
     mesocycle = relationship("Mesocycle", back_populates="workout_templates")
-    exercises = relationship("WorkoutExercise", back_populates="workout_template", cascade="all, delete-orphan")
+    exercises = relationship(
+        "WorkoutExercise",
+        back_populates="workout_template",
+        cascade="all, delete-orphan",
+        order_by="WorkoutExercise.order_index",
+    )
 
     def __repr__(self):
         return f"<WorkoutTemplate(id={self.id}, name='{self.name}', mesocycle_id={self.mesocycle_id})>"

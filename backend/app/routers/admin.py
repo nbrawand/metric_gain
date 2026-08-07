@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User
-from app.utils.auth import get_current_user
+from app.utils.auth import as_utc, get_current_user
 
 router = APIRouter()
 
@@ -51,8 +51,11 @@ async def grant_trial(
         )
 
     now = datetime.now(timezone.utc)
-    # Extend from current trial end if still in the future, otherwise from now
-    base = user.trial_ends_at if user.trial_ends_at and user.trial_ends_at > now else now
+    # Extend from current trial end if still in the future, otherwise from now.
+    # as_utc, because a naive value read back from the database raises on the
+    # comparison instead of extending the trial.
+    current_end = as_utc(user.trial_ends_at)
+    base = current_end if current_end and current_end > now else now
     user.trial_ends_at = base + timedelta(days=body.days)
     user.subscription_status = "trialing"
     db.commit()

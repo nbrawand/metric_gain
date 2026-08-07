@@ -699,10 +699,16 @@ export default function WorkoutExecution() {
   const instanceDays =
     instance?.template_days_per_week || mesocycle?.workout_templates?.length || 0;
 
-  // Look up template exercise to get notes
+  // Look up template exercise to get notes.
+  // Matched by id, then by order_index — never by array position. The session
+  // already records which workout template it came from, and position only
+  // happens to equal day_number while the array arrives in plan order.
   const getTemplateExercise = (exerciseId: number) => {
     if (!mesocycle?.workout_templates || !session) return null;
-    const template = mesocycle.workout_templates[session.day_number - 1];
+    const templates = mesocycle.workout_templates;
+    const template =
+      templates.find(wt => wt.id === session.workout_template_id) ||
+      templates.find(wt => wt.order_index === session.day_number - 1);
     if (!template) return null;
     return template.exercises.find(e => e.exercise_id === exerciseId) || null;
   };
