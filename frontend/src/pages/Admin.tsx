@@ -54,7 +54,7 @@ export default function Admin() {
       if (statusFilter !== 'all' && u.subscription_status !== statusFilter) return false;
       if (!query) return true;
       // Email is searched alongside the name because Google does not always
-      // give us one — name-only search would make those users unfindable
+      // give us one, name-only search would make those users unfindable
       return (
         (u.full_name?.toLowerCase().includes(query) ?? false) ||
         u.email.toLowerCase().includes(query)

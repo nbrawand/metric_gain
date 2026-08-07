@@ -131,7 +131,7 @@ def compute_sets_for_week(target_sets: int, increment: float, week: int) -> int:
     return max(1, int(target_sets + increment * (week - 1) + 0.5))
 
 
-# A block used to end on its hardest week — RIR 0 on the final week, then
+# A block used to end on its hardest week, RIR 0 on the final week, then
 # straight into the next block with a fully fatigued lifter. The deload is one
 # extra week after the planned training weeks: about half the sets, a little
 # lighter, and stopping well short of failure.
@@ -169,7 +169,7 @@ def compute_target_rir(week: int, total_weeks: int) -> int:
     the frontend, as with compute_sets_for_week.
 
     A week past the planned weeks is the deload, which sits above the ramp
-    rather than on it — the point is to stop well short of failure.
+    rather than on it, the point is to stop well short of failure.
     """
     if is_deload_week(week, total_weeks):
         return DELOAD_TARGET_RIR
@@ -239,7 +239,7 @@ def compute_progression_targets(
 
     Aim for +2.5%, rounded to the nearest step the equipment can be loaded
     with. When the percentage is too small to move a full step, hold the weight
-    and ask for one more rep instead — double progression — until reps reach the
+    and ask for one more rep instead (double progression) until reps reach the
     top of the range, at which point the weight goes up one step and reps reset.
 
     None of that happens unless the last performance actually earned it. This
@@ -251,7 +251,7 @@ def compute_progression_targets(
     There used to be a `min 2.5` floor under the percentage, which made every
     jump a full +5 lb no matter the lift: 15 -> 20 is +33% and unachievable
     week after week, while 225 -> 230 is +2.2%. That is backwards, and the
-    floor is what caused it — the percentage is the driver, the increment is
+    floor is what caused it: the percentage is the driver and the increment is
     only the resolution it gets rounded to.
 
     Returns (target_weight, target_reps).

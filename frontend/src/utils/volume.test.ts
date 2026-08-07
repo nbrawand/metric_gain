@@ -148,7 +148,7 @@ describe('volumeInputsForTemplate', () => {
   it('zeroes the increment when the block autoregulates', () => {
     /**
      * An autoregulated block generates flat and grows from what gets logged.
-     * Charting the template's ramp would show a plan that will not happen —
+     * Charting the template's ramp would show a plan that will not happen,
      * which is what made the weekly-increase control feel load-bearing when it
      * was being ignored.
      */

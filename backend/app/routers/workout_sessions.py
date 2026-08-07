@@ -194,7 +194,7 @@ def get_workout_session(
                 )
             elif ws.target_weight is None or prev_session is not None:
                 # No matching set last week. This is the normal case for the
-                # sets the weekly increment adds — they have no counterpart in
+                # sets the weekly increment adds, they have no counterpart in
                 # the previous week but were seeded with an old target, which
                 # left them showing a far lighter weight than their siblings.
                 hist_set = find_previous_set(
@@ -334,7 +334,7 @@ def _get_exercise_or_404(db, exercise_id: int, current_user: User, label: str) -
 
     Without the ownership half of this check, dropping someone else's private
     exercise id into a session echoed its full name and description back in the
-    response — the same leak GET /v1/exercises/{id} already refuses.
+    response, the same leak GET /v1/exercises/{id} already refuses.
     """
     exercise = db.query(Exercise).filter(Exercise.id == exercise_id).first()
     if not exercise:
@@ -375,7 +375,7 @@ def _reload_session(db, session_id: int) -> WorkoutSession:
 def _with_future_count(workout_session: WorkoutSession, count: int) -> WorkoutSession:
     """Attach how many later weeks the change reached, for the response.
 
-    Not a column — just an attribute the response schema reads, so the client
+    Not a column, just an attribute the response schema reads, so the client
     can say "applied to the next 4 weeks" instead of changing them silently.
     """
     workout_session.future_sessions_updated = count
@@ -475,7 +475,7 @@ def _add_exercise_sets(
         if planned_entries:
             # Per week, so a propagated exercise still follows the plan's ramp
             # rather than being frozen at the set count of the week it was added.
-            # The deload week is sized off week 1 and then halved — following
+            # The deload week is sized off week 1 and then halved, following
             # the ramp into it would land the recovery week on the block's
             # highest set count.
             num_sets = sum(
@@ -570,7 +570,7 @@ def swap_exercise(
 
     # Update all sets: swap exercise, reset performance data. Everything the
     # user recorded about the old lift has to go, including the RIR they rated
-    # it at and any note — otherwise the new exercise comes back carrying a
+    # it at and any note, otherwise the new exercise comes back carrying a
     # rating for a set that was never performed on it.
     def _apply_swap(sets):
         for ws in sets:
@@ -580,7 +580,7 @@ def swap_exercise(
             ws.rir = None
             ws.notes = None
             ws.target_weight = None
-            # The old lift's rep target goes too — 5-rep deadlift guidance on a
+            # The old lift's rep target goes too, 5-rep deadlift guidance on a
             # swapped-in crunch would stick for the whole block, since the
             # refresh only replaces it once the new exercise has history
             ws.target_reps = None
@@ -638,7 +638,7 @@ def remove_exercise(
         )
 
     # Drop it from the rest of the block too, but never from a week someone has
-    # already logged into — that would delete work they performed
+    # already logged into, that would delete work they performed
     updated = 0
     for future in _future_sessions_same_day(db, workout_session):
         if _has_logged_work(db, future.id, exercise_id):
@@ -756,7 +756,7 @@ def add_set_to_exercise(
         order_index=last_set.order_index,
         weight=0,
         reps=0,
-        # Carry the whole target across, not just reps — an extra set of the
+        # Carry the whole target across, not just reps, an extra set of the
         # same exercise has the same target as the ones beside it
         target_weight=last_set.target_weight,
         target_reps=last_set.target_reps,

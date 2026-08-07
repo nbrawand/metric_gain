@@ -22,7 +22,7 @@ export default function WorkoutExecution() {
   const navigate = useNavigate();
   const { accessToken, user } = useAuthStore();
   // Weights are stored in whatever unit the lifter logs in, so this is
-  // only a label — there is nothing to convert on the way out.
+  // only a label, there is nothing to convert on the way out.
   const weightUnit = weightUnitFromPreferences(user?.preferences);
   const unitLabel = weightUnitLabel(weightUnit);
   // Which target weight the plate/warmup helper is open for, if any
@@ -39,7 +39,7 @@ export default function WorkoutExecution() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Exercise edits also change the later weeks of this day, which the user
-  // cannot see from here — say so rather than changing them silently
+  // cannot see from here, say so rather than changing them silently
   const [notice, setNotice] = useState<string | null>(null);
   const [completionBanner, setCompletionBanner] = useState<{ week: number; day: number } | null>(null);
 
@@ -64,7 +64,7 @@ export default function WorkoutExecution() {
   const [inputValues, setInputValues] = useState<SetInputValues>({});
 
   // Last persisted numbers per set (server row or queued offline save). The
-  // leave-guard compares typed input against this — not against the live
+  // leave-guard compares typed input against this, not against the live
   // session, which mirrors every keystroke and so never differs.
   const savedValuesRef = useRef<Record<number, { weight: number; reps: number }>>({});
 
@@ -281,7 +281,7 @@ export default function WorkoutExecution() {
 
         // The swap reuses the same set rows with the performance cleared, so
         // the old exercise's checkmarks, typed numbers and any queued offline
-        // saves have to go with it — otherwise the new exercise looks already
+        // saves have to go with it, otherwise the new exercise looks already
         // logged and gets stored as 0 x 0.
         const swappedSetIds = updated.workout_sets
           .filter((s) => s.exercise_id === newExerciseId)
@@ -379,7 +379,7 @@ export default function WorkoutExecution() {
 
       // Baseline for the leave-guard: the last value known to be persisted
       // (server row, or queued offline data). Comparing against the live
-      // session is useless — keystrokes are mirrored into it immediately.
+      // session is useless, keystrokes are mirrored into it immediately.
       const baseline: Record<number, { weight: number; reps: number }> = {};
       sessionData.workout_sets.forEach((s) => {
         baseline[s.id] = { weight: s.weight, reps: s.reps };
@@ -421,7 +421,7 @@ export default function WorkoutExecution() {
     if (session) removeForSet(session.id, setId);
 
     // Editing a saved set clears its check to show the change is unsaved. The
-    // server keeps the last saved value until the user saves again — zeroing it
+    // server keeps the last saved value until the user saves again, zeroing it
     // here would throw away real data the moment they touch the field.
     if (loggedSetIds.has(setId)) {
       setLoggedSetIds((prev) => {
@@ -497,7 +497,7 @@ export default function WorkoutExecution() {
       if (restTimer.enabled && !setData.skipped) setRestToken((t) => t + 1);
     } catch (err) {
       if (isNetworkError(err)) {
-        // Network error — queue for later sync. The set was still performed,
+        // Network error, queue for later sync. The set was still performed,
         // so the rest is still real.
         enqueue(session.id, setId, setData);
         setLoggedSetIds((prev) => new Set(prev).add(setId));
@@ -658,8 +658,9 @@ export default function WorkoutExecution() {
         accessToken
       );
 
-      // Autoregulation resized next week off what was just logged. Say so —
-      // the sets changing on their own next week is otherwise unexplained.
+      // Autoregulation resized next week off what was just logged. Say so,
+      // because the sets changing on their own next week is otherwise
+      // unexplained.
       const adjustments = completed.volume_adjustments ?? [];
       if (adjustments.length > 0) {
         const added = adjustments.filter((a) => a.delta > 0).length;
@@ -712,7 +713,7 @@ export default function WorkoutExecution() {
       setCompletionBanner({ week: completedWeek, day: completedDay });
     } catch (err) {
       console.error('Error completing workout:', err);
-      setError(apiErrorDetail(err, 'Could not complete the workout. Your sets are saved — please try again.'));
+      setError(apiErrorDetail(err, 'Could not complete the workout. Your sets are saved. Please try again.'));
     }
   };
 
@@ -738,7 +739,7 @@ export default function WorkoutExecution() {
   // Typed-but-unsaved numbers only live in inputValues, and loading another
   // session drops every entry that doesn't belong to it. Leaving silently threw
   // the numbers away with nothing on screen to say so. Compared against the
-  // saved baseline, not the session — keystrokes mirror into the session
+  // saved baseline, not the session, keystrokes mirror into the session
   // immediately, so it always matches what was typed.
   const hasUnsavedInput = (): boolean =>
     !!session &&
@@ -795,7 +796,7 @@ export default function WorkoutExecution() {
     instance?.template_days_per_week || mesocycle?.workout_templates?.length || 0;
 
   // Look up template exercise to get notes.
-  // Matched by id, then by order_index — never by array position. The session
+  // Matched by id, then by order_index, never by array position. The session
   // already records which workout template it came from, and position only
   // happens to equal day_number while the array arrives in plan order.
   const getTemplateExercise = (exerciseId: number) => {
@@ -850,7 +851,7 @@ export default function WorkoutExecution() {
       });
     } catch (err) {
       console.error('Error updating exercise notes:', err);
-      // Reopen the editor with the text still in it — closing on failure made
+      // Reopen the editor with the text still in it, closing on failure made
       // the note the user just typed simply vanish
       setEditingNotesExerciseId(exerciseId);
       setError(apiErrorDetail(err, 'Could not save that note. Please try again.'));
@@ -913,7 +914,7 @@ export default function WorkoutExecution() {
     } catch (err) {
       console.error('Error reordering exercises:', err);
       // These are independent PATCHes, so some have already landed. Only the
-      // server knows the real order now — a local rollback would put an order
+      // server knows the real order now, a local rollback would put an order
       // on screen that isn't stored anywhere.
       setError(apiErrorDetail(err, 'Could not reorder exercises. Please try again.'));
       await loadWorkoutSession();
@@ -1103,7 +1104,7 @@ export default function WorkoutExecution() {
       {/* Offline Banner */}
       {!serverReachable && (
         <div className="bg-amber-600 text-white text-center text-sm py-1 px-4">
-          Offline — sets will sync when reconnected
+          Offline, sets will sync when reconnected
         </div>
       )}
 
@@ -1660,7 +1661,7 @@ export default function WorkoutExecution() {
             <div className="space-y-4 text-sm text-gray-300">
               <div>
                 <p className="font-medium text-white mb-1">Picking a Weight</p>
-                <p>Choose a weight where you can complete your target reps with the shown RIR (Reps In Reserve) — that's how many more reps you <span className="italic">could</span> have done.</p>
+                <p>Choose a weight where you can complete your target reps with the shown RIR (Reps In Reserve), which is how many more reps you <span className="italic">could</span> have done.</p>
               </div>
 
               <div>
@@ -1670,7 +1671,7 @@ export default function WorkoutExecution() {
 
               <div>
                 <p className="font-medium text-white mb-1">Rest Between Sets</p>
-                <p>Rest until you feel ready to give your next set full effort — usually 2-4 minutes for big lifts, 1-2 for smaller ones. That judgement is the default here. If you would rather have a countdown, turn the rest timer on from the menu.</p>
+                <p>Rest until you feel ready to give your next set full effort, usually 2-4 minutes for big lifts, 1-2 for smaller ones. That judgement is the default here. If you would rather have a countdown, turn the rest timer on from the menu.</p>
               </div>
             </div>
 
@@ -1711,7 +1712,7 @@ export default function WorkoutExecution() {
 
               <div>
                 <p className="font-medium text-white mb-1">Rest Between Sets</p>
-                <p>Rest until you feel ready to give your next set full effort — usually 2-4 minutes for big lifts, 1-2 for smaller ones. That judgement is the default here. If you would rather have a countdown, turn the rest timer on from the menu.</p>
+                <p>Rest until you feel ready to give your next set full effort, usually 2-4 minutes for big lifts, 1-2 for smaller ones. That judgement is the default here. If you would rather have a countdown, turn the rest timer on from the menu.</p>
               </div>
             </div>
 

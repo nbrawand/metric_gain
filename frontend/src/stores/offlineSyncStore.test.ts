@@ -76,7 +76,7 @@ describe('offlineSyncStore', () => {
   });
 
   it('keeps work the server might still accept later', async () => {
-    // An expired token, a 500, a proxy error mid-deploy — none of these mean
+    // An expired token, a 500, a proxy error mid-deploy, none of these mean
     // the set is invalid, and dropping them loses the workout
     for (const status of [401, 500, 502]) {
       reset();

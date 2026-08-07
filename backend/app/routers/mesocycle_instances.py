@@ -765,7 +765,7 @@ async def update_exercise_notes(
             detail="You can only change your own mesocycles."
         )
 
-    # The key must name an exercise in this instance's template — an arbitrary
+    # The key must name an exercise in this instance's template, an arbitrary
     # id would sit in exercise_notes forever, never displayed, never removable
     # from the UI. Deletes are exempt so a note left behind by a removed
     # exercise can still be cleaned up.

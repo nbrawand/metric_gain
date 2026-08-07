@@ -1,7 +1,7 @@
 """create admin_audit_log
 
-Admin endpoints mutate other people's accounts — granting trials, forcing a
-subscription status, revoking sessions — and left no record of who did it.
+Admin endpoints mutate other people's accounts (granting trials, forcing a
+subscription status, revoking sessions) and left no record of who did it.
 
 Revision ID: o5p6q7r8s9t0
 Revises: n4o5p6q7r8s9

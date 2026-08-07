@@ -1,5 +1,5 @@
 /**
- * Login page — Google OAuth only
+ * Login page. Google OAuth only
  */
 
 import { useNavigate, useLocation } from 'react-router-dom';

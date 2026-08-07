@@ -1,4 +1,4 @@
-"""Analytics endpoints — reading training history back to the lifter."""
+"""Analytics endpoints, reading training history back to the lifter."""
 
 from typing import List, Optional
 

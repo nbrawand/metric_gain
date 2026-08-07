@@ -21,7 +21,7 @@ def estimate_one_rep_max(
     make a deliberately submaximal set look like a strength regression against
     a set taken to failure at the same weight. Where RIR was not recorded the
     set is treated as if it were taken to failure, which is the conservative
-    reading — it can only understate the estimate.
+    reading, it can only understate the estimate.
 
     Returns None for anything unusable rather than a misleading zero.
     """

@@ -1,7 +1,7 @@
 """End-to-end: next week's target reflects whether this week was earned.
 
 The unit tests cover compute_progression_targets in isolation. These check the
-wiring — that the refresh path in GET /workout-sessions/{id} actually hands it
+wiring, that the refresh path in GET /workout-sessions/{id} actually hands it
 what the previous set was targeting, not just what was lifted.
 """
 
@@ -138,7 +138,7 @@ def test_a_big_miss_steps_next_weeks_weight_back_down(
 
 
 def test_reps_met_at_zero_rir_does_not_raise_the_weight(client, auth_headers, block):
-    """Prescribed 3 RIR, taken to failure — already a maximum effort."""
+    """Prescribed 3 RIR, taken to failure, already a maximum effort."""
     week_one = _target(client, auth_headers, block[1])
     assert week_one["target_rir"] == 3
     _log_and_finish(

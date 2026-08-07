@@ -10,7 +10,7 @@ def apply_update(instance, update_data: dict) -> None:
 
     Every Optional field on an update schema accepts null as a *set* value, so
     a body like {"weight": null} passes validation and would otherwise write
-    NULL into a NOT NULL column — an IntegrityError the client sees as a 500.
+    NULL into a NOT NULL column, an IntegrityError the client sees as a 500.
     Nullable columns are still clearable, which is how notes and rir get reset.
     """
     columns = inspect(type(instance)).columns
@@ -26,7 +26,7 @@ def user_weight_unit(user) -> str:
     """The unit this user logs in, read from their preferences JSON.
 
     Weights are stored as the number the lifter typed, so this is what says
-    which unit that number is in — and therefore which steps a target may be
+    which unit that number is in, and therefore which steps a target may be
     rounded to. Anything unparseable falls back to pounds.
     """
     from app.services.progression import normalize_unit

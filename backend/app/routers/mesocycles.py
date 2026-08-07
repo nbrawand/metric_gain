@@ -30,7 +30,7 @@ def _reject_duplicate_exercises(workout_data) -> None:
     """A workout may not list the same exercise twice.
 
     Sets are numbered per template entry, so two entries for one exercise give
-    it two runs of set numbers in a session — which breaks adding and removing
+    it two runs of set numbers in a session, which breaks adding and removing
     sets and matching next week's targets. The session-level swap and add
     endpoints already refuse this; template creation has to as well.
     """
@@ -318,7 +318,7 @@ async def create_mesocycle_from_instance(
     # Build the new template. days_per_week is set after the day loop from the
     # count of workouts actually copied: a day emptied during the run is
     # skipped below, and carrying the snapshot's count over would make the
-    # copy claim more training days than it has — its instances could then
+    # copy claim more training days than it has, its instances could then
     # never reach "completed".
     template_name = f"{instance.template_name or 'Mesocycle'} (Copy)"
     weeks = instance.template_weeks or 6
@@ -644,7 +644,7 @@ async def replace_workout_templates(
     and creates new ones from the provided data.
     """
     # Same ceiling the schema puts on days_per_week. Without it, saving 8 days
-    # persists the workouts here and then 422s on the metadata write — a
+    # persists the workouts here and then 422s on the metadata write, a
     # half-saved template whose day count disagrees with its day cards.
     if len(workout_templates_data) > 7:
         raise HTTPException(
@@ -672,7 +672,7 @@ async def replace_workout_templates(
         )
 
     # Replacing the templates rewrites them, and every session of a running
-    # instance points at those rows — they would be detached from their plan
+    # instance points at those rows, they would be detached from their plan
     _reject_if_instance_active(db, mesocycle_id, "edit")
 
     # Rows are reused rather than deleted and recreated. Instances key their

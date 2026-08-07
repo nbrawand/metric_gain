@@ -190,7 +190,7 @@ export default function Progress() {
         setVolume(v);
         setRecords(r.records);
         setTrained(t);
-        // Default to the heaviest lift — most likely the one they care about
+        // Default to the heaviest lift, most likely the one they care about
         if (t.length > 0) setSelectedExercise(r.records[0]?.exercise_id ?? t[0].id);
         setError(null);
       })
@@ -327,7 +327,7 @@ export default function Progress() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="text-sm text-teal-400 font-medium">
-                      {record.best_estimated_1rm ?? '—'} {unit}
+                      {record.best_estimated_1rm ?? '-'} {unit}
                     </div>
                     {record.best_estimated_1rm_date && (
                       <div className="text-xs text-gray-500">
@@ -337,7 +337,7 @@ export default function Progress() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="text-sm text-white">
-                      {record.heaviest_weight ?? '—'} {unit}
+                      {record.heaviest_weight ?? '-'} {unit}
                       {record.heaviest_weight_reps ? ` × ${record.heaviest_weight_reps}` : ''}
                     </div>
                     {record.heaviest_weight_date && (

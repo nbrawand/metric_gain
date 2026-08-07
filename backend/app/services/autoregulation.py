@@ -62,7 +62,7 @@ def score_exercise_performance(sets: Iterable) -> int:
     """How next week's set count should move for one exercise: +1, 0 or -1.
 
     A set that was skipped, or left blank on a session marked complete, is not
-    a hit — the work was not done, so volume has not earned the right to grow.
+    a hit, the work was not done, so volume has not earned the right to grow.
     Sets with no target at all cannot be judged and are ignored, which is what
     keeps history recorded before targets existed from reading as failure.
     """

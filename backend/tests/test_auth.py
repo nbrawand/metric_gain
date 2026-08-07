@@ -1,6 +1,6 @@
 """Tests for authentication endpoints.
 
-Sign-in is Google OAuth only — there is no registration or password login.
+Sign-in is Google OAuth only, there is no registration or password login.
 """
 
 from fastapi import status

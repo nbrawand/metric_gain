@@ -1,4 +1,4 @@
-"""Admin endpoints — user and subscription management.
+"""Admin endpoints, user and subscription management.
 
 Every route here is additionally guarded at the mount point in main.py. The
 per-endpoint dependency below is kept as well: a route that loses one still has
@@ -42,7 +42,7 @@ def _record(
 ) -> None:
     """Add an audit row for an admin action.
 
-    Added to the session but not committed — the caller commits it in the same
+    Added to the session but not committed, the caller commits it in the same
     transaction as the change itself, so the log cannot end up describing a
     change that was rolled back, or miss one that went through.
     """

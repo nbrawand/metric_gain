@@ -72,7 +72,7 @@ class Settings(BaseSettings):
             )
 
         # allow_credentials is on, so Starlette echoes back whatever origin asks
-        # when this is "*" — any site could then read a signed-in user's data
+        # when this is "*", any site could then read a signed-in user's data
         if "*" in self.cors_origins_list:
             raise ValueError(
                 "CORS_ORIGINS cannot be '*' in production; list the exact frontend origins."

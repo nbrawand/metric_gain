@@ -148,7 +148,7 @@ export default function MesocycleDetail() {
       alert('Please add at least one training day');
       return;
     }
-    // The backend rejects days_per_week > 7 — but only after the workout
+    // The backend rejects days_per_week > 7, but only after the workout
     // replacement already went through, leaving the template half-saved
     if (editTemplates.length > 7) {
       alert('A mesocycle can have at most 7 training days per week.');
@@ -192,7 +192,7 @@ export default function MesocycleDetail() {
       setEditing(false);
       await loadMesocycle();
     } catch (err) {
-      // Surface the reason — e.g. the template is locked while an instance runs
+      // Surface the reason, e.g. the template is locked while an instance runs
       alert(apiErrorDetail(err, 'Could not save your changes. Please try again.'));
       console.error('Error saving mesocycle:', err);
     } finally {
@@ -223,7 +223,7 @@ export default function MesocycleDetail() {
   };
 
   // Sessions are generated one per workout day, so the count has to track the
-  // day cards — storing a days/week that disagrees with them just misreports
+  // day cards, storing a days/week that disagrees with them just misreports
   // the template.
   const setDaysPerWeek = (days: number) => {
     setEditData((prev) => ({ ...prev, days_per_week: days }));
@@ -332,7 +332,7 @@ export default function MesocycleDetail() {
   const removeExercise = (workoutIndex: number, exerciseIndex: number) => {
     const updated = [...editTemplates];
     // Reindex, or the next added exercise reuses the gap's index and the two
-    // rows collide — their sets interleave and reordering them does nothing
+    // rows collide, their sets interleave and reordering them does nothing
     updated[workoutIndex] = {
       ...updated[workoutIndex],
       exercises: updated[workoutIndex].exercises

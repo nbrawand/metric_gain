@@ -521,7 +521,7 @@ def test_start_from_source_includes_exercises_the_source_never_ran(client, auth_
     assert counts.get(second_exercise) == 3
 
     # The exercise the source ran progresses off what was actually lifted, and
-    # every one of its sets gets the same target — the sets past the source's
+    # every one of its sets gets the same target, the sets past the source's
     # count used to fall through to the history lookup and progress on their own
     seeded = [s for s in sets if s["exercise_id"] == first_exercise]
     # 100 lifted -> +2.5% = 102.5, rounded to what this exercise can be loaded
@@ -814,7 +814,7 @@ def test_duplicate_set_numbers_are_rejected_by_the_database(
     client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance
 ):
     """The routers guard numbering with check-then-insert, which concurrent or
-    retried requests can slip past — the unique constraint is the backstop."""
+    retried requests can slip past, the unique constraint is the backstop."""
     from sqlalchemy.exc import IntegrityError
 
     from app.models.workout_session import WorkoutSet

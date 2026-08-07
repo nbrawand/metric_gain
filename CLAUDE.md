@@ -11,8 +11,8 @@ library.
 
 ## Competitive roadmap (vs RP Hypertrophy)
 
-Ordered deliberately. Everything under "Correctness" is a defect — the plan we
-hand lifters is wrong today — and the autoregulation bet automates those same
+Ordered deliberately. Everything under "Correctness" is a defect, the plan we
+hand lifters is wrong today, and the autoregulation bet automates those same
 numbers, so building it first would just automate the wrong answer. Work the
 sections in order.
 
@@ -21,13 +21,13 @@ RP charges $34.99/mo and asks 5 subjective questions per muscle per session
 (soreness, pump, workload, joint pain, disruption) to approximate what our
 logged sets already measure objectively. Don't copy the survey.
 
-### Correctness — the current plan is wrong
+### Correctness, the current plan is wrong
 
 [x] Size the weight jump to the lift instead of always rounding up to the next
 multiple of 5. `compute_progression_targets` in
 `backend/app/services/progression.py` advertises +2.5% but the `min 2.5` floor
 plus `round_to_nearest_5` makes every jump +5 lb. Measured: 15->20 (+33%),
-20->25 (+25%), 30->35 (+17%), but 225->230 (+2.2%). That is backwards — light
+20->25 (+25%), 30->35 (+17%), but 225->230 (+2.2%). That is backwards, light
 isolation work gets an unachievable target every week while heavy compounds
 barely move. Round to the increment actually available for that exercise
 (barbell 5, dumbbell 5, machine/cable per-stack, microplates where relevant),
@@ -43,13 +43,13 @@ week. Hold (or back off) on a miss.
 `round_to_nearest_5` is meaningless on kg plates, which go in 2.5/1.25 steps.
 Needs a user-level unit preference; `users.preferences` JSON already exists.
     Stored in preferences as `weight_unit`. Weights are kept as the number the
-    lifter typed, so switching units converts the logged history server-side —
+    lifter typed, so switching units converts the logged history server-side -
     otherwise a 225 lb squat silently becomes 225 kg and feeds every future
     target. Rounding happens in the chosen unit, never by converting a pounds
     answer. Toggle lives in the nav menu.
 
 [x] Add a deload week. `compute_target_rir` ramps `[3,2,2,1,1,0]` over a 6-week
-block, so RIR hits 0 on the final week and the block just ends — the next block
+block, so RIR hits 0 on the final week and the block just ends, the next block
 then starts with a fully fatigued lifter. RP's final week *is* the deload
 (volume drops to maintenance, ~6 sets/muscle/week). Decide whether the deload
 is an extra week or the last planned week, and make the calendar and the
@@ -59,17 +59,17 @@ is an extra week or the last planned week, and make the calendar and the
     their old span (the flag is stored, not derived) since they have no
     sessions for that week.
 
-[x] Warn on unrecoverable volume at plan time. There is no ceiling at all — the
+[x] Warn on unrecoverable volume at plan time. There is no ceiling at all, the
 old auto-volume setup and per-session cap were removed in `2812ab0`/`855754d`.
 Five chest exercises at 3 starting sets +2/week generates 15/25/35/45/55/65
 sets per week; RP's chest MRV is ~22. The volume chart
 (`frontend/src/utils/volume.ts`, `MuscleGroupVolumeChart`) already computes
-these totals for the review step — flag the muscle groups that blow past a
+these totals for the review step, flag the muscle groups that blow past a
 sane weekly ceiling instead of rendering the number silently.
     Ceilings live in `volume.ts` as `WEEKLY_SET_CEILINGS`, roughly where the
     published MRV ranges top out. The review step lists the offending groups
     (first week crossed, plus the peak) and the chart draws the ceiling as a
-    dashed line with over-cap weeks in amber. It warns rather than blocks — it
+    dashed line with over-cap weeks in amber. It warns rather than blocks, it
     is still the lifter's plan.
 
 ### The strategic bet
@@ -81,11 +81,11 @@ the fixed `weekly_set_increment` (chosen once at creation, replayed for the
 whole block by `compute_sets_for_week`) with: hit targets on all sets -> +1 set
 next week; missed on one -> hold; missed on most -> drop a set. Cap against a
 per-muscle-group ceiling. Note RP manages volume per *muscle group* while we
-increment per *exercise* — recovery happens per muscle, so the cap belongs at
+increment per *exercise*, recovery happens per muscle, so the cap belongs at
 the muscle-group level. Keep the manual increment as an override for lifters
 who want to drive it themselves.
     Done. On by default for new blocks (toggle when starting one), which also
-    means sessions generate flat instead of pre-ramped — pre-ramping and then
+    means sessions generate flat instead of pre-ramped, pre-ramping and then
     autoregulating would apply two increases to the same week. Cap enforced at
     the muscle-group level; ceilings are duplicated in
     `backend/app/services/autoregulation.py` and `frontend/src/utils/volume.ts`
@@ -95,14 +95,14 @@ who want to drive it themselves.
 ### Table stakes we're missing
 
 [x] Progress analytics. There is no route for it at all (see the `Route` list
-in `frontend/src/App.tsx`) — we store every set ever logged and show none of it
+in `frontend/src/App.tsx`), we store every set ever logged and show none of it
 back. Estimated 1RM over time, weekly volume per muscle group across blocks,
 PR history. Reviewers ding RP for weak analytics, so this is cheap ground.
     Done: /progress, backed by /v1/analytics. Estimated 1RM counts reps left in
     reserve, so a set stopped at 2 RIR isn't read as weaker than the same
     weight taken to failure; Epley is clamped at 12 effective reps.
 
-[x] Optional rest timer. **Product decision needed first — don't just build
+[x] Optional rest timer. **Product decision needed first, don't just build
 it.** The rest/log info modals in `frontend/src/pages/WorkoutExecution.tsx`
 currently say "No timer here on purpose," which is a defensible stance, but a
 missing timer is one of the most-requested features in RP's own App Store
@@ -120,7 +120,7 @@ about RP; both are self-contained and need no backend work.
     Unit-aware, and honest when no plate combination hits the target exactly.
 
 [x] Bodypart-specialization templates (chest focus, arm focus, glute focus).
-RP has 100+ templates against our 10 — the answer is a strong builder plus a
+RP has 100+ templates against our 10, the answer is a strong builder plus a
 handful of good blocks, not 100 we can't maintain. Overlaps with the template
 research item above; do them together.
     Done with the template research item: Chest Focus Upper/Lower and Arm Focus
@@ -148,7 +148,7 @@ trial** (30-day money-back only). Alpha Progression leads with 4.9 stars /
 40k+ reviews / 25M+ workouts, founder credentials, and an explicit comparison
 table naming Strong, Hevy and Fitbod.
 
-Documented complaints about RP — the openings: price ("more than my gym
+Documented complaints about RP, the openings: price ("more than my gym
 membership"), steep setup, cluttered UI, not suitable for beginners, no offline
 mode, weak analytics.
 
@@ -160,7 +160,7 @@ Everything below is visible to people who have not paid. Ordered by leverage.
 $34.99 and price is the single most repeated complaint about them. Being 7x
 cheaper is the strongest card and it is currently buried.
 
-[x] Sell the free trial above the fold. RP has no free trial at all — only a
+[x] Sell the free trial above the fold. RP has no free trial at all, only a
 money-back guarantee, which requires paying first. "Free for 5 days, no card up
 front" is a structural advantage that appears nowhere near the top. Change the
 CTA from "Get Started" to something that says free.
@@ -188,7 +188,7 @@ Two bugs found while doing the above, both fixed:
   is exactly what a cold backend produces on the landing page. It now only
   appears for people who actually have work to lose.
 
-### Accuracy — the page describes an older product
+### Accuracy, the page describes an older product
 
 [x] Fix the exercise count. It says 115; there are 140. Template count is not
 mentioned at all; there are 16. This category competes on countable numbers
@@ -210,17 +210,17 @@ vs self-reported surveys.
 
 [ ] Add product imagery for the newer screens. Correction to the original
 note: there are already three phone mockups on the page, not one. What is
-missing is the Progress charts, the volume warning and the plate calculator —
+missing is the Progress charts, the volume warning and the plate calculator -
 the newest and most visual work. Needs matching device-framed mockups rather
 than raw browser screenshots, which is design work, not copy.
 
-[~] Social proof — ratings, user counts, testimonials. **Do not manufacture
+[~] Social proof, ratings, user counts, testimonials. **Do not manufacture
 any.** Honest routes: a founder note on why this was built, the App Store
 rating once there is one, or letting How It Works carry the credibility.
     Partly done: a "Why This Exists" section now stands in, saying plainly that
     this is small and independent and has no endorsement wall, and pointing at
     the method instead. Real ratings and testimonials stay open until there are
-    genuine ones to show — this item cannot be finished by writing copy.
+    genuine ones to show, this item cannot be finished by writing copy.
 
 [x] Build a real pricing section. One sentence today: no annual option, no plan
 comparison, no money-back guarantee. RP anchors high with an annual price;
@@ -230,9 +230,9 @@ better for us.
 ### Smaller
 
 [x] Add a Privacy Policy. The footer links only Terms. We use Google OAuth and
-Stripe — this is a trust signal and probably a compliance gap.
+Stripe, this is a trust signal and probably a compliance gap.
     Written against an audit of what the code actually does, not a template.
-    **Not reviewed by a lawyer** — treat it as an accurate description of our
+    **Not reviewed by a lawyer**, treat it as an accurate description of our
     practices that still needs professional review before it is relied on.
 
 [ ] Reframe the PWA angle. "No download needed" reads apologetic. It is a
@@ -245,7 +245,7 @@ tour would let people evaluate before committing.
 
 [ ] Use How It Works as top-of-funnel content. It is public, genuinely
 educational, and now covers RIR, mesocycles, progressive overload, deloads and
-autoregulation — but it is positioned as documentation rather than a reason to
+autoregulation, but it is positioned as documentation rather than a reason to
 visit. SEO and content-marketing value going unused.
 
 [ ] Add email capture for people who are not ready to pay yet.
@@ -259,8 +259,8 @@ their account and get a copy of their data without asking a human. The policy
 says we are working on making both self-service, so this is now a promise in
 writing.
 
-[ ] Error monitoring. Eighteen commits of behaviour change — autoregulation,
-deload weeks, unit conversion that rewrites logged history — and a production
+[ ] Error monitoring. Eighteen commits of behaviour change, autoregulation,
+deload weeks, unit conversion that rewrites logged history, and a production
 500 still reaches us via a user rather than a page. Nothing is wired up: no
 Sentry, no alerting. Highest-value infrastructure item.
 
@@ -270,7 +270,7 @@ Before this it could not have gated anything.
 
 [ ] Promote the CSP from report-only. It protects nothing today. Needs one real
 sign-in with the browser console open to catch what Google's GSI widget
-actually reaches for, then swap the header name — steps in `frontend/CSP.md`.
+actually reaches for, then swap the header name, steps in `frontend/CSP.md`.
 Until then, tokens in localStorage mean an XSS is full account takeover.
 
 [ ] Tests for WorkoutExecution.tsx and Mesocycles.tsx (1,600 and 1,141 lines,

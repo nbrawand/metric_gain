@@ -97,7 +97,7 @@ def _set_workout_exercises(db: Session, workout_template: WorkoutTemplate, exerc
     their per-exercise note overrides by workout_exercise_id and new ids on
     every seed run would orphan every note a user has written. A row is matched
     to the same exercise rather than to the same position, so reordering the
-    template — or failing to resolve one exercise — cannot move a note onto a
+    template (or failing to resolve one exercise) cannot move a note onto a
     different lift.
     """
     existing = (
@@ -652,14 +652,14 @@ GLUTE_FOCUSED_UPPER_LOWER_TEMPLATE = {
 }
 
 # The library covered 2/3-day full body, 4-day upper/lower, 5-day and 6-day
-# splits, but had no single-rotation PPL — the most commonly recommended split
-# at 3 days — no chest/back + shoulders/arms + legs arrangement, no 4-day full
+# splits, but had no single-rotation PPL, the most commonly recommended split
+# at 3 days, no chest/back + shoulders/arms + legs arrangement, no 4-day full
 # body, and nothing for someone training with dumbbells only. The last two are
 # the bodypart-specialisation blocks; a glute-focused one already exists.
 
 THREE_DAY_PPL_TEMPLATE = {
     "name": "3-Day Push Pull Legs",
-    "description": "One rotation of push, pull and legs per week. The same split as the 6-day version at half the frequency — the usual recommendation for three training days, and a good step up from full body.",
+    "description": "One rotation of push, pull and legs per week. The same split as the 6-day version at half the frequency, the usual recommendation for three training days, and a good step up from full body.",
     "weeks": 6,
     "days_per_week": 3,
     "workouts": [
@@ -881,7 +881,7 @@ DUMBBELL_ONLY_TEMPLATE = {
 
 CHEST_FOCUS_TEMPLATE = {
     "name": "Chest Focus Upper/Lower",
-    "description": "4-day upper/lower with extra chest volume and angles, holding everything else at maintenance. Run one specialisation block at a time — the extra volume is only affordable because the rest is trimmed.",
+    "description": "4-day upper/lower with extra chest volume and angles, holding everything else at maintenance. Run one specialisation block at a time, the extra volume is only affordable because the rest is trimmed.",
     "weeks": 6,
     "days_per_week": 4,
     "workouts": [

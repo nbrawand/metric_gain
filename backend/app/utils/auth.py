@@ -14,7 +14,7 @@ from app.models.user import User
 
 # auto_error=False so a missing Authorization header lands in get_current_user
 # rather than being turned into HTTPBearer's default 403. "No credentials" is
-# 401 — 403 means "authenticated, but not allowed", which is what the admin and
+# 401. A 403 means "authenticated, but not allowed", which is what the admin and
 # subscription guards return, and the two should not be indistinguishable.
 security = HTTPBearer(auto_error=False)
 

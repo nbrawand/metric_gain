@@ -4,7 +4,7 @@
  * The app's stance is that you rest until you are ready rather than until a
  * clock says so, and that stays the default. But training without any sense of
  * elapsed time is its own problem, and a timer is one of the most-requested
- * things missing here — so it exists for people who want it, and is invisible
+ * things missing here, so it exists for people who want it, and is invisible
  * to everyone else.
  */
 

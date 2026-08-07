@@ -58,7 +58,7 @@ describe('computePlateLoading', () => {
 
   it('carries no floating point dust', () => {
     // 137.5 needs a 1.25 per side, which pound gyms do not stock, so the
-    // honest answer is 135 and 2.5 short — exactly 2.5, not 2.4999999996
+    // honest answer is 135 and 2.5 short, exactly 2.5, not 2.4999999996
     const { achievable, shortfall } = computePlateLoading(137.5, 'lb');
     expect(achievable).toBe(135);
     expect(shortfall).toBe(2.5);

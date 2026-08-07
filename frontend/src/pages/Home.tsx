@@ -61,7 +61,7 @@ export function Home() {
   const handleContinueMesocycle = async () => {
     if (!activeInstance || !accessToken) return;
 
-    // All sessions are created upfront — find the first uncompleted one
+    // All sessions are created upfront, find the first uncompleted one
     const unfinished = workoutSessions
       .filter(s => s.status !== 'completed')
       .sort((a, b) => a.week_number - b.week_number || a.day_number - b.day_number);
@@ -69,7 +69,7 @@ export function Home() {
     if (unfinished.length > 0) {
       navigate(`/workout/${unfinished[0].id}`);
     } else {
-      // All done — shouldn't normally reach here with an active instance
+      // All done, shouldn't normally reach here with an active instance
       navigate('/mesocycles');
     }
   };
@@ -165,7 +165,7 @@ export function Home() {
               </dl>
               {/* Anyone who has ever checked out has a Stripe customer to
                   manage. Gating this on "active" hid the portal from exactly
-                  the people who need it — a failed card or a cancellation. */}
+                  the people who need it, a failed card or a cancellation. */}
               {['active', 'past_due', 'canceled'].includes(user?.subscription_status ?? '') && (
                 <button
                   onClick={async () => {
@@ -174,7 +174,7 @@ export function Home() {
                       const { url } = await createPortalSession(accessToken);
                       window.location.href = url;
                     } catch (err) {
-                      // Surface the reason — "no subscription to manage yet" and
+                      // Surface the reason, "no subscription to manage yet" and
                       // "payments are not configured" need different responses
                       alert(apiErrorDetail(err, 'Could not open the billing portal. Please try again.'));
                     }

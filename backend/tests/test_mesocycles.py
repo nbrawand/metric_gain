@@ -872,7 +872,7 @@ def test_cannot_change_block_length_while_an_instance_is_active(
 def test_can_rename_a_template_while_an_instance_is_active(
     client, auth_headers, sample_exercise_id
 ):
-    """Only the shape is frozen — renaming a running block stays allowed."""
+    """Only the shape is frozen, renaming a running block stays allowed."""
     mesocycle, _ = _block_with_active_instance(client, auth_headers, sample_exercise_id)
 
     response = client.put(

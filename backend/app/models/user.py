@@ -38,7 +38,7 @@ class User(Base):
 
     # The Stripe event last applied to this user's subscription state. Stripe
     # neither orders deliveries nor stops retrying for days, so without these
-    # a stale past_due retry could overwrite a newer active status — and
+    # a stale past_due retry could overwrite a newer active status, and
     # nothing after it would ever put the account right again.
     stripe_event_id = Column(String(255), nullable=True)
     stripe_event_created = Column(BigInteger, nullable=True)  # unix seconds

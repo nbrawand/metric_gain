@@ -30,7 +30,7 @@ export const weightUnitLabel = (unit: WeightUnit): string =>
 
 
 /**
- * Rest timer preference. Off by default — the app's stance is that you rest
+ * Rest timer preference. Off by default, the app's stance is that you rest
  * until you are ready rather than until a clock says so, and that stays the
  * default for anyone who never opts in.
  */

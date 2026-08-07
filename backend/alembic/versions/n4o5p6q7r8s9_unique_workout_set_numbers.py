@@ -5,7 +5,7 @@ retried requests can slip past. Duplicate set numbers corrupt set add/remove
 and next week's per-set target matching, so the database has to hold the line.
 
 Existing duplicates (from races before this constraint) are renumbered to the
-next free number in their group rather than deleted — they may hold real
+next free number in their group rather than deleted, since they may hold real
 logged work.
 
 Revision ID: n4o5p6q7r8s9

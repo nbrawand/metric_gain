@@ -11,7 +11,7 @@ import { Link } from 'react-router-dom';
  *
  * Two rights below are honoured by email rather than by a button, because no
  * self-service deletion or export endpoint exists yet. Do not soften that
- * wording without building them first — the policy has to match the product.
+ * wording without building them first. The policy has to match the product.
  */
 export default function Privacy() {
   useEffect(() => {
@@ -65,8 +65,8 @@ export default function Privacy() {
             </p>
             <p className="mb-4">
               <strong className="text-white">What you create in the app.</strong> The
-              training blocks and workout templates you build, every set you log — weight,
-              reps, reps in reserve, and any note you attach — plus any custom exercises
+              training blocks and workout templates you build, every set you log (weight,
+              reps, reps in reserve, and any note you attach), plus any custom exercises
               you add. This is the substance of the service.
             </p>
             <p className="mb-4">
@@ -133,20 +133,20 @@ export default function Privacy() {
             </p>
             <ul className="list-disc pl-6 space-y-2 mb-4">
               <li>
-                <strong className="text-white">Google</strong> — sign-in only. Google
+                <strong className="text-white">Google</strong>: sign-in only. Google
                 handles the authentication; we receive your email address and name.
               </li>
               <li>
-                <strong className="text-white">Stripe</strong> — payment processing. You
+                <strong className="text-white">Stripe</strong>: payment processing. You
                 enter your card details directly with Stripe. We never see, receive or
                 store them; we hold only the identifiers Stripe gives us.
               </li>
               <li>
-                <strong className="text-white">Render</strong> — hosts our application
+                <strong className="text-white">Render</strong>: hosts our application
                 servers and database, where your account and training data live.
               </li>
               <li>
-                <strong className="text-white">Vercel</strong> — hosts the website itself.
+                <strong className="text-white">Vercel</strong>: hosts the website itself.
               </li>
             </ul>
             <p>
@@ -162,7 +162,7 @@ export default function Privacy() {
             <p className="mb-4">
               We keep your account and training history for as long as your account exists,
               so that your logged sets and progress are still there if you stop training
-              for a while and come back — including if your subscription lapses and you
+              for a while and come back, including if your subscription lapses and you
               later resubscribe.
             </p>
             <p>

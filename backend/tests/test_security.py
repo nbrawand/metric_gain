@@ -388,7 +388,7 @@ def test_client_ip_uses_the_proxy_written_forwarded_hop():
 
     Keying on that would put all users in a single bucket, so one abuser could
     lock everyone else out. But only the right-most X-Forwarded-For hop was
-    written by our own proxy — the left-most is attacker-supplied, and keying
+    written by our own proxy, the left-most is attacker-supplied, and keying
     on it made every rate limit bypassable (fresh bucket per request) and
     weaponizable (spoof a victim's IP to drain their bucket).
     """
@@ -471,7 +471,7 @@ def test_every_admin_route_rejects_a_non_admin(client, make_auth_headers):
     """
     headers = make_auth_headers("nosy_user@example.com", "Nosy User")
     routes = _admin_routes()
-    assert routes, "no admin routes found — the enumeration is broken, not the app"
+    assert routes, "no admin routes found; the enumeration is broken, not the app"
 
     for method, path in routes:
         response = client.request(method, path, json={}, headers=headers)
@@ -491,7 +491,7 @@ def test_every_admin_route_rejects_an_anonymous_caller(client, test_db):
 def test_grant_trial_is_audited(client, admin_headers, make_auth_headers):
     make_auth_headers("audited_target@example.com", "Target")
     # make_auth_headers creates active subscribers, and grant-trial rightly
-    # refuses those — move the target off "active" first
+    # refuses those, move the target off "active" first
     _set_status("audited_target@example.com", "none")
 
     response = client.post(
@@ -583,7 +583,7 @@ def test_missing_and_insufficient_credentials_are_distinguishable(
 
     HTTPBearer's default turned a missing header into 403, which made an
     unauthenticated caller indistinguishable from a signed-in one who lacked
-    rights — and stopped the frontend from trying a token refresh, because it
+    rights, and stopped the frontend from trying a token refresh, because it
     only refreshes on 401.
     """
     anonymous = client.get("/v1/auth/users/me")

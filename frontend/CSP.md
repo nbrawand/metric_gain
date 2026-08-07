@@ -2,7 +2,7 @@
 
 `vercel.json` ships the CSP as **`Content-Security-Policy-Report-Only`**, not as an
 enforcing policy. The other headers there (HSTS, `X-Frame-Options`,
-`X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`) *are* enforcing —
+`X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`) *are* enforcing -
 they carry no breakage risk.
 
 Report-Only means violations are logged to the browser console and nothing is
@@ -27,7 +27,7 @@ white-screens the page.
 1. Deploy, then open the site and **complete a full Google sign-in** plus one
    workout flow with the browser console open.
 2. Note every `[Report Only] Refused to ...` message and widen the matching
-   directive — or, better, remove the thing that triggered it.
+   directive, or, better, remove the thing that triggered it.
 3. Replace `'unsafe-inline'` in `script-src`: take the sha256 of the JSON-LD
    block in `index.html` and list it as `'sha256-...'`.
 4. Rename the header key to `Content-Security-Policy` and redeploy.

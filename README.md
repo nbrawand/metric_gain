@@ -6,7 +6,7 @@ A progressive web app for running structured strength training blocks that you p
 
 - **Mesocycle Management**: Create 3-12 week training blocks
 - **Progressive Overload**: Weight targets rise only when the last session hit them, sized to the smallest step the exercise can actually be loaded with
-- **Performance-Driven Volume**: Sets adjust each week from what you log — hit every target and gain a set, miss most and drop one — capped at a recoverable weekly total per muscle group. A fixed weekly ramp is available as an override
+- **Performance-Driven Volume**: Sets adjust each week from what you log (hit every target and gain a set, miss most and drop one) capped at a recoverable weekly total per muscle group. A fixed weekly ramp is available as an override
 - **Deload Week**: Every block runs one extra week at about half the sets, lighter, at 4 RIR
 - **Pounds or Kilograms**: Per-user unit preference; switching converts your logged history
 - **Volume Planning**: Review weekly sets per muscle group before committing, with a warning when a plan exceeds what most lifters recover from
@@ -122,8 +122,8 @@ uvicorn app.main:app --reload
 After restart, sign in with Google at `http://localhost:5173`.
 
 **What gets seeded** (see `backend/pre_deploy.py`):
-- `seed_exercises()` — 140 default exercises across all muscle groups
-- `seed_mesocycles()` — 16 stock templates (Push Pull Legs 6-day and 3-day, 2/3/4-Day Full Body, 4-Day Upper Lower, 5-Day L/P/P/L/U, Chest & Back / Shoulders & Arms / Legs, Beginner Strength, Beginner Machine Only, Beginner 3-Day Upper/Lower, Dumbbell Only Full Body, Bro Split, and the Glute, Chest and Arm focus blocks)
+- `seed_exercises()`, 140 default exercises across all muscle groups
+- `seed_mesocycles()`, 16 stock templates (Push Pull Legs 6-day and 3-day, 2/3/4-Day Full Body, 4-Day Upper Lower, 5-Day L/P/P/L/U, Chest & Back / Shoulders & Arms / Legs, Beginner Strength, Beginner Machine Only, Beginner 3-Day Upper/Lower, Dumbbell Only Full Body, Bro Split, and the Glute, Chest and Arm focus blocks)
 
 Seed scripts are in `backend/app/utils/seed_exercises.py` and `backend/app/utils/seed_mesocycles.py`. They only run if no stock data exists yet.
 
@@ -205,7 +205,7 @@ VITE_API_URL=http://localhost:8000
 
 ### Deployment
 
-**Backend (Render).** Build Command — keep this in step with the repo; it is the
+**Backend (Render).** Build Command, keep this in step with the repo; it is the
 only place migrations and seeding run:
 
 ```
@@ -214,14 +214,14 @@ pip install -r requirements.txt && alembic upgrade head && python pre_deploy.py
 
 `alembic upgrade head` applies schema changes. `python pre_deploy.py` seeds new
 stock exercises and mesocycle templates; both seeders are additive and match on
-name, so re-running every deploy is safe — existing exercises are skipped and
+name, so re-running every deploy is safe, existing exercises are skipped and
 stock templates are updated in place rather than duplicated.
 
 Health check is `/health`, which deliberately does **not** touch the database,
 so a green deploy does not by itself prove the schema is current.
 
 **Frontend (Vercel).** Security headers live in `frontend/vercel.json`. The CSP
-there is report-only — see [frontend/CSP.md](frontend/CSP.md).
+there is report-only, see [frontend/CSP.md](frontend/CSP.md).
 
 ### Production notes
 
@@ -231,12 +231,12 @@ Setting `ENVIRONMENT=production` changes behaviour deliberately:
 - Responses carry `Strict-Transport-Security`.
 - The app **refuses to start** if `SECRET_KEY` is a placeholder or shorter than
   32 characters, or if `CORS_ORIGINS` contains `*`. Both are silent
-  vulnerabilities otherwise — a guessable signing key lets anyone forge a token,
+  vulnerabilities otherwise, a guessable signing key lets anyone forge a token,
   and wildcard CORS with credentials enabled lets any site read a signed-in
   user's data.
 
 Security headers for the deployed frontend live in `frontend/vercel.json`. The
-CSP there is **report-only** and not yet protecting anything — see
+CSP there is **report-only** and not yet protecting anything, see
 [frontend/CSP.md](frontend/CSP.md) for what has to happen before it is enforced.
 
 ## License

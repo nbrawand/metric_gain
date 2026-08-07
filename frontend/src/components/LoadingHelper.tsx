@@ -38,8 +38,8 @@ export default function LoadingHelper({
             <h4 className="text-sm font-medium text-white mb-2">Each side of the bar</h4>
             {loading.belowBar ? (
               <p className="text-sm text-gray-400">
-                Below the {BAR_WEIGHT[unit]} {label} bar — dumbbells, a machine, or the bar
-                on its own.
+                Below the {BAR_WEIGHT[unit]} {label} bar. This will be dumbbells, a
+                machine, or the bar on its own.
               </p>
             ) : loading.perSide.length === 0 ? (
               <p className="text-sm text-gray-400">Empty bar.</p>
@@ -57,7 +57,7 @@ export default function LoadingHelper({
                 </div>
                 {loading.shortfall !== 0 && (
                   <p className="text-xs text-amber-400 mt-2">
-                    Closest is {loading.achievable} {label} — {loading.shortfall} {label} short.
+                    Closest is {loading.achievable} {label}, {loading.shortfall} {label} short.
                     No plate combination hits {weight} exactly.
                   </p>
                 )}

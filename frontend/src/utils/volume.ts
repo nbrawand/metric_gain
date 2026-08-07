@@ -39,7 +39,7 @@ export const DELOAD_TARGET_RIR = 4;
 
 /**
  * Target RIR for a week: ramps 3 -> 0 across the training weeks, clamped to
- * 0-3. Mirrors compute_target_rir, including the clamp — without it a week
+ * 0-3. Mirrors compute_target_rir, including the clamp, without it a week
  * number outside the block's range renders a negative or above-3 RIR.
  *
  * trainingWeeks is the planned week count, NOT the span including the deload.
@@ -57,7 +57,7 @@ export const computeTargetRir = (week: number, trainingWeeks: number): number =>
 };
 
 /**
- * Weekly set ceilings per muscle group — roughly where the published maximum
+ * Weekly set ceilings per muscle group, roughly where the published maximum
  * recoverable volume ranges top out for an intermediate lifter.
  *
  * These are guidance, not a hard limit: the app still builds whatever plan you

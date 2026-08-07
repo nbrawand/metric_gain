@@ -16,7 +16,7 @@ from app.utils.seed_mesocycles import STOCK_TEMPLATES
 def test_exercise_names_are_unique():
     """seed_exercises dedupes on name, so a collision silently drops one.
 
-    "Cable Kickback" existed twice — a triceps and a glute exercise — and the
+    "Cable Kickback" existed twice (a triceps and a glute exercise) and the
     glute one was never inserted into any database.
     """
     duplicates = [n for n, c in Counter(e["name"] for e in DEFAULT_EXERCISES).items() if c > 1]

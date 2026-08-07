@@ -23,12 +23,12 @@ export interface PendingSetSave {
   markLogged?: boolean;
 }
 
-// The queue is retried on every drain, so this is generous — it exists only so
+// The queue is retried on every drain, so this is generous, it exists only so
 // an item the server will never accept cannot be retried forever.
 const MAX_SYNC_ATTEMPTS = 25;
 
 // The queue outlives logout, so entries are tagged with their owner: another
-// account signing in on the same device must not sync — or discard — the
+// account signing in on the same device must not sync (or discard) the
 // previous one's unsent sets. Entries with no owner predate this and are
 // treated as the current user's so nothing already queued is stranded.
 // When the user record hasn't loaded yet there is nobody to exclude, so every
@@ -105,7 +105,7 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
             await updateWorkoutSet(item.sessionId, item.setId, item.data, accessToken);
             if (stillCurrent(item, key)) {
               get().remove(key);
-              // Only saves flip a set to "logged" — a queued clear syncing
+              // Only saves flip a set to "logged", a queued clear syncing
               // must not resurrect the set the user just un-logged.
               if (item.markLogged !== false) syncedSetIds.push(item.setId);
             }
@@ -117,8 +117,8 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
 
             if (!stillCurrent(item, key)) continue;
 
-            // Only drop work the server can never accept. Anything else — an
-            // expired token, a 500, a proxy error mid-deploy — keeps the sets
+            // Only drop work the server can never accept. Anything else, an
+            // expired token, a 500, a proxy error mid-deploy, keeps the sets
             // queued, or the whole workout is lost.
             if (status === 400 || status === 404 || status === 422) {
               console.warn(`Offline sync: dropping rejected item ${key}`, err);

@@ -32,7 +32,7 @@ def test_checkout_is_refused_while_a_subscription_is_still_open(client, billing_
     """active and past_due both already have a subscription in Stripe.
 
     Letting past_due check out opened a second subscription alongside the one
-    whose card had failed — and past_due is exactly the state that locks the
+    whose card had failed, and past_due is exactly the state that locks the
     app and drops the user on the subscribe page with nowhere else to go.
     """
     headers, set_status = billing_user
@@ -143,7 +143,7 @@ def test_webhook_drops_stale_and_duplicate_events(client, billing_user, webhook_
     """Stripe retries events for days and does not guarantee order.
 
     A past_due emitted before the active that superseded it must not win just
-    because it arrived last — that locked the user out of the app and out of
+    because it arrived last, that locked the user out of the app and out of
     checkout with a healthy subscription, and nothing would ever undo it.
     """
     headers, set_status = billing_user
@@ -170,7 +170,7 @@ def test_webhook_drops_stale_and_duplicate_events(client, billing_user, webhook_
 def test_checkout_completion_without_payment_does_not_activate(client, billing_user, webhook_secret):
     """Delayed-notification methods complete the session before the money moves.
 
-    The subscription id must still be recorded — the later subscription events
+    The subscription id must still be recorded, the later subscription events
     are what activate the account, and they look the user up by that id.
     """
     headers, set_status = billing_user

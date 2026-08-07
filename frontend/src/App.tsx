@@ -31,7 +31,7 @@ function ConnectivityBanner() {
   if (reachable) return null;
   // Only people with work to lose need this. A prospect reading the landing
   // page has nothing queued, and "Can't reach the server" across the top of a
-  // marketing page — which is exactly what a cold backend produces — reads as
+  // marketing page (which is exactly what a cold backend produces) reads as
   // a broken product.
   if (!isAuthenticated) return null;
 
@@ -98,7 +98,7 @@ function BillingSuccess() {
 
   // Stripe sends the customer back before its webhook has necessarily reached
   // us, so poll until the account actually flips to active. Navigating away on
-  // the stale status sent someone who had just paid back to the paywall — where
+  // the stale status sent someone who had just paid back to the paywall, where
   // subscribing again would have charged them a second time.
   useEffect(() => {
     let cancelled = false;
@@ -145,14 +145,14 @@ function BillingSuccess() {
         <h1 className="text-2xl font-bold text-white mb-4">
           {confirmState === 'confirming' && 'Confirming your payment...'}
           {confirmState === 'active' && 'Subscription active'}
-          {confirmState === 'timeout' && 'Payment received — still confirming'}
+          {confirmState === 'timeout' && 'Payment received, still confirming'}
         </h1>
         <p className="text-gray-300 mb-6">
           {confirmState === 'confirming' && 'This takes a few seconds. Please keep this page open.'}
           {confirmState === 'active' && 'Your payment was successful. You now have full access.'}
           {confirmState === 'timeout' &&
             'Your checkout completed, but activation is taking longer than usual. ' +
-            'It usually finishes within a few minutes — check back shortly.'}
+            'It usually finishes within a few minutes. Check back shortly.'}
         </p>
         <button
           onClick={() => navigate('/')}
@@ -171,7 +171,7 @@ function BillingCancel() {
     <main className="max-w-lg mx-auto px-4 py-16 text-center">
       <div className="bg-gray-800 rounded-2xl p-8">
         <h1 className="text-2xl font-bold text-white mb-4">Checkout canceled</h1>
-        <p className="text-gray-300 mb-6">No worries — you can subscribe whenever you're ready.</p>
+        <p className="text-gray-300 mb-6">No worries, you can subscribe whenever you're ready.</p>
         <a href="/subscribe" className="inline-block bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
           Back to Subscribe
         </a>
@@ -253,8 +253,8 @@ function App() {
   }, []);
 
   // Routes mount immediately. Only the login page needs the Google client id,
-  // and gating everything on it meant the public landing page — the one thing a
-  // prospect sees before paying — waited on a backend round trip, with retries.
+  // and gating everything on it meant the public landing page, the one thing a
+  // prospect sees before paying, waited on a backend round trip, with retries.
   // A cold server turned that into seconds of "Loading..." on a marketing page.
   //
   // The provider is always rendered rather than swapped in once the id arrives:

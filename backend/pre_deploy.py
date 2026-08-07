@@ -1,7 +1,7 @@
 """Pre-deploy script: seed stock exercises and mesocycle templates.
 
 Run after migrations. Exits non-zero on failure so a deploy that could not
-seed is not reported as successful — a silent failure here leaves every user
+seed is not reported as successful. A silent failure here leaves every user
 looking at an empty exercise library.
 """
 

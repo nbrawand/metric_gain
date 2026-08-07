@@ -18,7 +18,7 @@ const OFFLINE_DETAIL = "You appear to be offline. Check your connection and try 
  * Narrow an unknown caught value to the shape fetchApi throws.
  *
  * Everything here rejects with an ApiError, but a catch block still receives
- * `unknown` — these keep call sites from having to cast to `any` to read it.
+ * `unknown`, these keep call sites from having to cast to `any` to read it.
  */
 export function isApiError(error: unknown): error is ApiError {
   return (
@@ -40,8 +40,8 @@ export function apiErrorDetail(error: unknown, fallback: string): string {
 /**
  * True when the request never reached the server.
  *
- * fetchApi uses status 0 for this, which is what the offline queue keys on —
- * a real HTTP failure must not be queued and retried forever.
+ * fetchApi uses status 0 for this, which is what the offline queue keys on.
+ * A real HTTP failure must not be queued and retried forever.
  */
 export function isNetworkError(error: unknown): boolean {
   return isApiError(error) && error.status === 0;
@@ -74,7 +74,7 @@ function parseErrorResponse(response: Response, errorData?: unknown): ApiError {
 }
 
 /**
- * Global connectivity state — tracks whether the backend is reachable.
+ * Global connectivity state, tracks whether the backend is reachable.
  * Components subscribe via onConnectivityChange().
  */
 let _serverReachable = true;
@@ -116,7 +116,7 @@ export function setAuthStoreRef(setToken: AuthStoreSetter, logout: AuthStoreLogo
  *
  * Returns the new access token, or null when the session is genuinely over
  * (no stored token, or the server rejected it). Throws RefreshUnavailableError
- * when the server could not be reached — the refresh token is probably still
+ * when the server could not be reached, the refresh token is probably still
  * good, and treating that as an expiry signed people out mid-workout on a
  * flaky connection.
  */
@@ -204,13 +204,13 @@ async function fetchApi<T>(
       },
     });
   } catch {
-    // Network error — server unreachable
+    // Network error, server unreachable
     setServerReachable(false);
     const error: ApiError = { detail: OFFLINE_DETAIL, status: 0 };
     throw error;
   }
 
-  // We got a response — server is reachable
+  // We got a response, server is reachable
   setServerReachable(true);
 
   if (!response.ok) {
@@ -223,7 +223,7 @@ async function fetchApi<T>(
       try {
         newToken = await tryRefreshToken();
       } catch {
-        // Could not reach the server to refresh — keep the session and let the
+        // Could not reach the server to refresh, keep the session and let the
         // caller handle it as any other transient failure. Callers branch on
         // `status`, so nothing but an ApiError may leave here.
         setServerReachable(false);
@@ -241,7 +241,7 @@ async function fetchApi<T>(
         existingHeaders['Authorization'] = `Bearer ${newToken}`;
         return fetchApi<T>(endpoint, { ...options, headers: existingHeaders }, true);
       }
-      // Refresh failed — session is truly expired, log out
+      // Refresh failed, session is truly expired, log out
       if (_logout) _logout();
     }
 

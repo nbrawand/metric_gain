@@ -8,7 +8,7 @@ export default function Subscribe() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // A failed payment locks the app, which lands the user here — and this is the
+  // A failed payment locks the app, which lands the user here, and this is the
   // only page they can reach. Checking out again would open a second
   // subscription next to the one that needs a working card, so past_due gets
   // the billing portal instead.

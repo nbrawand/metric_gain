@@ -42,7 +42,7 @@ export async function refreshToken(
  * locally rather than trapping someone in a session they asked to leave.
  *
  * Deliberately a raw fetch rather than the shared client: on a 401 the client
- * would try to refresh and, failing that, call logout again — and logout is
+ * would try to refresh and, failing that, call logout again, and logout is
  * what called this.
  */
 export async function revokeTokens(accessToken: string): Promise<void> {

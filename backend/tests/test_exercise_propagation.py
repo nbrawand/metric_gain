@@ -159,7 +159,7 @@ def test_a_completed_later_week_is_never_rewritten(
         f"/v1/workout-sessions/{weeks[1]['id']}/exercises/{sample_exercise_id}",
         headers=auth_headers,
     )
-    # Weeks 2 and 4 only — week 3 is completed
+    # Weeks 2 and 4 only, week 3 is completed
     assert response.json()["future_sessions_updated"] == 3
 
     assert sample_exercise_id in _exercise_ids(client, auth_headers, weeks[3]["id"])
@@ -232,7 +232,7 @@ def test_added_exercise_follows_the_plans_weekly_set_ramp(
     """A propagated exercise is sized per week, not frozen at week 1's count.
 
     Day 1's template entry ramps 3 sets +1/week, so removing and re-adding it
-    in week 1 must still produce 3/4/5/6 across the training weeks — and then
+    in week 1 must still produce 3/4/5/6 across the training weeks, and then
     deload rather than carrying the ramp into the recovery week.
     """
     instance = sample_mesocycle_instance

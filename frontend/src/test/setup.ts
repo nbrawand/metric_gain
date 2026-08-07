@@ -4,8 +4,8 @@ import { afterEach, beforeEach } from 'vitest';
 
 /**
  * jsdom in this version exposes `localStorage` as an object with no methods, so
- * anything using zustand's `persist` — the auth store and the offline sync
- * queue — throws on import. An in-memory Storage keeps those testable.
+ * anything using zustand's `persist`, the auth store and the offline sync
+ * queue, throws on import. An in-memory Storage keeps those testable.
  */
 class MemoryStorage implements Storage {
   private store = new Map<string, string>();

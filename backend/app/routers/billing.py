@@ -1,4 +1,4 @@
-"""Billing endpoints — Stripe subscription management."""
+"""Billing endpoints. Stripe subscription management."""
 
 import logging
 from typing import Optional
@@ -66,7 +66,7 @@ def _stale_event(user: User, event) -> bool:
     Stripe neither orders deliveries nor stops retrying for days, so both
     cases really happen: the same event redelivered after it was processed,
     and an old past_due arriving after the active that superseded it. Events
-    stamped the same second as the last applied one are let through — their
+    stamped the same second as the last applied one are let through, their
     order is unknowable, and dropping them risks discarding a genuinely newer
     state.
     """
@@ -93,7 +93,7 @@ async def create_checkout_session(
 ):
     """Create a Stripe Checkout session for subscription."""
     # State guards come before the config check so the endpoint answers the same
-    # way whatever the deployment holds — "you already have a subscription" is
+    # way whatever the deployment holds, "you already have a subscription" is
     # true regardless of whether Stripe keys happen to be loaded.
     # Checking out again would open a second subscription and orphan the first,
     # which keeps billing with no user attached to its webhooks
@@ -107,7 +107,7 @@ async def create_checkout_session(
         raise HTTPException(
             status_code=400,
             detail=(
-                "Your subscription is still open — its last payment failed. "
+                "Your subscription is still open, its last payment failed. "
                 "Use Manage Subscription to update your card."
             ),
         )
@@ -119,7 +119,7 @@ async def create_checkout_session(
     # between completing checkout and the webhook arriving the guards above
     # pass and a second checkout would open a second live subscription. Ask
     # Stripe directly whether one is already open. Only statuses the app
-    # treats as open block here — unpaid/canceled map to a closed local
+    # treats as open block here, unpaid/canceled map to a closed local
     # subscription and must stay eligible for a fresh checkout.
     if current_user.stripe_customer_id:
         existing = stripe.Subscription.list(
@@ -161,7 +161,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     # An empty secret must refuse service, not verify: construct_event happily
     # validates an HMAC computed with an empty key, so without this guard a
     # deploy that forgot STRIPE_WEBHOOK_SECRET accepts self-signed events from
-    # anyone — free subscription activations, forced cancellations.
+    # anyone, free subscription activations, forced cancellations.
     if not settings.STRIPE_WEBHOOK_SECRET:
         logger.error("Stripe webhook received but STRIPE_WEBHOOK_SECRET is not configured")
         raise HTTPException(status_code=503, detail="Billing webhooks are not configured.")
@@ -202,7 +202,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         if user and _stale_event(user, event):
             logger.info("Skipping stale/duplicate event %s for user=%s", event["id"], user.email)
         elif user:
-            # Never overwrite a stored subscription id with nothing — losing
+            # Never overwrite a stored subscription id with nothing, losing
             # it means later cancellation events can't find this user and
             # their access would never end.
             if subscription_id:
@@ -210,7 +210,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             # Delayed-notification methods (ACH and friends) complete the
             # session before the money moves. Record the ids either way so the
             # later subscription events can find the user, but only paid
-            # sessions grant access — the subscription.updated that follows
+            # sessions grant access, the subscription.updated that follows
             # the eventual payment flips the status.
             payment_status = data.get("payment_status")
             if payment_status in (None, "paid", "no_payment_required"):
@@ -261,7 +261,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         user = _find_user_by_subscription(db, subscription_id)
         # Fall back to the customer only when the invoice names no
         # subscription at all. An invoice for a subscription this app doesn't
-        # track is a retry from one the user already replaced — marking them
+        # track is a retry from one the user already replaced, marking them
         # past_due for it locks out an account whose current subscription is
         # healthy, with no event that would ever undo it.
         if not user and not subscription_id:

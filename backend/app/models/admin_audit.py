@@ -33,7 +33,7 @@ class AdminAuditLog(Base):
     )
     target_email = Column(String(255), nullable=False, index=True)
 
-    # JSON blob of whatever the action needed to be reconstructable later —
+    # JSON blob of whatever the action needed to be reconstructable later:
     # the granted day count, the status moved from and to
     details = Column(Text, nullable=True)
 

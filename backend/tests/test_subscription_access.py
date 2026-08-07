@@ -47,7 +47,7 @@ def test_as_utc_normalizes_without_shifting_the_instant():
     naive = datetime(2026, 1, 1, 12, 0, 0)
     assert as_utc(naive) == datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
 
-    # Same instant, expressed at a +5 offset — must stay the same instant
+    # Same instant, expressed at a +5 offset, must stay the same instant
     aware = datetime(2026, 1, 1, 17, 0, 0, tzinfo=timezone(timedelta(hours=5)))
     assert as_utc(aware) == datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
 

@@ -32,7 +32,7 @@ export default function Landing() {
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 justify-center md:justify-start mb-6">
               <span className="text-white text-2xl font-bold">$4.99<span className="text-base font-medium text-teal-200">/month</span></span>
               <span className="text-teal-100 text-sm bg-teal-900/60 border border-teal-500 rounded-full px-3 py-1">
-                Free for 5 days — no card up front
+                Free for 5 days, no card up front
               </span>
             </div>
 
@@ -81,7 +81,7 @@ export default function Landing() {
               Most apps just log what you did. Strength Guider walks you through every session of a structured training block: it generates your full schedule with weight targets and RIR goals, then adjusts your sets each week from what you actually logged. With <span className="text-white font-medium">140 exercises</span> across 12 muscle groups and <span className="text-white font-medium">16 ready-made blocks</span>, you can start training today or build your own from scratch.
             </p>
             <p className="text-gray-300 leading-relaxed mb-3">
-              Every block ends with a deload week. Weights only rise when you hit the last session's targets, and they move in steps your gym can actually load — in pounds or kilograms. Tap any target for the plates and a warmup ramp, and see your estimated strength, weekly volume and best lifts on the Progress page.
+              Every block ends with a deload week. Weights only rise when you hit the last session's targets, and they move in steps your gym can actually load, in pounds or kilograms. Tap any target for the plates and a warmup ramp, and see your estimated strength, weekly volume and best lifts on the Progress page.
             </p>
             <p className="text-gray-300 leading-relaxed">
               Think of it as a knowledgeable training guide that keeps you on a structured plan instead of guesswork, at a fraction of the cost of a personal trainer. Along the way, you learn the science just by using the app.
@@ -114,7 +114,7 @@ export default function Landing() {
             </div>
             <h3 className="text-white font-semibold text-lg mb-2">Plan Your Volume</h3>
             <p className="text-gray-400 text-sm leading-relaxed">
-              Choose a starting set count for every exercise, then review per-muscle-group volume charts before you commit — with a warning if a plan runs past what most lifters recover from. From there your sets adjust each week from what you actually log, capped per muscle group.
+              Choose a starting set count for every exercise, then review per-muscle-group volume charts before you commit, with a warning if a plan runs past what most lifters recover from. From there your sets adjust each week from what you actually log, capped per muscle group.
             </p>
           </div>
 
@@ -146,7 +146,7 @@ export default function Landing() {
             </div>
             <h3 className="text-white font-semibold text-lg mb-2">Works Without Signal</h3>
             <p className="text-gray-400 text-sm leading-relaxed">
-              Basements, car parks, and gyms with no bars of reception. Log every set as normal — nothing blocks on the network, and your sets sync themselves the moment you are back online.
+              Basements, car parks, and gyms with no bars of reception. Log every set as normal. Nothing blocks on the network, and your sets sync themselves the moment you are back online.
             </p>
           </div>
 
@@ -174,7 +174,7 @@ export default function Landing() {
           </h3>
           <p className="text-gray-400 text-sm leading-relaxed">
             Serious training apps tend to assume you already know what a mesocycle is. Three
-            of the ready-made blocks are built for people who don't yet — including a
+            of the ready-made blocks are built for people who don't yet, including a
             machines-only one if free weights are still intimidating. Pick one, and the app
             explains RIR, volume and progression as you go rather than asking you to
             configure them first.
@@ -243,7 +243,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Offline — the clearest head-to-head win, so it gets its own band
+      {/* Offline: the clearest head-to-head win, so it gets its own band
           rather than sitting as one card among four */}
       <section className="bg-teal-900/30 border-t border-b border-teal-800 py-14 px-4">
         <div className="max-w-3xl mx-auto text-center">
@@ -252,7 +252,7 @@ export default function Landing() {
           </h2>
           <p className="text-gray-300 leading-relaxed mb-3">
             Your whole block is on the device before you get to the gym. Log every set as
-            normal in a basement, a car park, or anywhere with no bars — nothing waits on
+            normal in a basement, a car park, or anywhere with no bars. Nothing waits on
             the network, and your sets sync themselves the moment you are back online.
           </p>
           <p className="text-gray-400 text-sm">
@@ -320,7 +320,7 @@ export default function Landing() {
             <tbody className="text-gray-300">
               {[
                 ['Price', '$4.99 / month', 'Around $25–35 / month'],
-                ['Free trial', '5 days, no card up front', 'Often none — money back only'],
+                ['Free trial', '5 days, no card up front', 'Often none, money back only'],
                 ['Works offline', 'Yes, log everything with no signal', 'Usually needs a connection'],
                 ['How volume adapts', 'From the sets you logged', 'Soreness and pump questions each session'],
                 ['For a first block', '3 beginner blocks, one machines-only', 'Usually aimed at intermediate and up'],
@@ -349,7 +349,7 @@ export default function Landing() {
           {[
             {
               q: 'Do I need to know what a mesocycle is?',
-              a: "No. Pick one of the ready-made blocks and start — the app explains RIR, volume and progression as you go. Three of the blocks are built for people running their first structured programme, including one using only machines.",
+              a: "No. Pick one of the ready-made blocks and start. The app explains RIR, volume and progression as you go. Three of the blocks are built for people running their first structured programme, including one using only machines.",
             },
             {
               q: 'What if I miss a workout?',
@@ -361,11 +361,11 @@ export default function Landing() {
             },
             {
               q: 'Do I have to download an app?',
-              a: "No. It runs in your browser on any device. On a phone you can add it to your home screen and it opens full-screen like a native app — no app store, and updates arrive on their own.",
+              a: "No. It runs in your browser on any device. On a phone you can add it to your home screen and it opens full-screen like a native app. No app store, and updates arrive on their own.",
             },
             {
               q: 'Pounds or kilograms?',
-              a: "Either. Pick your unit and everything — including the weight steps it asks you to add — is calculated in it, because 5 lb is not a number any kilo plate rack can make.",
+              a: "Either. Pick your unit and everything, including the weight steps it asks you to add, is calculated in it, because 5 lb is not a number any kilo plate rack can make.",
             },
             {
               q: 'Can I cancel?',
@@ -388,7 +388,7 @@ export default function Landing() {
       </section>
 
       {/* Why this exists. Standing in for the ratings and testimonial walls the
-          bigger apps use — we do not have those yet, and inventing them is not
+          bigger apps use. We do not have those yet, and inventing them is not
           an option. Being straight about being small is the honest version. */}
       <section className="bg-gray-800 border-t border-b border-gray-700 py-14 px-4">
         <div className="max-w-3xl mx-auto">
@@ -396,8 +396,8 @@ export default function Landing() {
           <p className="text-gray-300 leading-relaxed mb-3">
             Structured training works, and the apps that do it properly cost more per month
             than a lot of gym memberships. Strength Guider was built to do the part that
-            actually matters — plan a block, guide every session, and adjust from what you
-            lifted — without the price tag or the questionnaires.
+            actually matters, which is to plan a block, guide every session, and adjust from
+            what you lifted, without the price tag or the questionnaires.
           </p>
           <p className="text-gray-300 leading-relaxed">
             It is small and independent, so there is no wall of celebrity endorsements here.
@@ -423,11 +423,11 @@ export default function Landing() {
             $4.99<span className="text-lg font-medium text-gray-400">/month</span>
           </div>
           <p className="text-teal-400 text-sm font-medium mt-2 mb-5">
-            First 5 days free — no card up front
+            First 5 days free, no card up front
           </p>
           <ul className="text-left space-y-2 mb-6">
             {[
-              'Every feature — nothing held back for a higher tier',
+              'Every feature, nothing held back for a higher tier',
               '16 ready-made blocks and 140 exercises',
               'Sets that adjust from your logged performance',
               'Full offline training and syncing',

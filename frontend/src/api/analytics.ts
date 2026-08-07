@@ -1,5 +1,5 @@
 /**
- * Analytics API client — reading training history back.
+ * Analytics API client, reading training history back.
  */
 
 import { get } from './client';

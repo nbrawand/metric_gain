@@ -55,17 +55,17 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
             <span className="text-teal-400 font-medium">starting set count</span> and a{' '}
             <span className="text-teal-400 font-medium">weekly increase</span>. Before
             confirming, you review per-muscle-group charts of your planned weekly
-            volume — then the plan sticks for the whole mesocycle.
+            volume, then the plan sticks for the whole mesocycle.
           </p>
           <p className="text-gray-300 leading-relaxed mb-3">
             Intensity is managed through{' '}
-            <span className="text-teal-400 font-medium">RIR (Reps In Reserve)</span> —
+            <span className="text-teal-400 font-medium">RIR (Reps In Reserve)</span>,
             the number of reps you could have done before failure. Week 1 targets
             3 RIR (moderate effort), decreasing each week until 0 RIR (failure)
             in the final week.
           </p>
           <p className="text-gray-300 leading-relaxed">
-            During a workout you can add or remove sets on the spot — future
+            During a workout you can add or remove sets on the spot, future
             sessions stay on your plan.
           </p>
         </>
@@ -82,7 +82,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
               </div>
               <p className="text-gray-300 text-sm leading-relaxed">
                 Go to <span className="text-teal-400 font-medium">Mesocycles</span> and
-                create a template — choose your training days, weeks, exercises,
+                create a template, choose your training days, weeks, exercises,
                 and the weekly increase.
               </p>
             </div>

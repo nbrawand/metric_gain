@@ -110,7 +110,7 @@ export default function Mesocycles() {
     );
     // Only on open: resizing is handled by the days/week control itself, which
     // must not throw away days the user has already filled in.
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- days_per_week is deliberately omitted — see the comment above; resizing is handled by the days/week control so filled-in days are not discarded.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- days_per_week is deliberately omitted, see the comment above; resizing is handled by the days/week control so filled-in days are not discarded.
   }, [showCreateModal]);
 
   // Add or drop day cards to match, keeping the ones already filled in
@@ -126,7 +126,7 @@ export default function Mesocycles() {
     });
     // Forget days that no longer exist. Collapsed state is keyed by index, so
     // dropping to 2 days and back to 4 otherwise handed the removed day's
-    // collapsed flag to the blank one taking its place — a day you just added
+    // collapsed flag to the blank one taking its place, a day you just added
     // showed up already closed.
     setCollapsedDays((prev) => {
       const kept = [...prev].filter((index) => index < days);
@@ -250,7 +250,7 @@ export default function Mesocycles() {
     }
 
     try {
-      // Create instance — backend now creates all sessions upfront.
+      // Create instance, backend now creates all sessions upfront.
       // Built from local date parts, not toISOString: that converts to UTC, so
       // starting a block on a weekday evening west of UTC dated it tomorrow.
       const now = new Date();
@@ -268,7 +268,7 @@ export default function Mesocycles() {
 
       const instance = await startMesocycleInstance(instanceData, accessToken);
 
-      // All sessions are already created — find the first one (week 1, day 1)
+      // All sessions are already created, find the first one (week 1, day 1)
       const sessions = await listWorkoutSessions(
         { mesocycle_instance_id: instance.id },
         accessToken
@@ -351,7 +351,7 @@ export default function Mesocycles() {
   };
 
   const handleReviewPlan = () => {
-    // The build fields are hidden during review, so validate here — the browser
+    // The build fields are hidden during review, so validate here, the browser
     // cannot report a constraint violation on an input it cannot focus.
     if (!mesocycleData.name.trim()) {
       alert('Please enter a template name');
@@ -440,7 +440,7 @@ export default function Mesocycles() {
       (_, i) => i !== exerciseIndex
     );
     // Reindex, or the next added exercise reuses the gap's index and the two
-    // rows collide — their sets interleave and reordering them does nothing
+    // rows collide, their sets interleave and reordering them does nothing
     updated[workoutIndex].exercises.forEach((ex, i) => { ex.order_index = i; });
     setWorkoutTemplates(updated);
   };
@@ -696,7 +696,7 @@ export default function Mesocycles() {
                       <h3 className="text-sm font-medium text-gray-300 mb-1">Planned Weekly Sets per Muscle Group</h3>
                       <p className="text-xs text-gray-400 mb-3">
                         {autoregulateVolume
-                          ? "With performance-based sets on, this is the template's plan — what you actually get each week follows what you log."
+                          ? "With performance-based sets on, this is the template's plan. What you actually get each week follows what you log."
                           : 'The fixed plan this block will follow.'}
                       </p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -730,7 +730,7 @@ export default function Mesocycles() {
                           Hit every target and you get an extra set next week; miss most of
                           them and you get one fewer, capped at a recoverable weekly total
                           per muscle group. Turn this off to follow the template's fixed
-                          weekly increase instead. Defaults to how the template was built —
+                          weekly increase instead. Defaults to how the template was built -
                           changing it here applies to this block only.
                         </span>
                       </span>
@@ -774,7 +774,7 @@ export default function Mesocycles() {
                               .map(inst => (
                                 <option key={inst.id} value={inst.id}>
                                   Started {new Date(inst.start_date).toLocaleDateString()}
-                                  {' — Completed '}
+                                  {', completed '}
                                   {new Date(inst.updated_at).toLocaleDateString()}{' '}
                                   {new Date(inst.updated_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
                                 </option>

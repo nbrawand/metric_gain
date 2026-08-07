@@ -6,7 +6,7 @@ a review chart showing a ramp that would not happen. The template now carries
 the default, chosen alongside the increments it governs.
 
 Defaults to true, matching what starting a block already did. This is only a
-default for a control — running blocks are governed by their own instance flag
+default for a control. Running blocks are governed by their own instance flag
 and are unaffected.
 
 Revision ID: r8s9t0u1v2w3

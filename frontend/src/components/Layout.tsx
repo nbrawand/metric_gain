@@ -278,7 +278,7 @@ export default function Layout() {
                     )}
                     <p className="text-xs text-gray-500 mt-2">
                       Off by default. Resting until you feel ready beats resting until a
-                      clock says so — but the countdown is here if you want it.
+                      clock says so, but the countdown is here if you want it.
                     </p>
                   </div>
                 </div>

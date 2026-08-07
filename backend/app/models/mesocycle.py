@@ -26,7 +26,7 @@ class Mesocycle(Base):
     description = Column(Text, nullable=True)
 
     # Default volume mode for blocks started from this template. Stored here so
-    # the choice is made where the weekly increments it overrides are set —
+    # the choice is made where the weekly increments it overrides are set:
     # picking "+2 sets/week" per exercise and then having it silently ignored
     # was the confusing part. Still overridable per run when starting a block.
     autoregulate_volume = Column(
@@ -78,7 +78,7 @@ class MesocycleInstance(Base):
 
     # Whether this block carries the extra deload week after its training
     # weeks. Recorded per instance rather than derived, because blocks started
-    # before deloads existed have no sessions for that week — computing it
+    # before deloads existed have no sessions for that week, computing it
     # would give them a phantom final week that can never be completed.
     includes_deload = Column(Boolean, default=True, nullable=False, server_default="false")
 

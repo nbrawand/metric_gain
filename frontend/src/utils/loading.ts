@@ -36,7 +36,8 @@ export interface PlateLoading {
  * Which plates to put on each side to reach a target weight.
  *
  * Greedy from the heaviest plate down, which is both how people actually load
- * a bar and optimal for the plate sets above — each is a multiple of the next.
+ * a bar and optimal for the plate sets above, since each is a multiple of the
+ * next.
  */
 export const computePlateLoading = (
   target: number,

@@ -12,7 +12,7 @@ const updateSW = registerSW({
     window.dispatchEvent(new CustomEvent('sw-update-available', { detail: { updateSW } }));
   },
   onOfflineReady() {
-    // App is cached and ready for offline use — no action needed
+    // App is cached and ready for offline use, no action needed
   },
 });
 

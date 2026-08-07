@@ -70,7 +70,7 @@ export default function HowItWorks() {
             <div>
               <h3 className="text-white font-medium mb-1">Adjust on the Fly</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                During a workout you can add or remove sets, swap exercises, or add new ones. These changes only affect the current session — future sessions stick to your plan.
+                During a workout you can add or remove sets, swap exercises, or add new ones. Adding, removing or swapping an exercise carries into the same day in every later week of the block, since that is nearly always a decision about the block rather than about today. Weeks you have already completed are never rewritten.
               </p>
             </div>
           </div>
@@ -140,7 +140,7 @@ export default function HowItWorks() {
       <section id="rest" className="bg-gray-800 rounded-lg p-6 scroll-mt-16">
         <h2 className="text-xl font-semibold text-teal-400 mb-3">Resting Between Sets</h2>
         <p className="text-gray-300 leading-relaxed mb-3">
-          Rest until you feel ready to give the next set full effort — usually two to four
+          Rest until you feel ready to give the next set full effort, usually two to four
           minutes for big lifts and one to two for smaller ones. That judgement is better
           than a fixed number, so it is what the app defaults to.
         </p>
@@ -181,10 +181,10 @@ export default function HowItWorks() {
           </p>
         </div>
         <div className="space-y-2 text-sm text-gray-300">
-          <p><span className="text-teal-400 font-medium">3 RIR</span> — You had three reps left. The set felt moderate.</p>
-          <p><span className="text-teal-400 font-medium">2 RIR</span> — You had two reps left. The set was challenging but controlled.</p>
-          <p><span className="text-teal-400 font-medium">1 RIR</span> — You had one rep left. The set was very hard, close to your limit.</p>
-          <p><span className="text-teal-400 font-medium">0 RIR</span> — You could not have completed another rep. This is failure.</p>
+          <p><span className="text-teal-400 font-medium">3 RIR</span>: You had three reps left. The set felt moderate.</p>
+          <p><span className="text-teal-400 font-medium">2 RIR</span>: You had two reps left. The set was challenging but controlled.</p>
+          <p><span className="text-teal-400 font-medium">1 RIR</span>: You had one rep left. The set was very hard, close to your limit.</p>
+          <p><span className="text-teal-400 font-medium">0 RIR</span>: You could not have completed another rep. This is failure.</p>
         </div>
         <p className="text-gray-300 leading-relaxed mt-3">
           Strength Guider uses RIR to manage intensity across each mesocycle. Earlier weeks use higher RIR targets to allow for volume accumulation, while later weeks lower the target to increase intensity.
@@ -201,15 +201,15 @@ export default function HowItWorks() {
           From there, volume follows your results rather than a formula:
         </p>
         <div className="bg-gray-700 rounded-lg p-4 mb-3 text-sm space-y-1">
-          <p className="text-gray-300"><span className="text-teal-400">every set hit its target</span> — one more set next week</p>
-          <p className="text-gray-300"><span className="text-teal-400">one set missed</span> — hold at the same number</p>
-          <p className="text-gray-300"><span className="text-teal-400">most sets missed</span> — one fewer set next week</p>
+          <p className="text-gray-300"><span className="text-teal-400">every set hit its target</span>: one more set next week</p>
+          <p className="text-gray-300"><span className="text-teal-400">one set missed</span>: hold at the same number</p>
+          <p className="text-gray-300"><span className="text-teal-400">most sets missed</span>: one fewer set next week</p>
         </div>
         <p className="text-gray-300 leading-relaxed mb-3">
           Increases stop at a recoverable weekly total for each muscle group. Recovery happens per muscle, not per exercise: three chest movements each creeping up by one set is nine extra chest sets a week, which no per-exercise limit would notice.
         </p>
         <p className="text-gray-300 leading-relaxed mb-3">
-          Prefer to drive it yourself? Turn off <span className="text-white font-medium">Adjust sets from my performance</span> when you start a block, and it follows the fixed weekly increase from your template instead — <span className="font-mono text-xs">round(starting sets + weekly increase × (N − 1))</span>, minimum 1. Half-set increases are allowed, so 0.5 with 3 starting sets gives 3, 4, 4, 5, 5, 6 across six weeks.
+          Prefer to drive it yourself? Turn off <span className="text-white font-medium">Adjust sets from my performance</span> when you start a block, and it follows the fixed weekly increase from your template instead, which is <span className="font-mono text-xs">round(starting sets + weekly increase × (N − 1))</span>, minimum 1. Half-set increases are allowed, so 0.5 with 3 starting sets gives 3, 4, 4, 5, 5, 6 across six weeks.
         </p>
         <p className="text-gray-300 leading-relaxed">
           Adding, removing or swapping an exercise mid-workout carries into the same day in every later week of the block, since that is nearly always a decision about the block rather than about today. Weeks you have already completed are never rewritten.

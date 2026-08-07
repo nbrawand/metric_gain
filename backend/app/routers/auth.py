@@ -1,4 +1,4 @@
-"""Authentication endpoints — Google OAuth only."""
+"""Authentication endpoints. Google OAuth only."""
 
 import logging
 
@@ -38,7 +38,7 @@ def _token_data(user: User) -> dict:
     """Claims every token for this user carries.
 
     `tv` pins the token to the user's current token_version so that signing out
-    (or an admin revoking) can invalidate it — a plain JWT is otherwise good
+    (or an admin revoking) can invalidate it, a plain JWT is otherwise good
     until it expires no matter what happens to the account.
     """
     return {"sub": str(user.id), "email": user.email, "tv": user.token_version}
@@ -68,7 +68,7 @@ async def google_login(
     except ValueError:
         raise HTTPException(status_code=401, detail="Google sign-in failed. Please try again.")
     except GoogleAuthError:
-        # Not a bad token — Google's cert endpoint couldn't be reached. A 401
+        # Not a bad token. Google's cert endpoint couldn't be reached. A 401
         # here reads as "your login was rejected" when retrying would succeed.
         raise HTTPException(
             status_code=503,
@@ -190,7 +190,7 @@ async def logout(
     """Revoke every token issued to the caller.
 
     Signing out was previously client-side only: the browser dropped its copy
-    while the tokens stayed valid for the rest of their lifetime — 90 minutes
+    while the tokens stayed valid for the rest of their lifetime, 90 minutes
     for an access token, 7 days for a refresh token. This makes the tokens
     themselves dead, which is what someone signing out on a shared or lost
     device is asking for. It signs the account out everywhere, on purpose.
@@ -218,7 +218,7 @@ def _convert_logged_weights(db: Session, user: User, from_unit: str, to_unit: st
     """Rewrite every weight this user has logged into the new unit.
 
     Weights are stored as the number the lifter typed, so switching units
-    without this would relabel a 225 lb squat as 225 kg — and every future
+    without this would relabel a 225 lb squat as 225 kg, and every future
     target is computed from that history. Converted values land on a loadable
     step in the new unit rather than a decimal nobody can put on a bar.
     """
