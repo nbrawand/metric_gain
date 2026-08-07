@@ -327,7 +327,7 @@ sign-in with the browser console open to catch what Google's GSI widget
 actually reaches for, then swap the header name, steps in `frontend/CSP.md`.
 Until then, tokens in localStorage mean an XSS is full account takeover.
 
-[~] Tests for WorkoutExecution.tsx and Mesocycles.tsx (1,600 and 1,141 lines,
+[x] Tests for WorkoutExecution.tsx and Mesocycles.tsx (1,600 and 1,141 lines,
 no direct coverage). Both need refactoring to be testable; the components and
 stores they compose are covered, which is why this is lower than it looks.
     WorkoutExecution has 9 tests now, and no refactoring was needed after all:
@@ -338,7 +338,13 @@ stores they compose are covered, which is why this is lower than it looks.
     survives a failed save. Mutation tested: removing the enqueue fails 4,
     flattening the skipped rule fails 1, dropping the field-preserving spread
     fails 3.
-    Mesocycles.tsx is still uncovered.
+    Mesocycles.tsx has 10, covering the two irreversible things it does:
+    deleting a template and starting a block. Also mutation tested. One of
+    them, that a block is dated from local parts rather than toISOString, was
+    passing vacuously, because the assertion can only fail in the hours where
+    the local and UTC dates differ and CI runs in UTC, where they never do.
+    The suite now pins TZ to America/Los_Angeles and that test freezes the
+    clock at 21:30 local, so it fails for the right reason.
 
 [ ] Watch autoregulation against real training. The logic is well covered but
 the *policy* is unproven: +1 on a clean week, -1 below 60% of target reps,
