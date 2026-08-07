@@ -1,7 +1,6 @@
 """Tests for workout session and workout set endpoints."""
 
 import pytest
-from datetime import date, datetime, timedelta
 from fastapi import status
 
 
@@ -67,6 +66,24 @@ def sample_mesocycle_with_workouts(client, auth_headers, sample_exercise_id):
     return response.json()
 
 
+def _session_detail(client, auth_headers, instance_id, week=1, day=1):
+    """Fetch one of the sessions an instance pre-creates for the whole block.
+
+    Sessions are only ever created by starting an instance, so tests take the
+    one they want rather than creating it.
+    """
+    listed = client.get(
+        f"/v1/workout-sessions/?mesocycle_instance_id={instance_id}",
+        headers=auth_headers,
+    ).json()
+    wanted = next(
+        s for s in listed if s["week_number"] == week and s["day_number"] == day
+    )
+    return client.get(
+        f"/v1/workout-sessions/{wanted['id']}", headers=auth_headers
+    ).json()
+
+
 @pytest.fixture
 def sample_mesocycle_instance(client, auth_headers, sample_mesocycle_with_workouts):
     """Create a mesocycle instance from the template for testing."""
@@ -81,56 +98,30 @@ def sample_mesocycle_instance(client, auth_headers, sample_mesocycle_with_workou
     return response.json()
 
 
-def test_create_workout_session(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
-    """Test creating a workout session."""
+def test_pre_created_session_shape(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
+    """Starting an instance creates each session ready to train."""
     mesocycle = sample_mesocycle_with_workouts
     instance = sample_mesocycle_instance
-    template_id = mesocycle["workout_templates"][0]["id"]
 
-    session_data = {
-        "mesocycle_instance_id": instance["id"],
-        "workout_template_id": template_id,
-        "workout_date": str(date.today()),
-        "week_number": 1,
-        "day_number": 1
-    }
-
-    response = client.post("/v1/workout-sessions/", json=session_data, headers=auth_headers)
-
-    assert response.status_code == status.HTTP_201_CREATED
-    data = response.json()
+    data = _session_detail(client, auth_headers, instance["id"], week=1, day=1)
 
     assert data["mesocycle_instance_id"] == instance["id"]
-    assert data["workout_template_id"] == template_id
+    assert data["workout_template_id"] == mesocycle["workout_templates"][0]["id"]
     assert data["week_number"] == 1
     assert data["day_number"] == 1
     assert data["status"] == "in_progress"
-    assert "workout_sets" in data
     # Week 1 set count comes straight from the template plan (target_sets=3)
     assert len(data["workout_sets"]) == 3
 
 
-def test_create_workout_session_auto_generates_sets(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
-    """Test that workout session automatically generates sets from template."""
+def test_pre_created_session_sets_follow_the_plan(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
+    """Each generated set belongs to the planned exercise and starts empty."""
     mesocycle = sample_mesocycle_with_workouts
     instance = sample_mesocycle_instance
     template = mesocycle["workout_templates"][0]
-    template_id = template["id"]
 
-    session_data = {
-        "mesocycle_instance_id": instance["id"],
-        "workout_template_id": template_id,
-        "workout_date": str(date.today()),
-        "week_number": 1,
-        "day_number": 1
-    }
+    data = _session_detail(client, auth_headers, instance["id"], week=1, day=1)
 
-    response = client.post("/v1/workout-sessions/", json=session_data, headers=auth_headers)
-
-    assert response.status_code == status.HTTP_201_CREATED
-    data = response.json()
-
-    # Check sets were generated
     sets = data["workout_sets"]
     exercise_template = template["exercises"][0]
 
@@ -139,27 +130,14 @@ def test_create_workout_session_auto_generates_sets(client, auth_headers, sample
 
     for workout_set in sets:
         assert workout_set["exercise_id"] == exercise_template["exercise_id"]
-        assert workout_set["weight"] == 0  # Default value
-        assert workout_set["reps"] == 0  # Default value
+        assert workout_set["weight"] == 0  # Nothing logged yet
+        assert workout_set["reps"] == 0
         assert "target_reps" in workout_set
 
 
 def test_list_workout_sessions(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
     """Test listing workout sessions."""
-    mesocycle = sample_mesocycle_with_workouts
-    instance = sample_mesocycle_instance
-    template_id = mesocycle["workout_templates"][0]["id"]
-
-    # Create two sessions
-    for day in [1, 2]:
-        session_data = {
-            "mesocycle_instance_id": instance["id"],
-            "workout_template_id": template_id,
-            "workout_date": str(date.today() + timedelta(days=day-1)),
-            "week_number": 1,
-            "day_number": day
-        }
-        client.post("/v1/workout-sessions/", json=session_data, headers=auth_headers)
+    # The instance fixture pre-creates every session of the block
 
     # List sessions
     response = client.get("/v1/workout-sessions/", headers=auth_headers)
@@ -173,19 +151,7 @@ def test_list_workout_sessions(client, auth_headers, sample_mesocycle_with_worko
 
 def test_list_workout_sessions_filter_by_mesocycle_instance(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
     """Test filtering workout sessions by mesocycle instance."""
-    mesocycle = sample_mesocycle_with_workouts
     instance = sample_mesocycle_instance
-    template_id = mesocycle["workout_templates"][0]["id"]
-
-    # Create session
-    session_data = {
-        "mesocycle_instance_id": instance["id"],
-        "workout_template_id": template_id,
-        "workout_date": str(date.today()),
-        "week_number": 1,
-        "day_number": 1
-    }
-    client.post("/v1/workout-sessions/", json=session_data, headers=auth_headers)
 
     # Filter by mesocycle instance
     response = client.get(
@@ -202,20 +168,6 @@ def test_list_workout_sessions_filter_by_mesocycle_instance(client, auth_headers
 
 def test_list_workout_sessions_filter_by_status(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
     """Test filtering workout sessions by status."""
-    mesocycle = sample_mesocycle_with_workouts
-    instance = sample_mesocycle_instance
-    template_id = mesocycle["workout_templates"][0]["id"]
-
-    # Create session
-    session_data = {
-        "mesocycle_instance_id": instance["id"],
-        "workout_template_id": template_id,
-        "workout_date": str(date.today()),
-        "week_number": 1,
-        "day_number": 1
-    }
-    response = client.post("/v1/workout-sessions/", json=session_data, headers=auth_headers)
-    session_id = response.json()["id"]
 
     # Filter by status
     response = client.get(
@@ -232,20 +184,9 @@ def test_list_workout_sessions_filter_by_status(client, auth_headers, sample_mes
 
 def test_get_workout_session_by_id(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
     """Test getting a workout session by ID."""
-    mesocycle = sample_mesocycle_with_workouts
     instance = sample_mesocycle_instance
-    template_id = mesocycle["workout_templates"][0]["id"]
 
-    # Create session
-    session_data = {
-        "mesocycle_instance_id": instance["id"],
-        "workout_template_id": template_id,
-        "workout_date": str(date.today()),
-        "week_number": 1,
-        "day_number": 1
-    }
-    create_response = client.post("/v1/workout-sessions/", json=session_data, headers=auth_headers)
-    session_id = create_response.json()["id"]
+    session_id = _session_detail(client, auth_headers, instance["id"], week=1, day=1)["id"]
 
     # Get session
     response = client.get(f"/v1/workout-sessions/{session_id}", headers=auth_headers)
@@ -267,20 +208,9 @@ def test_get_nonexistent_workout_session(client, auth_headers):
 
 def test_update_workout_session_status(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
     """Test updating workout session status."""
-    mesocycle = sample_mesocycle_with_workouts
     instance = sample_mesocycle_instance
-    template_id = mesocycle["workout_templates"][0]["id"]
 
-    # Create session
-    session_data = {
-        "mesocycle_instance_id": instance["id"],
-        "workout_template_id": template_id,
-        "workout_date": str(date.today()),
-        "week_number": 1,
-        "day_number": 1
-    }
-    create_response = client.post("/v1/workout-sessions/", json=session_data, headers=auth_headers)
-    session_id = create_response.json()["id"]
+    session_id = _session_detail(client, auth_headers, instance["id"], week=1, day=1)["id"]
 
     # Update to completed
     update_data = {"status": "completed"}
@@ -299,20 +229,9 @@ def test_update_workout_session_status(client, auth_headers, sample_mesocycle_wi
 
 def test_delete_workout_session(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
     """Test deleting a workout session."""
-    mesocycle = sample_mesocycle_with_workouts
     instance = sample_mesocycle_instance
-    template_id = mesocycle["workout_templates"][0]["id"]
 
-    # Create session
-    session_data = {
-        "mesocycle_instance_id": instance["id"],
-        "workout_template_id": template_id,
-        "workout_date": str(date.today()),
-        "week_number": 1,
-        "day_number": 1
-    }
-    create_response = client.post("/v1/workout-sessions/", json=session_data, headers=auth_headers)
-    session_id = create_response.json()["id"]
+    session_id = _session_detail(client, auth_headers, instance["id"], week=1, day=1)["id"]
 
     # Delete session
     response = client.delete(f"/v1/workout-sessions/{session_id}", headers=auth_headers)
@@ -328,20 +247,9 @@ def test_delete_workout_session(client, auth_headers, sample_mesocycle_with_work
 
 def test_update_workout_set_weight_and_reps(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
     """Test updating weight and reps for a workout set."""
-    mesocycle = sample_mesocycle_with_workouts
     instance = sample_mesocycle_instance
-    template_id = mesocycle["workout_templates"][0]["id"]
 
-    # Create session
-    session_data = {
-        "mesocycle_instance_id": instance["id"],
-        "workout_template_id": template_id,
-        "workout_date": str(date.today()),
-        "week_number": 1,
-        "day_number": 1
-    }
-    create_response = client.post("/v1/workout-sessions/", json=session_data, headers=auth_headers)
-    session = create_response.json()
+    session = _session_detail(client, auth_headers, instance["id"], week=1, day=1)
     session_id = session["id"]
     set_id = session["workout_sets"][0]["id"]
 
@@ -365,20 +273,9 @@ def test_update_workout_set_weight_and_reps(client, auth_headers, sample_mesocyc
 
 def test_update_workout_set_with_rir(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
     """Test updating workout set with RIR (reps in reserve)."""
-    mesocycle = sample_mesocycle_with_workouts
     instance = sample_mesocycle_instance
-    template_id = mesocycle["workout_templates"][0]["id"]
 
-    # Create session
-    session_data = {
-        "mesocycle_instance_id": instance["id"],
-        "workout_template_id": template_id,
-        "workout_date": str(date.today()),
-        "week_number": 1,
-        "day_number": 1
-    }
-    create_response = client.post("/v1/workout-sessions/", json=session_data, headers=auth_headers)
-    session = create_response.json()
+    session = _session_detail(client, auth_headers, instance["id"], week=1, day=1)
     session_id = session["id"]
     set_id = session["workout_sets"][0]["id"]
 
@@ -404,20 +301,9 @@ def test_update_workout_set_with_rir(client, auth_headers, sample_mesocycle_with
 
 def test_update_workout_set_with_notes(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
     """Test updating workout set with notes."""
-    mesocycle = sample_mesocycle_with_workouts
     instance = sample_mesocycle_instance
-    template_id = mesocycle["workout_templates"][0]["id"]
 
-    # Create session
-    session_data = {
-        "mesocycle_instance_id": instance["id"],
-        "workout_template_id": template_id,
-        "workout_date": str(date.today()),
-        "week_number": 1,
-        "day_number": 1
-    }
-    create_response = client.post("/v1/workout-sessions/", json=session_data, headers=auth_headers)
-    session = create_response.json()
+    session = _session_detail(client, auth_headers, instance["id"], week=1, day=1)
     session_id = session["id"]
     set_id = session["workout_sets"][0]["id"]
 
@@ -441,20 +327,9 @@ def test_update_workout_set_with_notes(client, auth_headers, sample_mesocycle_wi
 
 def test_add_workout_set_to_session(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance, sample_exercise_id):
     """Test adding an additional workout set to a session."""
-    mesocycle = sample_mesocycle_with_workouts
     instance = sample_mesocycle_instance
-    template_id = mesocycle["workout_templates"][0]["id"]
 
-    # Create session
-    session_data = {
-        "mesocycle_instance_id": instance["id"],
-        "workout_template_id": template_id,
-        "workout_date": str(date.today()),
-        "week_number": 1,
-        "day_number": 1
-    }
-    create_response = client.post("/v1/workout-sessions/", json=session_data, headers=auth_headers)
-    session = create_response.json()
+    session = _session_detail(client, auth_headers, instance["id"], week=1, day=1)
     session_id = session["id"]
     initial_set_count = len(session["workout_sets"])
 
@@ -481,20 +356,9 @@ def test_add_workout_set_to_session(client, auth_headers, sample_mesocycle_with_
 
 def test_delete_workout_set(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
     """Test deleting a workout set."""
-    mesocycle = sample_mesocycle_with_workouts
     instance = sample_mesocycle_instance
-    template_id = mesocycle["workout_templates"][0]["id"]
 
-    # Create session
-    session_data = {
-        "mesocycle_instance_id": instance["id"],
-        "workout_template_id": template_id,
-        "workout_date": str(date.today()),
-        "week_number": 1,
-        "day_number": 1
-    }
-    create_response = client.post("/v1/workout-sessions/", json=session_data, headers=auth_headers)
-    session = create_response.json()
+    session = _session_detail(client, auth_headers, instance["id"], week=1, day=1)
     session_id = session["id"]
     set_id = session["workout_sets"][0]["id"]
 
@@ -518,10 +382,6 @@ def test_access_workout_sessions_without_auth(client):
     response = client.get("/v1/workout-sessions/")
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    # Try to create session
-    response = client.post("/v1/workout-sessions/", json={})
-    assert response.status_code == status.HTTP_403_FORBIDDEN
-
     # Try to get session
     response = client.get("/v1/workout-sessions/1")
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -530,20 +390,10 @@ def test_access_workout_sessions_without_auth(client):
 def test_workout_session_isolation_between_users(client, auth_headers, make_auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
     """Test that users cannot access other users' workout sessions."""
     # auth_headers belongs to the first user who owns the mesocycle
-    mesocycle = sample_mesocycle_with_workouts
     instance = sample_mesocycle_instance
-    template_id = mesocycle["workout_templates"][0]["id"]
 
     # Create session as user1
-    session_data = {
-        "mesocycle_instance_id": instance["id"],
-        "workout_template_id": template_id,
-        "workout_date": str(date.today()),
-        "week_number": 1,
-        "day_number": 1
-    }
-    create_response = client.post("/v1/workout-sessions/", json=session_data, headers=auth_headers)
-    session_id = create_response.json()["id"]
+    session_id = _session_detail(client, auth_headers, instance["id"], week=1, day=1)["id"]
 
     # Create a second user
     user2_headers = make_auth_headers("workout_test2@example.com", "Second Tester")
@@ -736,23 +586,42 @@ def test_start_from_source_includes_exercises_the_source_never_ran(client, auth_
 
 # Guards on session and set mutation
 
-def test_cannot_create_session_in_another_users_instance(
+def test_cannot_modify_another_users_session(
     client, auth_headers, make_auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance
 ):
-    """A session request must not be able to reach into someone else's instance."""
+    """Another user must not be able to read or write someone else's workout."""
+    session = _session_detail(client, auth_headers, sample_mesocycle_instance["id"], week=1, day=1)
+    set_id = session["workout_sets"][0]["id"]
+    exercise_id = session["workout_sets"][0]["exercise_id"]
+
     intruder = make_auth_headers("session_intruder@example.com", "Intruder")
-    response = client.post(
-        "/v1/workout-sessions/",
-        json={
-            "mesocycle_instance_id": sample_mesocycle_instance["id"],
-            "workout_template_id": sample_mesocycle_with_workouts["workout_templates"][0]["id"],
-            "workout_date": str(date.today()),
-            "week_number": 1,
-            "day_number": 1,
-        },
+
+    assert client.get(
+        f"/v1/workout-sessions/{session['id']}", headers=intruder
+    ).status_code == status.HTTP_404_NOT_FOUND
+
+    assert client.patch(
+        f"/v1/workout-sessions/{session['id']}/sets/{set_id}",
+        json={"weight": 999, "reps": 99},
         headers=intruder,
-    )
-    assert response.status_code == status.HTTP_404_NOT_FOUND
+    ).status_code == status.HTTP_404_NOT_FOUND
+
+    assert client.post(
+        f"/v1/workout-sessions/{session['id']}/exercises/{exercise_id}/sets",
+        headers=intruder,
+    ).status_code == status.HTTP_404_NOT_FOUND
+
+    assert client.patch(
+        f"/v1/workout-sessions/{session['id']}",
+        json={"status": "completed"},
+        headers=intruder,
+    ).status_code == status.HTTP_404_NOT_FOUND
+
+    # The owner's session is untouched
+    unchanged = _session_detail(client, auth_headers, sample_mesocycle_instance["id"], week=1, day=1)
+    assert unchanged["status"] == "in_progress"
+    assert len(unchanged["workout_sets"]) == len(session["workout_sets"])
+    assert all(s["weight"] == 0 for s in unchanged["workout_sets"])
 
 
 def test_swapping_onto_an_exercise_already_present_is_rejected(
