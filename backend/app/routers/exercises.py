@@ -188,6 +188,23 @@ async def update_custom_exercise(
 
     # Update exercise with provided fields
     update_data = exercise_data.model_dump(exclude_unset=True)
+
+    # Renaming must obey the same uniqueness rule as creation, or a rename
+    # manufactures exactly the duplicate that POST rejects
+    new_name = update_data.get("name")
+    if new_name and new_name != exercise.name:
+        duplicate = db.query(Exercise).filter(
+            Exercise.name == new_name,
+            Exercise.user_id == current_user.id,
+            Exercise.is_custom == True,
+            Exercise.id != exercise.id,
+        ).first()
+        if duplicate:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You already have a custom exercise with that name."
+            )
+
     apply_update(exercise, update_data)
 
     db.commit()

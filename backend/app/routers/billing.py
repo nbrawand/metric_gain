@@ -93,6 +93,25 @@ async def create_checkout_session(
     if not settings.STRIPE_SECRET_KEY:
         raise HTTPException(status_code=501, detail="Payments are not configured.")
 
+    # The local status only moves when a webhook lands, so in the window
+    # between completing checkout and the webhook arriving the guards above
+    # pass and a second checkout would open a second live subscription. Ask
+    # Stripe directly whether one is already open. Only statuses the app
+    # treats as open block here — unpaid/canceled map to a closed local
+    # subscription and must stay eligible for a fresh checkout.
+    if current_user.stripe_customer_id:
+        existing = stripe.Subscription.list(
+            customer=current_user.stripe_customer_id, status="all", limit=100
+        )
+        if any(s.status in ("active", "trialing", "past_due", "incomplete") for s in existing.data):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "You already have a subscription in progress. "
+                    "Use Manage Subscription if it needs attention."
+                ),
+            )
+
     # Create Stripe Customer if none exists
     if not current_user.stripe_customer_id:
         customer = stripe.Customer.create(
@@ -117,6 +136,14 @@ async def create_checkout_session(
 @router.post("/webhook")
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     """Handle Stripe webhook events."""
+    # An empty secret must refuse service, not verify: construct_event happily
+    # validates an HMAC computed with an empty key, so without this guard a
+    # deploy that forgot STRIPE_WEBHOOK_SECRET accepts self-signed events from
+    # anyone — free subscription activations, forced cancellations.
+    if not settings.STRIPE_WEBHOOK_SECRET:
+        logger.error("Stripe webhook received but STRIPE_WEBHOOK_SECRET is not configured")
+        raise HTTPException(status_code=503, detail="Billing webhooks are not configured.")
+
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
 
@@ -151,10 +178,26 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 if user:
                     user.stripe_customer_id = customer_id
         if user:
-            user.stripe_subscription_id = subscription_id
-            user.subscription_status = "active"
+            # Never overwrite a stored subscription id with nothing — losing
+            # it means later cancellation events can't find this user and
+            # their access would never end.
+            if subscription_id:
+                user.stripe_subscription_id = subscription_id
+            # Delayed-notification methods (ACH and friends) complete the
+            # session before the money moves. Record the ids either way so the
+            # later subscription events can find the user, but only paid
+            # sessions grant access — the subscription.updated that follows
+            # the eventual payment flips the status.
+            payment_status = data.get("payment_status")
+            if payment_status in (None, "paid", "no_payment_required"):
+                user.subscription_status = "active"
+                logger.info("Activated subscription for user=%s", user.email)
+            else:
+                logger.info(
+                    "Checkout completed with payment_status=%s for user=%s; awaiting payment",
+                    payment_status, user.email,
+                )
             db.commit()
-            logger.info("Activated subscription for user=%s", user.email)
         else:
             logger.error("Webhook checkout.session.completed: no user found for customer=%s", customer_id)
 
@@ -188,8 +231,13 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     elif event_type == "invoice.payment_failed":
         subscription_id = _invoice_subscription_id(data)
         user = _find_user_by_subscription(db, subscription_id)
-        if not user:
-            customer_id = data.get("customer")
+        # Fall back to the customer only when the invoice names no
+        # subscription at all. An invoice for a subscription this app doesn't
+        # track is a retry from one the user already replaced — marking them
+        # past_due for it locks out an account whose current subscription is
+        # healthy, with no event that would ever undo it.
+        if not user and not subscription_id:
+            customer_id = _id_of(data.get("customer"))
             if customer_id:
                 user = db.query(User).filter(
                     User.stripe_customer_id == customer_id

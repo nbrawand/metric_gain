@@ -356,6 +356,10 @@ def swap_exercise(
         ws.rir = None
         ws.notes = None
         ws.target_weight = None
+        # The old lift's rep target goes too — 5-rep deadlift guidance on a
+        # swapped-in crunch would stick for the whole block, since the refresh
+        # only replaces it once the new exercise has history
+        ws.target_reps = None
         ws.skipped = 0
 
     db.commit()
@@ -429,6 +433,7 @@ def add_exercise(
 
     num_sets = 3
     target_rir = 3
+    planned_entries = []
     if template:
         planned_entries = [
             te for te in template.exercises if te.exercise_id == request.exercise_id
@@ -444,14 +449,18 @@ def add_exercise(
         target_rir = compute_target_rir(workout_session.week_number, total_weeks)
 
     # Seed targets from history like every other set-generating path, so an
-    # exercise added mid-block isn't the only one that starts with no guidance
+    # exercise added mid-block isn't the only one that starts with no guidance.
+    # The plan's rep range is the same fallback the seeding path uses — without
+    # it, a planned exercise removed and re-added before it has any history
+    # permanently loses its rep target.
     prev_weight, prev_reps = find_previous_performance(
         db, current_user.id, request.exercise_id,
         mesocycle_instance_id=workout_session.mesocycle_instance_id,
         current_week=workout_session.week_number,
         current_day=workout_session.day_number,
     )
-    target_weight, target_reps = compute_progression_targets(prev_weight, prev_reps, None)
+    fallback_reps = planned_entries[0].target_reps_max if planned_entries else None
+    target_weight, target_reps = compute_progression_targets(prev_weight, prev_reps, fallback_reps)
 
     for set_num in range(1, num_sets + 1):
         workout_set = WorkoutSet(

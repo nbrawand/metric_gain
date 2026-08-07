@@ -65,3 +65,17 @@ def test_billing_endpoints_require_auth(client):
             status.HTTP_401_UNAUTHORIZED,
             status.HTTP_403_FORBIDDEN,
         )
+
+
+def test_webhook_refuses_service_without_a_secret(client):
+    """An empty webhook secret must refuse service, not verify.
+
+    stripe's construct_event happily validates an HMAC computed with an empty
+    key, so accepting requests here would let anyone forge subscription events.
+    """
+    response = client.post(
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "t=1,v1=deadbeef"},
+    )
+    assert response.status_code == 503

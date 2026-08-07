@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from jose import jwt
+from google.auth.exceptions import GoogleAuthError
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
 from pydantic import BaseModel
@@ -61,6 +62,13 @@ async def google_login(
         )
     except ValueError:
         raise HTTPException(status_code=401, detail="Google sign-in failed. Please try again.")
+    except GoogleAuthError:
+        # Not a bad token — Google's cert endpoint couldn't be reached. A 401
+        # here reads as "your login was rejected" when retrying would succeed.
+        raise HTTPException(
+            status_code=503,
+            detail="Could not reach Google to verify your sign-in. Please try again.",
+        )
 
     email = idinfo.get("email")
     if not email:
@@ -97,7 +105,7 @@ async def google_login(
     if user.subscription_status == "trialing" and user.trial_ends_at is None:
         user.trial_ends_at = datetime.now(timezone.utc) + timedelta(days=5)
 
-    user.last_login = datetime.utcnow()
+    user.last_login = datetime.now(timezone.utc)
     db.commit()
 
     token_data = _token_data(user)

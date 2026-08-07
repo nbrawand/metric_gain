@@ -596,20 +596,17 @@ def test_swapping_onto_an_exercise_already_present_is_rejected(
 def test_adding_a_set_for_an_unknown_exercise_is_rejected(
     client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance
 ):
-    """An unknown exercise id must 404 rather than violate the foreign key."""
+    """An exercise id not in the session must 404 rather than create orphan sets.
+
+    (The old generic POST /{id}/sets route this once covered was removed; the
+    per-exercise route is the only way to add sets now.)
+    """
     session = next(
         s for s in _sessions_for_instance(client, auth_headers, sample_mesocycle_instance["id"])
         if s["week_number"] == 1 and s["day_number"] == 1
     )
     response = client.post(
-        f"/v1/workout-sessions/{session['id']}/sets",
-        json={
-            "exercise_id": 999999,
-            "set_number": 1,
-            "order_index": 0,
-            "weight": 100,
-            "reps": 10,
-        },
+        f"/v1/workout-sessions/{session['id']}/exercises/999999/sets",
         headers=auth_headers,
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND

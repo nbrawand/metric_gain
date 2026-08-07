@@ -138,9 +138,11 @@ export default function Admin() {
               className="w-full bg-gray-700 text-white rounded px-3 py-2 text-sm"
             />
           </div>
+          {/* The backend requires days >= 1; a blank field parses to 0 and
+              would only surface as a generic "Failed to grant trial" */}
           <button
             onClick={() => grantEmail && handleGrantTrial(grantEmail, grantDays)}
-            disabled={!grantEmail}
+            disabled={!grantEmail || !Number.isInteger(grantDays) || grantDays < 1}
             className="bg-teal-600 hover:bg-teal-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm font-medium py-2 px-4 rounded transition-colors"
           >
             Grant

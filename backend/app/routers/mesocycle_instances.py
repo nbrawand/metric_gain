@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
-from app.models.mesocycle import Mesocycle, MesocycleInstance, WorkoutTemplate
+from app.models.mesocycle import Mesocycle, MesocycleInstance, WorkoutTemplate, WorkoutExercise
 from app.models.workout_session import WorkoutSession, WorkoutSet
 from app.models.user import User
 from app.models.exercise import Exercise
@@ -624,6 +624,26 @@ async def update_exercise_notes(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only change your own mesocycles."
         )
+
+    # The key must name an exercise in this instance's template — an arbitrary
+    # id would sit in exercise_notes forever, never displayed, never removable
+    # from the UI. Deletes are exempt so a note left behind by a removed
+    # exercise can still be cleaned up.
+    if data.notes:
+        workout_exercise = (
+            db.query(WorkoutExercise)
+            .join(WorkoutTemplate, WorkoutExercise.workout_template_id == WorkoutTemplate.id)
+            .filter(
+                WorkoutExercise.id == data.workout_exercise_id,
+                WorkoutTemplate.mesocycle_id == instance.mesocycle_template_id,
+            )
+            .first()
+        )
+        if not workout_exercise:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="That exercise is not part of this mesocycle.",
+            )
 
     # Load existing notes or start fresh
     notes_dict = json.loads(instance.exercise_notes) if instance.exercise_notes else {}

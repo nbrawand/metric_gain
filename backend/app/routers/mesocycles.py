@@ -269,18 +269,22 @@ async def create_mesocycle_from_instance(
     if instance.status != "completed":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You can only create a template from a completed mesocycle.")
 
-    # Get the original template for exercise parameters (sets, reps, RIR)
+    # Get the original template for exercise parameters (sets, reps, RIR).
+    # Keyed by (day, exercise): the same exercise can appear on several days
+    # with different parameters (heavy day / light day), and a map keyed by
+    # exercise alone let the last day's numbers overwrite every other day's.
     original_template = None
-    template_exercise_map: dict[int, dict] = {}  # exercise_id -> {target_sets, reps_min, reps_max, ...}
+    template_exercise_map: dict[tuple[int, int], dict] = {}  # (day_number, exercise_id) -> params
+    template_exercise_fallback: dict[int, dict] = {}  # exercise_id -> params, for exercises that moved days
     if instance.mesocycle_template_id:
         original_template = db.query(Mesocycle).options(
             joinedload(Mesocycle.workout_templates).joinedload(WorkoutTemplate.exercises)
         ).filter(Mesocycle.id == instance.mesocycle_template_id).first()
 
         if original_template:
-            for wt in original_template.workout_templates:
+            for wt in sorted(original_template.workout_templates, key=lambda w: w.order_index):
                 for we in wt.exercises:
-                    template_exercise_map[we.exercise_id] = {
+                    params = {
                         "target_sets": we.target_sets,
                         "weekly_set_increment": we.weekly_set_increment,
                         "target_reps_min": we.target_reps_min,
@@ -289,6 +293,8 @@ async def create_mesocycle_from_instance(
                         "ending_rir": we.ending_rir,
                         "notes": we.notes,
                     }
+                    template_exercise_map[(wt.order_index + 1, we.exercise_id)] = params
+                    template_exercise_fallback.setdefault(we.exercise_id, params)
 
     # Get workout sessions grouped by day_number, pick the latest week for each day
     sessions = db.query(WorkoutSession).filter(
@@ -308,16 +314,19 @@ async def create_mesocycle_from_instance(
             detail="That mesocycle has no workouts to copy.",
         )
 
-    # Build the new template
+    # Build the new template. days_per_week is set after the day loop from the
+    # count of workouts actually copied: a day emptied during the run is
+    # skipped below, and carrying the snapshot's count over would make the
+    # copy claim more training days than it has — its instances could then
+    # never reach "completed".
     template_name = f"{instance.template_name or 'Mesocycle'} (Copy)"
     weeks = instance.template_weeks or 6
-    days_per_week = instance.template_days_per_week or len(latest_sessions)
 
     new_mesocycle = Mesocycle(
         user_id=current_user.id,
         name=template_name,
         weeks=weeks,
-        days_per_week=days_per_week,
+        days_per_week=len(latest_sessions),
     )
     db.add(new_mesocycle)
     db.flush()
@@ -328,6 +337,7 @@ async def create_mesocycle_from_instance(
         for wt in sorted(original_template.workout_templates, key=lambda w: w.order_index):
             original_workout_names[wt.order_index + 1] = wt.name  # order_index is 0-based, day_number is 1-based
 
+    created_days = 0
     for day_number in sorted(latest_sessions.keys()):
         session = latest_sessions[day_number]
 
@@ -347,17 +357,26 @@ async def create_mesocycle_from_instance(
             continue
 
         workout_name = original_workout_names.get(day_number, f"Day {day_number}")
+        # order_index counts created workouts, not the original day: skipped
+        # days must not leave gaps, since sessions are generated positionally
         workout_template = WorkoutTemplate(
             mesocycle_id=new_mesocycle.id,
             name=workout_name,
-            order_index=day_number - 1,
+            order_index=created_days,
         )
+        created_days += 1
         db.add(workout_template)
         db.flush()
 
         for order_idx, (exercise_id, exercise_sets) in enumerate(exercise_groups.items()):
-            # Use original template params if available, otherwise defaults
-            params = template_exercise_map.get(exercise_id, {})
+            # Use original template params for this day if available, falling
+            # back to the exercise's params from whichever day it lived on
+            # originally, then to defaults
+            params = (
+                template_exercise_map.get((day_number, exercise_id))
+                or template_exercise_fallback.get(exercise_id)
+                or {}
+            )
 
             workout_exercise = WorkoutExercise(
                 workout_template_id=workout_template.id,
@@ -623,6 +642,15 @@ async def replace_workout_templates(
     Deletes all existing workout templates (and their exercises via cascade)
     and creates new ones from the provided data.
     """
+    # Same ceiling the schema puts on days_per_week. Without it, saving 8 days
+    # persists the workouts here and then 422s on the metadata write — a
+    # half-saved template whose day count disagrees with its day cards.
+    if len(workout_templates_data) > 7:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A mesocycle can have at most 7 training days per week.",
+        )
+
     mesocycle = db.query(Mesocycle).filter(Mesocycle.id == mesocycle_id).first()
 
     if not mesocycle:

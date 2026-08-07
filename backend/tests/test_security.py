@@ -383,11 +383,14 @@ def test_refresh_endpoint_is_rate_limited(client, clean_limiter, test_db):
     assert saw_429, "refresh accepted 40 requests from one IP without throttling"
 
 
-def test_client_ip_prefers_the_forwarded_header():
+def test_client_ip_uses_the_proxy_written_forwarded_hop():
     """Behind Render's proxy every request shares one socket peer address.
 
     Keying on that would put all users in a single bucket, so one abuser could
-    lock everyone else out.
+    lock everyone else out. But only the right-most X-Forwarded-For hop was
+    written by our own proxy — the left-most is attacker-supplied, and keying
+    on it made every rate limit bypassable (fresh bucket per request) and
+    weaponizable (spoof a victim's IP to drain their bucket).
     """
     from starlette.requests import Request
 
@@ -401,5 +404,7 @@ def test_client_ip_prefers_the_forwarded_header():
         }
         return Request(scope)
 
-    assert client_ip(make_request({"x-forwarded-for": "203.0.113.9, 10.0.0.1"})) == "203.0.113.9"
+    # The proxy appended 198.51.100.7; the spoofed 203.0.113.9 must be ignored
+    assert client_ip(make_request({"x-forwarded-for": "203.0.113.9, 198.51.100.7"})) == "198.51.100.7"
+    assert client_ip(make_request({"x-forwarded-for": "198.51.100.7"})) == "198.51.100.7"
     assert client_ip(make_request({})) == "10.0.0.1"

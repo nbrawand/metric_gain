@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { getActiveMesocycleInstance } from '../api/mesocycles';
 import { listWorkoutSessions } from '../api/workoutSessions';
@@ -14,6 +14,7 @@ import OnboardingWizard from '../components/OnboardingWizard';
 
 export function Home() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, accessToken, updatePreferences } = useAuthStore();
   const [activeInstance, setActiveInstance] = useState<MesocycleInstance | null>(null);
   const [workoutSessions, setWorkoutSessions] = useState<WorkoutSessionListItem[]>([]);
@@ -27,9 +28,12 @@ export function Home() {
     }
   });
 
+  // Keyed on the navigation, not just mount: ending a mesocycle from the
+  // calendar overlay navigates to "/" without remounting Home, and a stale
+  // "Continue Mesocycle" card would keep pointing into the finished block.
   useEffect(() => {
     loadActiveInstance();
-  }, []);
+  }, [location.key]);
 
   const loadActiveInstance = async () => {
     if (!accessToken) return;

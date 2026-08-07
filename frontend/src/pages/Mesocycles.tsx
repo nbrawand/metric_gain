@@ -415,6 +415,9 @@ export default function Mesocycles() {
     updated[workoutIndex].exercises = updated[workoutIndex].exercises.filter(
       (_, i) => i !== exerciseIndex
     );
+    // Reindex, or the next added exercise reuses the gap's index and the two
+    // rows collide — their sets interleave and reordering them does nothing
+    updated[workoutIndex].exercises.forEach((ex, i) => { ex.order_index = i; });
     setWorkoutTemplates(updated);
   };
 

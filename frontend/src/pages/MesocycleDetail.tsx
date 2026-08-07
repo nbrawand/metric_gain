@@ -146,6 +146,12 @@ export default function MesocycleDetail() {
       alert('Please add at least one training day');
       return;
     }
+    // The backend rejects days_per_week > 7 — but only after the workout
+    // replacement already went through, leaving the template half-saved
+    if (editTemplates.length > 7) {
+      alert('A mesocycle can have at most 7 training days per week.');
+      return;
+    }
     if (editTemplates.some((w) => !w.name.trim())) {
       alert('Please give every training day a workout name');
       return;
@@ -236,6 +242,12 @@ export default function MesocycleDetail() {
   };
 
   const addWorkoutTemplate = () => {
+    // The backend caps days_per_week at 7; an 8th day would save the workouts
+    // and then fail the metadata write, leaving the template half-saved
+    if (editTemplates.length >= 7) {
+      alert('A mesocycle can have at most 7 training days per week.');
+      return;
+    }
     const updated = [
       ...editTemplates,
       {
@@ -317,9 +329,13 @@ export default function MesocycleDetail() {
 
   const removeExercise = (workoutIndex: number, exerciseIndex: number) => {
     const updated = [...editTemplates];
+    // Reindex, or the next added exercise reuses the gap's index and the two
+    // rows collide — their sets interleave and reordering them does nothing
     updated[workoutIndex] = {
       ...updated[workoutIndex],
-      exercises: updated[workoutIndex].exercises.filter((_, i) => i !== exerciseIndex),
+      exercises: updated[workoutIndex].exercises
+        .filter((_, i) => i !== exerciseIndex)
+        .map((ex, i) => ({ ...ex, order_index: i })),
     };
     setEditTemplates(updated);
   };

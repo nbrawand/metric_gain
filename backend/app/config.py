@@ -78,6 +78,23 @@ class Settings(BaseSettings):
                 "CORS_ORIGINS cannot be '*' in production; list the exact frontend origins."
             )
 
+        # A billing deploy without the webhook secret is not degraded, it is
+        # broken in both directions: real Stripe deliveries bounce while the
+        # endpoint would verify forged events against an empty HMAC key.
+        if self.STRIPE_SECRET_KEY and not self.STRIPE_WEBHOOK_SECRET:
+            raise ValueError(
+                "STRIPE_WEBHOOK_SECRET is required in production whenever "
+                "STRIPE_SECRET_KEY is set."
+            )
+
+        # Stripe redirects users here after checkout; the default would send
+        # paying customers to localhost
+        if self.STRIPE_SECRET_KEY and "localhost" in self.FRONTEND_URL:
+            raise ValueError(
+                "FRONTEND_URL still points at localhost; set it to the deployed "
+                "frontend origin."
+            )
+
         return self
 
 

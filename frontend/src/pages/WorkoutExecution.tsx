@@ -47,6 +47,11 @@ export default function WorkoutExecution() {
   // Local input state to prevent re-renders while typing
   const [inputValues, setInputValues] = useState<SetInputValues>({});
 
+  // Last persisted numbers per set (server row or queued offline save). The
+  // leave-guard compares typed input against this — not against the live
+  // session, which mirrors every keystroke and so never differs.
+  const savedValuesRef = useRef<Record<number, { weight: number; reps: number }>>({});
+
   // Collapsible exercises
   const [collapsedExercises, setCollapsedExercises] = useState<Set<number>>(new Set());
   const toggleExerciseCollapsed = (exerciseId: number) => {
@@ -151,6 +156,13 @@ export default function WorkoutExecution() {
           }
         });
         return next;
+      });
+      // First sighting of a set (e.g. just added) fixes its saved baseline.
+      // Later session updates are keystroke mirrors and must not move it.
+      session.workout_sets.forEach((set) => {
+        if (!(set.id in savedValuesRef.current)) {
+          savedValuesRef.current[set.id] = { weight: set.weight, reps: set.reps };
+        }
       });
     }
   }, [session]);
@@ -314,10 +326,17 @@ export default function WorkoutExecution() {
       // Sets saved while offline are only in the queue, not on the server yet.
       // Without folding them back in, a reload shows them unlogged at 0 and
       // completing the workout would overwrite the queued values with zeros.
+      // Queued clears are the opposite case: the server still holds the old
+      // numbers, so the set must show as unlogged despite what the server says.
       const pending = getPendingForSession(sessionData.id);
+      const pendingClearIds = new Set(
+        pending.filter((item) => item.markLogged === false).map((item) => item.setId)
+      );
       setLoggedSetIds(new Set([
-        ...sessionData.workout_sets.filter(s => s.skipped || s.weight > 0 || s.reps > 0).map(s => s.id),
-        ...pending.map(item => item.setId),
+        ...sessionData.workout_sets
+          .filter(s => (s.skipped || s.weight > 0 || s.reps > 0) && !pendingClearIds.has(s.id))
+          .map(s => s.id),
+        ...pending.filter((item) => item.markLogged !== false).map((item) => item.setId),
       ]));
       if (pending.length > 0) {
         setInputValues((prev) => {
@@ -331,6 +350,18 @@ export default function WorkoutExecution() {
           return next;
         });
       }
+
+      // Baseline for the leave-guard: the last value known to be persisted
+      // (server row, or queued offline data). Comparing against the live
+      // session is useless — keystrokes are mirrored into it immediately.
+      const baseline: Record<number, { weight: number; reps: number }> = {};
+      sessionData.workout_sets.forEach((s) => {
+        baseline[s.id] = { weight: s.weight, reps: s.reps };
+      });
+      for (const item of pending) {
+        baseline[item.setId] = { weight: item.data.weight ?? 0, reps: item.data.reps ?? 0 };
+      }
+      savedValuesRef.current = baseline;
 
       setError(null);
     } catch (err: any) {
@@ -435,11 +466,13 @@ export default function WorkoutExecution() {
       // overwrite what was just saved with what the user already replaced
       removeForSet(session.id, setId);
       setLoggedSetIds((prev) => new Set(prev).add(setId));
+      savedValuesRef.current[setId] = { weight, reps };
     } catch (err: any) {
       if (err?.status === 0) {
         // Network error — queue for later sync
         enqueue(session.id, setId, setData);
         setLoggedSetIds((prev) => new Set(prev).add(setId));
+        savedValuesRef.current[setId] = { weight, reps };
       } else {
         console.error('Error logging set:', err);
         setError(err?.detail || 'Could not save that set. Please try again.');
@@ -470,6 +503,7 @@ export default function WorkoutExecution() {
       ...prev,
       [setId]: { weight: '0', reps: '0' },
     }));
+    savedValuesRef.current[setId] = { weight: 0, reps: 0 };
     setSession((prev) => {
       if (!prev) return prev;
       return {
@@ -486,8 +520,9 @@ export default function WorkoutExecution() {
     } catch (err: any) {
       if (err?.status === 0) {
         // Offline: queue the clear like a save, or the server keeps the old
-        // numbers and the set reappears logged after a reload
-        enqueue(session.id, setId, cleared);
+        // numbers and the set reappears logged after a reload. markLogged
+        // false, so draining it doesn't flip the set back to "saved 0×0".
+        enqueue(session.id, setId, cleared, false);
       } else {
         console.error('Error resetting set:', err);
         setError(err?.detail || 'Could not clear that set. Please try again.');
@@ -650,16 +685,20 @@ export default function WorkoutExecution() {
 
   // Typed-but-unsaved numbers only live in inputValues, and loading another
   // session drops every entry that doesn't belong to it. Leaving silently threw
-  // the numbers away with nothing on screen to say so.
+  // the numbers away with nothing on screen to say so. Compared against the
+  // saved baseline, not the session — keystrokes mirror into the session
+  // immediately, so it always matches what was typed.
   const hasUnsavedInput = (): boolean =>
     !!session &&
     session.workout_sets.some((s) => {
       if (loggedSetIds.has(s.id)) return false;
       const typed = inputValues[s.id];
-      if (!typed) return false;
-      const weight = parseFloat(typed.weight || '0') || 0;
-      const reps = parseFloat(typed.reps || '0') || 0;
-      return weight !== s.weight || reps !== s.reps;
+      const saved = savedValuesRef.current[s.id];
+      if (!typed || !saved) return false;
+      // Normalize the same way handleLogSet would, so "8" vs "8." never warns
+      const weight = Math.max(0, parseFloat(typed.weight || '0') || 0);
+      const reps = Math.floor(Math.max(0, parseFloat(typed.reps || '0') || 0));
+      return weight !== saved.weight || reps !== saved.reps;
     });
 
   const handleCalendarCellClick = async (weekNum: number, dayNum: number) => {

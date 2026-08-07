@@ -9,13 +9,17 @@ import { updateWorkoutSet } from '../api/workoutSessions';
 import { useAuthStore } from './authStore';
 import type { WorkoutSetUpdate } from '../types/workout_session';
 
-interface PendingSetSave {
+export interface PendingSetSave {
   sessionId: number;
   setId: number;
   data: WorkoutSetUpdate;
   queuedAt: number;
   attempts?: number;
   userId?: number;
+  // A queued clear (un-log) must not flip the set back to "logged" when it
+  // syncs or when pending items are folded in on reload. Absent on entries
+  // persisted before this field existed, which were overwhelmingly saves.
+  markLogged?: boolean;
 }
 
 // The queue is retried on every drain, so this is generous — it exists only so
@@ -39,7 +43,7 @@ interface OfflineSyncState {
   pendingItems: Record<string, PendingSetSave>;
   syncInProgress: boolean;
 
-  enqueue: (sessionId: number, setId: number, data: WorkoutSetUpdate) => void;
+  enqueue: (sessionId: number, setId: number, data: WorkoutSetUpdate, markLogged?: boolean) => void;
   remove: (key: string) => void;
   removeForSet: (sessionId: number, setId: number) => void;
   drainQueue: (accessToken: string) => Promise<{ syncedSetIds: number[] }>;
@@ -54,12 +58,12 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
       pendingItems: {},
       syncInProgress: false,
 
-      enqueue: (sessionId, setId, data) => {
+      enqueue: (sessionId, setId, data, markLogged = true) => {
         const key = `${sessionId}:${setId}`;
         set((state) => ({
           pendingItems: {
             ...state.pendingItems,
-            [key]: { sessionId, setId, data, queuedAt: Date.now(), userId: currentUserId() },
+            [key]: { sessionId, setId, data, queuedAt: Date.now(), userId: currentUserId(), markLogged },
           },
         }));
       },
@@ -83,16 +87,33 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
         set({ syncInProgress: true });
         const syncedSetIds: number[] = [];
 
+        // The snapshot above goes stale while earlier items are in flight: an
+        // edit can remove an entry (its old numbers must not be sent) or
+        // replace it (the newer numbers must survive this drain). Every send,
+        // removal and attempts bump is therefore guarded by re-reading the
+        // live entry and matching queuedAt.
+        const stillCurrent = (item: PendingSetSave, key: string) => {
+          const current = get().pendingItems[key];
+          return current !== undefined && current.queuedAt === item.queuedAt;
+        };
+
         for (const [key, item] of entries) {
+          if (!stillCurrent(item, key)) continue;
           try {
             await updateWorkoutSet(item.sessionId, item.setId, item.data, accessToken);
-            get().remove(key);
-            syncedSetIds.push(item.setId);
+            if (stillCurrent(item, key)) {
+              get().remove(key);
+              // Only saves flip a set to "logged" — a queued clear syncing
+              // must not resurrect the set the user just un-logged.
+              if (item.markLogged !== false) syncedSetIds.push(item.setId);
+            }
           } catch (err: any) {
             const status = err?.status;
 
             // No connection: nothing else will get through either
             if (status === 0) break;
+
+            if (!stillCurrent(item, key)) continue;
 
             // Only drop work the server can never accept. Anything else — an
             // expired token, a 500, a proxy error mid-deploy — keeps the sets
@@ -111,11 +132,12 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
               console.warn(`Offline sync: giving up on ${key} after ${attempts} attempts`, err);
               get().remove(key);
             } else {
-              set((state) => ({
-                pendingItems: state.pendingItems[key]
-                  ? { ...state.pendingItems, [key]: { ...state.pendingItems[key], attempts } }
-                  : state.pendingItems,
-              }));
+              set((state) => {
+                const current = state.pendingItems[key];
+                return current && current.queuedAt === item.queuedAt
+                  ? { pendingItems: { ...state.pendingItems, [key]: { ...current, attempts } } }
+                  : { pendingItems: state.pendingItems };
+              });
             }
           }
         }
