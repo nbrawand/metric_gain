@@ -24,6 +24,10 @@ from app.utils.auth import get_current_user
 from app.utils.db import apply_update
 from app.services.progression import (
     DEFAULT_INCREMENT,
+    compute_deload_sets,
+    compute_deload_weight,
+    is_deload_week,
+    DELOAD_TARGET_RIR,
     increments_for_exercises,
     compute_sets_for_week,
     compute_target_rir,
@@ -82,6 +86,8 @@ async def list_mesocycle_instances(
                 template_name=t_name,
                 template_weeks=t_weeks,
                 template_days_per_week=t_days,
+                includes_deload=instance.includes_deload,
+                total_weeks=instance.total_weeks,
             )
         )
 
@@ -252,6 +258,62 @@ def _generate_sets_for_session(
                 target_rir=target_rir,
             )
             db.add(workout_set)
+
+
+def _generate_deload_sets(
+    db,
+    workout_session,
+    workout_template,
+    training_weeks,
+    user_id,
+    mesocycle_instance_id,
+    day_number,
+):
+    """Generate the extra recovery week that follows the training weeks.
+
+    Same exercises, about half the sets, a little lighter, and stopping well
+    short of failure. Sized off week 1 rather than the final week on purpose:
+    the last training week is the highest-volume one, and half of that is still
+    a hard session.
+    """
+    increments = increments_for_exercises(
+        db, [te.exercise_id for te in workout_template.exercises]
+    )
+
+    for template_exercise in workout_template.exercises:
+        increment = increments.get(template_exercise.exercise_id, DEFAULT_INCREMENT)
+        num_sets = compute_deload_sets(
+            compute_sets_for_week(
+                template_exercise.target_sets,
+                template_exercise.weekly_set_increment,
+                1,
+            )
+        )
+
+        prev_set = find_previous_set(
+            db, user_id, template_exercise.exercise_id,
+            mesocycle_instance_id=mesocycle_instance_id,
+            current_week=workout_session.week_number,
+            current_day=day_number,
+        )
+        target_weight = compute_deload_weight(
+            prev_set.weight if prev_set else None, increment
+        )
+
+        for set_num in range(1, num_sets + 1):
+            db.add(
+                WorkoutSet(
+                    workout_session_id=workout_session.id,
+                    exercise_id=template_exercise.exercise_id,
+                    set_number=set_num,
+                    order_index=template_exercise.order_index * 100 + set_num,
+                    weight=0,
+                    reps=0,
+                    target_weight=target_weight,
+                    target_reps=template_exercise.target_reps_min,
+                    target_rir=DELOAD_TARGET_RIR,
+                )
+            )
 
 
 def _generate_sets_from_source(
@@ -448,6 +510,7 @@ async def start_mesocycle_instance(
         template_name=template.name,
         template_weeks=total_weeks,
         template_days_per_week=days_per_week,
+        includes_deload=True,
         status="active",
         start_date=instance_data.start_date or date.today(),
     )
@@ -471,9 +534,11 @@ async def start_mesocycle_instance(
             detail="This template has no workout days. Add at least one before starting it.",
         )
 
-    # Create all workout sessions
+    # Create all workout sessions, plus one extra week for the deload. A block
+    # used to end on its hardest week and hand the next one a fully fatigued
+    # lifter; the deload is where that fatigue gets paid down.
     start = instance_data.start_date or date.today()
-    for week in range(1, total_weeks + 1):
+    for week in range(1, new_instance.total_weeks + 1):
         for day_idx, wt in enumerate(workout_templates):
             day_number = day_idx + 1
             # A planned date per session rather than today's date on all of
@@ -515,6 +580,11 @@ async def start_mesocycle_instance(
                         db, session, wt, week, total_weeks,
                         current_user.id, new_instance.id, day_number,
                     )
+            elif is_deload_week(week, total_weeks):
+                _generate_deload_sets(
+                    db, session, wt, total_weeks,
+                    current_user.id, new_instance.id, day_number,
+                )
             else:
                 # All other weeks (or week 1 fresh start)
                 _generate_sets_for_session(

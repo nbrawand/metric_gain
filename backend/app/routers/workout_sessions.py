@@ -16,6 +16,9 @@ from app.models.mesocycle import WorkoutExercise, WorkoutTemplate
 from app.services.progression import (
     DEFAULT_INCREMENT,
     increment_for_equipment,
+    is_deload_week,
+    compute_deload_sets,
+    compute_deload_weight,
     compute_sets_for_week,
     compute_target_rir,
     compute_progression_targets,
@@ -136,6 +139,12 @@ def get_workout_session(
                 for ps in prev_sets:
                     prev_map.setdefault(ps.exercise_id, []).append(ps)
 
+        # A deload week must not be progressed. The refresh path recomputes
+        # targets for every in-progress session, so without this the recovery
+        # week quietly climbed back above the training weeks.
+        _, training_weeks = _plan_context(db, workout_session)
+        deload = is_deload_week(workout_session.week_number, training_weeks)
+
         # The plan's rep range is the ceiling double progression works up to;
         # without it a held weight would keep asking for one more rep forever
         rep_ceilings = {}
@@ -157,7 +166,18 @@ def get_workout_session(
             if prev_exercise_sets:
                 prev_set = next((s for s in prev_exercise_sets if s.set_number == ws.set_number), None)
 
-            if prev_set and prev_set.weight > 0:
+            if deload:
+                hist = find_previous_set(
+                    db, current_user.id, ws.exercise_id,
+                    mesocycle_instance_id=workout_session.mesocycle_instance_id,
+                    current_week=workout_session.week_number,
+                    current_day=workout_session.day_number,
+                )
+                new_target = compute_deload_weight(
+                    hist.weight if hist else None, increment
+                )
+                new_reps = None
+            elif prev_set and prev_set.weight > 0:
                 # Per-set progression from the same set last week
                 new_target, new_reps = compute_progression_targets(
                     prev_set.weight,
@@ -433,6 +453,8 @@ def _add_exercise_sets(
     )
     new_order_index = max_order + 100
 
+    deload = is_deload_week(workout_session.week_number, total_weeks)
+
     num_sets = 3
     target_rir = 3
     planned_entries = []
@@ -442,13 +464,20 @@ def _add_exercise_sets(
         ]
         if planned_entries:
             # Per week, so a propagated exercise still follows the plan's ramp
-            # rather than being frozen at the set count of the week it was added
+            # rather than being frozen at the set count of the week it was added.
+            # The deload week is sized off week 1 and then halved — following
+            # the ramp into it would land the recovery week on the block's
+            # highest set count.
             num_sets = sum(
                 compute_sets_for_week(
-                    te.target_sets, te.weekly_set_increment, workout_session.week_number
+                    te.target_sets,
+                    te.weekly_set_increment,
+                    1 if deload else workout_session.week_number,
                 )
                 for te in planned_entries
             )
+    if deload:
+        num_sets = compute_deload_sets(num_sets)
     if total_weeks:
         target_rir = compute_target_rir(workout_session.week_number, total_weeks)
 
@@ -460,13 +489,20 @@ def _add_exercise_sets(
     )
     fallback_reps = planned_entries[0].target_reps_max if planned_entries else None
     exercise_row = db.query(Exercise).filter(Exercise.id == exercise_id).first()
-    target_weight, target_reps = compute_progression_targets(
-        prev_weight, prev_reps, fallback_reps,
-        increment=increment_for_equipment(
-            exercise_row.equipment if exercise_row else None
-        ),
-        rep_ceiling=fallback_reps,
+    increment = increment_for_equipment(
+        exercise_row.equipment if exercise_row else None
     )
+    if deload:
+        target_weight = compute_deload_weight(prev_weight, increment)
+        target_reps = (
+            planned_entries[0].target_reps_min if planned_entries else fallback_reps
+        )
+    else:
+        target_weight, target_reps = compute_progression_targets(
+            prev_weight, prev_reps, fallback_reps,
+            increment=increment,
+            rep_ceiling=fallback_reps,
+        )
 
     for set_num in range(1, num_sets + 1):
         db.add(

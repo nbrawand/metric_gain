@@ -78,7 +78,10 @@ export function Home() {
   // workouts by days/week: sessions can be done out of order, and the division
   // ran past the end of the block once everything was finished.
   const completedCount = workoutSessions.filter(s => s.status === 'completed').length;
-  const totalWeeks = activeInstance?.template_weeks || mesocycle?.weeks || 0;
+  // Spans the deload week, so "week 5 of 5" doesn't sit there while a deload
+  // session is still waiting to be done
+  const totalWeeks =
+    activeInstance?.total_weeks || activeInstance?.template_weeks || mesocycle?.weeks || 0;
   const nextUnfinished = workoutSessions
     .filter(s => s.status !== 'completed')
     .sort((a, b) => a.week_number - b.week_number || a.day_number - b.day_number)[0];

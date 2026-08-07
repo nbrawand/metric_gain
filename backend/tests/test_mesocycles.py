@@ -865,7 +865,8 @@ def test_cannot_change_block_length_while_an_instance_is_active(
     unchanged = client.get(f"/v1/mesocycles/{mesocycle['id']}", headers=auth_headers).json()
     assert unchanged["weeks"] == 4
     assert unchanged["days_per_week"] == 1
-    assert len(sessions_before) == 4
+    # 4 training weeks + the deload week, at 1 day per week
+    assert len(sessions_before) == 5
 
 
 def test_can_rename_a_template_while_an_instance_is_active(

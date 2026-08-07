@@ -43,12 +43,16 @@ week. Hold (or back off) on a miss.
 `round_to_nearest_5` is meaningless on kg plates, which go in 2.5/1.25 steps.
 Needs a user-level unit preference; `users.preferences` JSON already exists.
 
-[ ] Add a deload week. `compute_target_rir` ramps `[3,2,2,1,1,0]` over a 6-week
+[x] Add a deload week. `compute_target_rir` ramps `[3,2,2,1,1,0]` over a 6-week
 block, so RIR hits 0 on the final week and the block just ends — the next block
 then starts with a fully fatigued lifter. RP's final week *is* the deload
 (volume drops to maintenance, ~6 sets/muscle/week). Decide whether the deload
 is an extra week or the last planned week, and make the calendar and the
 "blocks complete when every session is done" logic agree with the choice.
+    Decided: an extra week. `weeks` still means training weeks; instances carry
+    `includes_deload` and expose `total_weeks`. Blocks already in flight keep
+    their old span (the flag is stored, not derived) since they have no
+    sessions for that week.
 
 [ ] Warn on unrecoverable volume at plan time. There is no ceiling at all — the
 old auto-volume setup and per-session cap were removed in `2812ab0`/`855754d`.

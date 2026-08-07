@@ -1,6 +1,6 @@
 """Mesocycle, MesocycleInstance, WorkoutTemplate, and WorkoutExercise models for training planning."""
 
-from sqlalchemy import Column, Integer, String, Text, Date, DateTime, ForeignKey, Float
+from sqlalchemy import Boolean, Column, Integer, String, Text, Date, DateTime, ForeignKey, Float
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
@@ -65,8 +65,14 @@ class MesocycleInstance(Base):
 
     # Snapshot fields (captured at instance creation for when template is deleted)
     template_name = Column(String(255), nullable=True)
-    template_weeks = Column(Integer, nullable=True)
+    template_weeks = Column(Integer, nullable=True)  # Planned training weeks
     template_days_per_week = Column(Integer, nullable=True)
+
+    # Whether this block carries the extra deload week after its training
+    # weeks. Recorded per instance rather than derived, because blocks started
+    # before deloads existed have no sessions for that week — computing it
+    # would give them a phantom final week that can never be completed.
+    includes_deload = Column(Boolean, default=True, nullable=False, server_default="false")
 
     # Per-exercise note overrides, JSON: {"workout_exercise_id": "notes"}
     exercise_notes = Column(Text, nullable=True)
@@ -81,6 +87,11 @@ class MesocycleInstance(Base):
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    @property
+    def total_weeks(self) -> int:
+        """Weeks of sessions this block actually has, deload included."""
+        return (self.template_weeks or 0) + (1 if self.includes_deload else 0)
 
     # Relationships
     user = relationship("User", back_populates="mesocycle_instances")

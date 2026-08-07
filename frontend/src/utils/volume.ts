@@ -34,12 +34,24 @@ export const computeWeeklyVolumeByMuscleGroup = (
   return result;
 };
 
+/** RIR asked for during the deload week. Must match DELOAD_TARGET_RIR. */
+export const DELOAD_TARGET_RIR = 4;
+
 /**
- * Target RIR for a week: ramps 3 -> 0 across the block, clamped to 0-3.
- * Mirrors compute_target_rir, including the clamp — without it a week number
- * outside the block's range renders a negative or above-3 RIR.
+ * Target RIR for a week: ramps 3 -> 0 across the training weeks, clamped to
+ * 0-3. Mirrors compute_target_rir, including the clamp — without it a week
+ * number outside the block's range renders a negative or above-3 RIR.
+ *
+ * trainingWeeks is the planned week count, NOT the span including the deload.
+ * A week past it is the deload, which sits above the ramp: the point of that
+ * week is to stop well short of failure.
  */
-export const computeTargetRir = (week: number, totalWeeks: number): number => {
-  if (!Number.isFinite(week) || !Number.isFinite(totalWeeks) || totalWeeks <= 1) return 0;
-  return Math.max(0, Math.min(3, Math.round((3 * (totalWeeks - week)) / (totalWeeks - 1))));
+export const computeTargetRir = (week: number, trainingWeeks: number): number => {
+  if (!Number.isFinite(week) || !Number.isFinite(trainingWeeks)) return 0;
+  if (trainingWeeks > 0 && week > trainingWeeks) return DELOAD_TARGET_RIR;
+  if (trainingWeeks <= 1) return 0;
+  return Math.max(
+    0,
+    Math.min(3, Math.round((3 * (trainingWeeks - week)) / (trainingWeeks - 1)))
+  );
 };

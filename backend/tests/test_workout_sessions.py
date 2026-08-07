@@ -350,12 +350,16 @@ def test_instance_pre_creates_sessions_with_planned_sets(client, auth_headers, s
     instance = sample_mesocycle_instance
     sessions = _sessions_for_instance(client, auth_headers, instance["id"])
 
-    # 4 weeks x 2 workout templates
-    assert len(sessions) == 8
+    # (4 training weeks + 1 deload) x 2 workout templates
+    assert len(sessions) == 10
 
     # Day 1: target_sets=3, increment=1.0 -> 3, 4, 5, 6
     # Day 2: target_sets=4, increment=0.5 -> 4, 5, 5, 6 (round half up)
-    expected = {1: {1: 3, 2: 4, 3: 5, 4: 6}, 2: {1: 4, 2: 5, 3: 5, 4: 6}}
+    # Week 5 is the deload: half of week 1, rounded half up, never below 1
+    expected = {
+        1: {1: 3, 2: 4, 3: 5, 4: 6, 5: 2},
+        2: {1: 4, 2: 5, 3: 5, 4: 6, 5: 2},
+    }
     for s in sessions:
         assert s["set_count"] == expected[s["day_number"]][s["week_number"]]
 

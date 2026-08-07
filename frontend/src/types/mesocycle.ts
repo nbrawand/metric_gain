@@ -133,8 +133,12 @@ export interface MesocycleInstance {
   created_at: string;
   updated_at: string;
   template_name: string | null;
+  /** Planned training weeks. The block also runs one deload week after these. */
   template_weeks: number | null;
   template_days_per_week: number | null;
+  includes_deload?: boolean;
+  /** Weeks of real sessions: training weeks plus the deload. */
+  total_weeks?: number;
   exercise_notes?: Record<string, string>;
   mesocycle_template: Mesocycle | null; // Null if template was deleted
 }
@@ -152,8 +156,12 @@ export interface MesocycleInstanceListItem {
   created_at: string;
   updated_at: string;
   template_name: string;
+  /** Planned training weeks; the block runs one deload week after these. */
   template_weeks: number;
   template_days_per_week: number;
+  includes_deload?: boolean;
+  /** Weeks of real sessions: training weeks plus the deload. */
+  total_weeks?: number;
 }
 
 /**

@@ -92,13 +92,48 @@ def compute_sets_for_week(target_sets: int, increment: float, week: int) -> int:
     return max(1, int(target_sets + increment * (week - 1) + 0.5))
 
 
+# A block used to end on its hardest week — RIR 0 on the final week, then
+# straight into the next block with a fully fatigued lifter. The deload is one
+# extra week after the planned training weeks: about half the sets, a little
+# lighter, and stopping well short of failure.
+DELOAD_TARGET_RIR = 4
+DELOAD_LOAD_FACTOR = 0.9
+DELOAD_SET_FACTOR = 0.5
+
+
+def is_deload_week(week: int, training_weeks: Optional[int]) -> bool:
+    """True for the extra recovery week that follows the planned weeks."""
+    if not training_weeks:
+        return False
+    return week > training_weeks
+
+
+def compute_deload_sets(planned_sets: int) -> int:
+    """About half the working set count, never below one."""
+    return max(1, int(planned_sets * DELOAD_SET_FACTOR + 0.5))
+
+
+def compute_deload_weight(
+    prev_weight: Optional[float], increment: float = DEFAULT_INCREMENT
+) -> Optional[float]:
+    """A little lighter than what was being worked with, on a loadable step."""
+    if prev_weight is None:
+        return None
+    return max(increment, round_to_increment(prev_weight * DELOAD_LOAD_FACTOR, increment))
+
+
 def compute_target_rir(week: int, total_weeks: int) -> int:
-    """Target RIR ramps from 3 (week 1) down to 0 (final week).
+    """Target RIR ramps from 3 (week 1) down to 0 (final training week).
 
     Formula: round_half_up(3 * (total_weeks - week) / (total_weeks - 1)).
     Half-up (not Python's banker's rounding) so the ramp matches Math.round in
     the frontend, as with compute_sets_for_week.
+
+    A week past the planned weeks is the deload, which sits above the ramp
+    rather than on it — the point is to stop well short of failure.
     """
+    if is_deload_week(week, total_weeks):
+        return DELOAD_TARGET_RIR
     if total_weeks <= 1:
         return 0
     # Clamped because a week outside the block would otherwise produce a

@@ -42,7 +42,8 @@ def test_add_carries_into_every_later_week(
 ):
     instance = sample_mesocycle_instance
     weeks = _sessions_for_day(client, auth_headers, instance["id"])
-    assert len(weeks) == 4, "template is 4 weeks"
+    # 4 training weeks plus the deload week that follows them
+    assert len(weeks) == 5, "4 training weeks + deload"
 
     response = client.post(
         f"/v1/workout-sessions/{weeks[1]['id']}/exercises/add",
@@ -50,9 +51,9 @@ def test_add_carries_into_every_later_week(
         headers=auth_headers,
     )
     assert response.status_code == status.HTTP_200_OK
-    assert response.json()["future_sessions_updated"] == 3
+    assert response.json()["future_sessions_updated"] == 4
 
-    for week in (1, 2, 3, 4):
+    for week in (1, 2, 3, 4, 5):
         assert other_exercise_id in _exercise_ids(client, auth_headers, weeks[week]["id"]), (
             f"week {week} did not get the added exercise"
         )
@@ -69,9 +70,9 @@ def test_remove_carries_into_every_later_week(
         headers=auth_headers,
     )
     assert response.status_code == status.HTTP_200_OK
-    assert response.json()["future_sessions_updated"] == 3
+    assert response.json()["future_sessions_updated"] == 4
 
-    for week in (1, 2, 3, 4):
+    for week in (1, 2, 3, 4, 5):
         assert sample_exercise_id not in _exercise_ids(
             client, auth_headers, weeks[week]["id"]
         ), f"week {week} still has the removed exercise"
@@ -92,9 +93,9 @@ def test_swap_carries_into_every_later_week(
         headers=auth_headers,
     )
     assert response.status_code == status.HTTP_200_OK
-    assert response.json()["future_sessions_updated"] == 3
+    assert response.json()["future_sessions_updated"] == 4
 
-    for week in (1, 2, 3, 4):
+    for week in (1, 2, 3, 4, 5):
         ids = _exercise_ids(client, auth_headers, weeks[week]["id"])
         assert other_exercise_id in ids, f"week {week} missing the swapped-in exercise"
         assert sample_exercise_id not in ids, f"week {week} kept the swapped-out exercise"
@@ -112,7 +113,7 @@ def test_only_later_weeks_change_not_earlier_ones(
         json={"exercise_id": other_exercise_id},
         headers=auth_headers,
     )
-    assert response.json()["future_sessions_updated"] == 1
+    assert response.json()["future_sessions_updated"] == 2
 
     assert other_exercise_id not in _exercise_ids(client, auth_headers, weeks[1]["id"])
     assert other_exercise_id not in _exercise_ids(client, auth_headers, weeks[2]["id"])
@@ -159,7 +160,7 @@ def test_a_completed_later_week_is_never_rewritten(
         headers=auth_headers,
     )
     # Weeks 2 and 4 only — week 3 is completed
-    assert response.json()["future_sessions_updated"] == 2
+    assert response.json()["future_sessions_updated"] == 3
 
     assert sample_exercise_id in _exercise_ids(client, auth_headers, weeks[3]["id"])
     assert sample_exercise_id not in _exercise_ids(client, auth_headers, weeks[2]["id"])
@@ -189,7 +190,7 @@ def test_logged_work_in_a_later_week_is_not_deleted(
         f"/v1/workout-sessions/{weeks[1]['id']}/exercises/{sample_exercise_id}",
         headers=auth_headers,
     )
-    assert response.json()["future_sessions_updated"] == 2
+    assert response.json()["future_sessions_updated"] == 3
 
     assert sample_exercise_id in _exercise_ids(client, auth_headers, weeks[3]["id"])
 
@@ -231,7 +232,8 @@ def test_added_exercise_follows_the_plans_weekly_set_ramp(
     """A propagated exercise is sized per week, not frozen at week 1's count.
 
     Day 1's template entry ramps 3 sets +1/week, so removing and re-adding it
-    in week 1 must still produce 3/4/5/6 across the block.
+    in week 1 must still produce 3/4/5/6 across the training weeks — and then
+    deload rather than carrying the ramp into the recovery week.
     """
     instance = sample_mesocycle_instance
     weeks = _sessions_for_day(client, auth_headers, instance["id"])
@@ -247,7 +249,7 @@ def test_added_exercise_follows_the_plans_weekly_set_ramp(
     )
 
     counts = []
-    for week in (1, 2, 3, 4):
+    for week in (1, 2, 3, 4, 5):
         detail = client.get(
             f"/v1/workout-sessions/{weeks[week]['id']}", headers=auth_headers
         ).json()
@@ -255,4 +257,6 @@ def test_added_exercise_follows_the_plans_weekly_set_ramp(
             sum(1 for s in detail["workout_sets"] if s["exercise_id"] == sample_exercise_id)
         )
 
-    assert counts == [3, 4, 5, 6], f"expected the plan's ramp, got {counts}"
+    # Training weeks follow the plan's ramp; the deload halves week 1 rather
+    # than continuing it, so the recovery week is not the block's biggest
+    assert counts == [3, 4, 5, 6, 2], f"expected ramp then deload, got {counts}"

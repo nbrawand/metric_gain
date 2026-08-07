@@ -645,8 +645,12 @@ export default function WorkoutExecution() {
         accessToken
       );
 
-      // Check if all workouts in the mesocycle are now completed
-      const totalWorkouts = (instance.template_weeks || mesocycle.weeks) * daysPerWeek;
+      // Check if all workouts in the mesocycle are now completed. Counted over
+      // the deload week as well: without it the block completes as soon as the
+      // last training week is done and the recovery week is never reachable.
+      const weekSpan =
+        instance.total_weeks || (instance.template_weeks || mesocycle.weeks);
+      const totalWorkouts = weekSpan * daysPerWeek;
       const completedCount = updatedSessions.filter(s => s.status === 'completed').length;
 
       if (completedCount >= totalWorkouts) {
@@ -743,7 +747,11 @@ export default function WorkoutExecution() {
   const mesocycle = instance?.mesocycle_template;
   // Week count is taken from the snapshot made when the block started, so
   // later edits to the template cannot resize the calendar under the user.
-  const instanceWeeks = instance?.template_weeks || mesocycle?.weeks || 0;
+  // Includes the deload week, so the calendar shows every session that exists
+  const instanceWeeks =
+    instance?.total_weeks || instance?.template_weeks || mesocycle?.weeks || 0;
+  const trainingWeeks = instance?.template_weeks || mesocycle?.weeks || 0;
+  const isDeloadWeek = (week: number) => trainingWeeks > 0 && week > trainingWeeks;
   // Day count from the same snapshot as the weeks, so a template edited
   // mid-block cannot change how many workouts this block is thought to have
   const instanceDays =
@@ -1030,6 +1038,11 @@ export default function WorkoutExecution() {
             </button>
             <h2 className="text-lg font-semibold">
               WEEK {session.week_number} &bull; DAY {session.day_number}
+              {isDeloadWeek(session.week_number) && (
+                <span className="ml-2 text-xs font-semibold text-teal-300 bg-teal-900/60 px-2 py-0.5 rounded align-middle">
+                  DELOAD
+                </span>
+              )}
             </h2>
           </div>
         </div>
@@ -1399,7 +1412,7 @@ export default function WorkoutExecution() {
                               // Prefer the RIR stored on the set: that is the plan the
                               // backend generated, and recomputing it here can disagree.
                               const weekRir =
-                                set.target_rir ?? computeTargetRir(session.week_number, instanceWeeks);
+                                set.target_rir ?? computeTargetRir(session.week_number, trainingWeeks);
                               return (
                                 <div className="text-xs text-teal-400 text-center mt-1">
                                   {set.target_reps

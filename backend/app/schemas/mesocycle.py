@@ -157,7 +157,9 @@ class MesocycleInstanceResponse(BaseModel):
 
     # Snapshot fields (captured at instance creation)
     template_name: Optional[str] = None
-    template_weeks: Optional[int] = None
+    template_weeks: Optional[int] = None  # Planned training weeks
+    includes_deload: bool = False
+    total_weeks: int = 0  # Training weeks + deload, i.e. weeks of real sessions
     template_days_per_week: Optional[int] = None
 
     # Per-exercise note overrides keyed by workout_exercise_id
@@ -191,7 +193,9 @@ class MesocycleInstanceListResponse(BaseModel):
 
     # Basic template info (from snapshots, with fallback to template)
     template_name: str
-    template_weeks: int
+    template_weeks: int  # Planned training weeks
+    includes_deload: bool = False
+    total_weeks: int = 0  # Training weeks + deload, i.e. weeks of real sessions
     template_days_per_week: int
 
     class Config:
