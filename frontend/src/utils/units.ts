@@ -41,6 +41,10 @@ export interface RestTimerPreference {
 
 export const DEFAULT_REST_TIMER: RestTimerPreference = { enabled: false, seconds: 120 };
 
+/** Durations offered in settings. Lives here, not in the component: a
+ * component file that also exports constants breaks React fast refresh. */
+export const REST_TIMER_PRESETS = [60, 90, 120, 180, 240];
+
 export const restTimerFromPreferences = (
   preferences: string | null | undefined
 ): RestTimerPreference => {

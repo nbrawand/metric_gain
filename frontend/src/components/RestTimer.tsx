@@ -10,9 +10,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-export const REST_TIMER_PRESETS = [60, 90, 120, 180, 240];
-export const DEFAULT_REST_SECONDS = 120;
-
 const formatClock = (totalSeconds: number): string => {
   const safe = Math.max(0, totalSeconds);
   const minutes = Math.floor(safe / 60);

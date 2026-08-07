@@ -11,6 +11,7 @@ import { createPortalSession } from '../api/billing';
 import { MesocycleInstance } from '../types/mesocycle';
 import { WorkoutSessionListItem } from '../types/workout_session';
 import OnboardingWizard from '../components/OnboardingWizard';
+import { apiErrorDetail, isApiError } from '../api/client';
 
 export function Home() {
   const navigate = useNavigate();
@@ -33,6 +34,7 @@ export function Home() {
   // "Continue Mesocycle" card would keep pointing into the finished block.
   useEffect(() => {
     loadActiveInstance();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- loadActiveInstance is redefined each render; including it would refetch on every render. Keyed on the navigation, which is what should reload it.
   }, [location.key]);
 
   const loadActiveInstance = async () => {
@@ -47,9 +49,9 @@ export function Home() {
         accessToken
       );
       setWorkoutSessions(sessions);
-    } catch (err: any) {
+    } catch (err) {
       // 404 means no active instance, which is fine
-      if (err?.status !== 404) {
+      if (!isApiError(err) || err.status !== 404) {
         console.error('Error loading active mesocycle instance:', err);
       }
       setActiveInstance(null);
@@ -171,10 +173,10 @@ export function Home() {
                     try {
                       const { url } = await createPortalSession(accessToken);
                       window.location.href = url;
-                    } catch (err: any) {
+                    } catch (err) {
                       // Surface the reason — "no subscription to manage yet" and
                       // "payments are not configured" need different responses
-                      alert(err?.detail || 'Could not open the billing portal. Please try again.');
+                      alert(apiErrorDetail(err, 'Could not open the billing portal. Please try again.'));
                     }
                   }}
                   className="mt-3 w-full bg-gray-600 hover:bg-gray-500 text-gray-300 text-sm font-medium py-2 px-4 rounded-lg transition-colors"

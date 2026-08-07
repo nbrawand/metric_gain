@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { getExercises, getMuscleGroups, createExercise, deleteExercise } from '../api/exercises';
+import { apiErrorDetail } from '../api/client';
 import type { Exercise, ExerciseCreate } from '../types/exercise';
 import { FormInput } from '../components/FormInput';
 import { Button } from '../components/Button';
@@ -45,6 +46,7 @@ export function Exercises() {
 
   useEffect(() => {
     loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- loadData is redefined each render; including it would refetch on every render. The filters below are the real triggers.
   }, [debouncedSearch, selectedMuscleGroup]);
 
   const loadData = async () => {
@@ -73,9 +75,9 @@ export function Exercises() {
       if (requestId !== searchRequestRef.current) return;
       setExercises(exercisesData);
       setMuscleGroups(muscleGroupsData);
-    } catch (err: any) {
+    } catch (err) {
       if (requestId !== searchRequestRef.current) return;
-      setError(err.detail || "Failed to load exercises");
+      setError(apiErrorDetail(err, "Failed to load exercises"));
     } finally {
       if (requestId === searchRequestRef.current) setIsLoading(false);
     }
@@ -93,8 +95,8 @@ export function Exercises() {
       setShowCreateModal(false);
       setCreateFormData({ name: '', description: '', muscle_group: '', equipment: '' });
       loadData(); // Reload exercises
-    } catch (err: any) {
-      setCreateError(err.detail || 'Failed to create exercise');
+    } catch (err) {
+      setCreateError(apiErrorDetail(err, 'Failed to create exercise'));
     } finally {
       setIsCreating(false);
     }
@@ -107,8 +109,8 @@ export function Exercises() {
     try {
       await deleteExercise(exerciseId, accessToken);
       loadData(); // Reload exercises
-    } catch (err: any) {
-      setError(err.detail || 'Failed to delete exercise');
+    } catch (err) {
+      setError(apiErrorDetail(err, 'Failed to delete exercise'));
     }
   };
 

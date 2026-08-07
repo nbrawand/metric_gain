@@ -35,6 +35,7 @@ export default function Admin() {
 
   useEffect(() => {
     loadUsers();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- loadUsers is redefined each render; including it would refetch on every render. The token is the only thing that should trigger a reload.
   }, [accessToken]);
 
   // Counts come off the unfiltered list so the dropdown keeps reading as a

@@ -15,6 +15,7 @@ import { useAuthStore } from '../stores/authStore';
 import ClampedNumberInput from '../components/ClampedNumberInput';
 import type { Mesocycle, WorkoutTemplateCreate, WorkoutExerciseCreate } from '../types/mesocycle';
 import type { Exercise } from '../types/exercise';
+import { apiErrorDetail } from '../api/client';
 
 export default function MesocycleDetail() {
   const { id } = useParams<{ id: string }>();
@@ -45,6 +46,7 @@ export default function MesocycleDetail() {
     if (id) {
       loadMesocycle();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- loadMesocycle is redefined each render; including it would refetch on every render. The id in the URL is the only thing that should reload it.
   }, [id]);
 
   const loadMesocycle = async () => {
@@ -189,9 +191,9 @@ export default function MesocycleDetail() {
 
       setEditing(false);
       await loadMesocycle();
-    } catch (err: any) {
+    } catch (err) {
       // Surface the reason — e.g. the template is locked while an instance runs
-      alert(err?.detail || 'Could not save your changes. Please try again.');
+      alert(apiErrorDetail(err, 'Could not save your changes. Please try again.'));
       console.error('Error saving mesocycle:', err);
     } finally {
       setSaving(false);

@@ -5,8 +5,13 @@ import { getActiveMesocycleInstance, updateMesocycleInstance } from '../api/meso
 import { listWorkoutSessions } from '../api/workoutSessions';
 import { MesocycleInstance } from '../types/mesocycle';
 import { WorkoutSessionListItem } from '../types/workout_session';
-import { weightUnitFromPreferences, weightUnitLabel, WeightUnit, restTimerFromPreferences } from '../utils/units';
-import { REST_TIMER_PRESETS } from './RestTimer';
+import {
+  weightUnitFromPreferences,
+  weightUnitLabel,
+  WeightUnit,
+  restTimerFromPreferences,
+  REST_TIMER_PRESETS,
+} from '../utils/units';
 
 export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -54,6 +59,7 @@ export default function Layout() {
       setActiveInstance(null);
       setWorkoutSessions([]);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- loadActiveInstance is redefined each render; including it would refetch the active block on every render. Keyed on the token and the route instead.
   }, [accessToken, location.pathname]);
 
   const loadActiveInstance = async () => {

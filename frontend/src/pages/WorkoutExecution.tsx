@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useOfflineSyncStore } from '../stores/offlineSyncStore';
-import { onConnectivityChange, getServerReachable } from '../api/client';
+import { apiErrorDetail, getServerReachable, isNetworkError, onConnectivityChange } from '../api/client';
 import { getWorkoutSession, updateWorkoutSet, updateWorkoutSession, listWorkoutSessions, swapExercise, removeExercise, addExercise, addSetToExercise, removeSetFromExercise } from '../api/workoutSessions';
 import { getExercises } from '../api/exercises';
 import { getMesocycleInstance, updateMesocycleInstance, updateInstanceExerciseNotes } from '../api/mesocycles';
@@ -90,6 +90,7 @@ export default function WorkoutExecution() {
 
   useEffect(() => {
     loadWorkoutSession();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- loadWorkoutSession is redefined each render; including it would refetch the session on every render. The session id is the real trigger.
   }, [sessionId]);
 
   // Offline sync: subscribe to connectivity changes, drain queue when back online
@@ -148,6 +149,7 @@ export default function WorkoutExecution() {
     }, 10000);
 
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- drainQueue and hasPending come from the sync store and change identity on every queue mutation; including them would re-run the drain it just did.
   }, [accessToken]);
 
   // Initialize input values when session data loads (merge, don't overwrite edits)
@@ -223,9 +225,9 @@ export default function WorkoutExecution() {
       setSession(updated);
       futureWeeksNotice(updated.future_sessions_updated, 'removed');
       setShowExerciseMenu(null);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error removing exercise:', err);
-      setError(err?.detail || 'Could not remove that exercise. Please try again.');
+      setError(apiErrorDetail(err, 'Could not remove that exercise. Please try again.'));
     }
   };
 
@@ -246,9 +248,9 @@ export default function WorkoutExecution() {
     try {
       const updated = await addSetToExercise(session.id, exerciseId, accessToken);
       setSession(updated);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error adding set:', err);
-      setError(err?.detail || 'Could not add a set. Please try again.');
+      setError(apiErrorDetail(err, 'Could not add a set. Please try again.'));
     }
   };
 
@@ -264,9 +266,9 @@ export default function WorkoutExecution() {
         return next;
       });
       setSession(updated);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error removing set:', err);
-      setError(err?.detail || 'Could not remove that set. Please try again.');
+      setError(apiErrorDetail(err, 'Could not remove that set. Please try again.'));
     }
   };
 
@@ -307,8 +309,8 @@ export default function WorkoutExecution() {
         futureWeeksNotice(updated.future_sessions_updated, 'added');
       }
       setSession(updated);
-    } catch (err: any) {
-      const msg = err?.detail || 'Could not update that exercise. Please try again.';
+    } catch (err) {
+      const msg = apiErrorDetail(err, 'Could not update that exercise. Please try again.');
       alert(msg);
       console.error('Error in exercise picker:', err);
     } finally {
@@ -388,10 +390,10 @@ export default function WorkoutExecution() {
       savedValuesRef.current = baseline;
 
       setError(null);
-    } catch (err: any) {
+    } catch (err) {
       if (isStale()) return;
       setError(
-        err?.status === 0
+        isNetworkError(err)
           ? "You're offline, so this workout can't be opened right now."
           : 'Could not load this workout. Please try again.'
       );
@@ -493,8 +495,8 @@ export default function WorkoutExecution() {
       savedValuesRef.current[setId] = { weight, reps };
       // A skipped set is not a set you need to rest after
       if (restTimer.enabled && !setData.skipped) setRestToken((t) => t + 1);
-    } catch (err: any) {
-      if (err?.status === 0) {
+    } catch (err) {
+      if (isNetworkError(err)) {
         // Network error — queue for later sync. The set was still performed,
         // so the rest is still real.
         enqueue(session.id, setId, setData);
@@ -503,7 +505,7 @@ export default function WorkoutExecution() {
         if (restTimer.enabled && !setData.skipped) setRestToken((t) => t + 1);
       } else {
         console.error('Error logging set:', err);
-        setError(err?.detail || 'Could not save that set. Please try again.');
+        setError(apiErrorDetail(err, 'Could not save that set. Please try again.'));
       }
     } finally {
       setSavingSetIds((prev) => {
@@ -545,15 +547,15 @@ export default function WorkoutExecution() {
     const cleared = { weight: 0, reps: 0, skipped: 0 as 0 | 1 };
     try {
       await updateWorkoutSet(session.id, setId, cleared, accessToken);
-    } catch (err: any) {
-      if (err?.status === 0) {
+    } catch (err) {
+      if (isNetworkError(err)) {
         // Offline: queue the clear like a save, or the server keeps the old
         // numbers and the set reappears logged after a reload. markLogged
         // false, so draining it doesn't flip the set back to "saved 0×0".
         enqueue(session.id, setId, cleared, false);
       } else {
         console.error('Error resetting set:', err);
-        setError(err?.detail || 'Could not clear that set. Please try again.');
+        setError(apiErrorDetail(err, 'Could not clear that set. Please try again.'));
       }
     }
   };
@@ -611,8 +613,8 @@ export default function WorkoutExecution() {
             const setData = { weight, reps, skipped: (weight === 0 && reps === 0) ? 1 : 0 as 0 | 1 };
             try {
               await updateWorkoutSet(session.id, setId, setData, accessToken);
-            } catch (err: any) {
-              if (err?.status === 0) {
+            } catch (err) {
+              if (isNetworkError(err)) {
                 enqueue(session.id, setId, setData);
               } else {
                 throw err;
@@ -708,9 +710,9 @@ export default function WorkoutExecution() {
 
       // Show the completion banner for the workout we just finished
       setCompletionBanner({ week: completedWeek, day: completedDay });
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error completing workout:', err);
-      setError(err?.detail || 'Could not complete the workout. Your sets are saved — please try again.');
+      setError(apiErrorDetail(err, 'Could not complete the workout. Your sets are saved — please try again.'));
     }
   };
 
@@ -846,12 +848,12 @@ export default function WorkoutExecution() {
           exercise_notes: updatedNotes,
         };
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error updating exercise notes:', err);
       // Reopen the editor with the text still in it — closing on failure made
       // the note the user just typed simply vanish
       setEditingNotesExerciseId(exerciseId);
-      setError(err?.detail || 'Could not save that note. Please try again.');
+      setError(apiErrorDetail(err, 'Could not save that note. Please try again.'));
     }
   };
 
@@ -908,12 +910,12 @@ export default function WorkoutExecution() {
         const newOrderIndex = s.exercise_id === exerciseId ? targetOrderIndex : currentOrderIndex;
         return updateWorkoutSet(session.id, s.id, { order_index: newOrderIndex }, accessToken);
       }));
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error reordering exercises:', err);
       // These are independent PATCHes, so some have already landed. Only the
       // server knows the real order now — a local rollback would put an order
       // on screen that isn't stored anywhere.
-      setError(err?.detail || 'Could not reorder exercises. Please try again.');
+      setError(apiErrorDetail(err, 'Could not reorder exercises. Please try again.'));
       await loadWorkoutSession();
     }
   };
@@ -987,9 +989,9 @@ export default function WorkoutExecution() {
       await Promise.all(changedSets.map(u =>
         updateWorkoutSet(session.id, u.setId, { order_index: u.newOrderIndex }, accessToken)
       ));
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error reordering muscle groups:', err);
-      setError(err?.detail || 'Could not reorder muscle groups. Please try again.');
+      setError(apiErrorDetail(err, 'Could not reorder muscle groups. Please try again.'));
       await loadWorkoutSession();
     }
   };

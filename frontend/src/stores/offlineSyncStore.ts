@@ -8,6 +8,7 @@ import { persist } from 'zustand/middleware';
 import { updateWorkoutSet } from '../api/workoutSessions';
 import { useAuthStore } from './authStore';
 import type { WorkoutSetUpdate } from '../types/workout_session';
+import { isApiError } from '../api/client';
 
 export interface PendingSetSave {
   sessionId: number;
@@ -70,7 +71,8 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
 
       remove: (key) => {
         set((state) => {
-          const { [key]: _, ...rest } = state.pendingItems;
+          const rest = { ...state.pendingItems };
+          delete rest[key];
           return { pendingItems: rest };
         });
       },
@@ -107,8 +109,8 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
               // must not resurrect the set the user just un-logged.
               if (item.markLogged !== false) syncedSetIds.push(item.setId);
             }
-          } catch (err: any) {
-            const status = err?.status;
+          } catch (err) {
+            const status = isApiError(err) ? err.status : undefined;
 
             // No connection: nothing else will get through either
             if (status === 0) break;

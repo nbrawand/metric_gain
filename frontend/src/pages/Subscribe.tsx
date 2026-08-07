@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { createCheckoutSession, createPortalSession } from '../api/billing';
+import { apiErrorDetail } from '../api/client';
 
 export default function Subscribe() {
   const { accessToken, user } = useAuthStore();
@@ -20,8 +21,8 @@ export default function Subscribe() {
     try {
       const { url } = await createCheckoutSession(accessToken);
       window.location.href = url;
-    } catch (err: any) {
-      setError(err?.detail || 'Could not start checkout. Please try again.');
+    } catch (err) {
+      setError(apiErrorDetail(err, 'Could not start checkout. Please try again.'));
       setLoading(false);
     }
   };
@@ -33,8 +34,8 @@ export default function Subscribe() {
     try {
       const { url } = await createPortalSession(accessToken);
       window.location.href = url;
-    } catch (err: any) {
-      setError(err?.detail || 'Could not open the billing portal. Please try again.');
+    } catch (err) {
+      setError(apiErrorDetail(err, 'Could not open the billing portal. Please try again.'));
       setLoading(false);
     }
   };

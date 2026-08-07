@@ -28,6 +28,7 @@ import { Exercise } from '../types/exercise';
 import { computeWeeklyVolumeByMuscleGroup, findVolumeWarnings } from '../utils/volume';
 import MuscleGroupVolumeChart from '../components/MuscleGroupVolumeChart';
 import ClampedNumberInput from '../components/ClampedNumberInput';
+import { apiErrorDetail } from '../api/client';
 
 export default function Mesocycles() {
   const navigate = useNavigate();
@@ -76,6 +77,7 @@ export default function Mesocycles() {
   // Load mesocycles and exercises
   useEffect(() => {
     loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- loadData is redefined each render; including it would refetch on every render. This is a mount-only load.
   }, []);
 
   const blankDay = (index: number): WorkoutTemplateCreate => ({
@@ -100,6 +102,7 @@ export default function Mesocycles() {
     );
     // Only on open: resizing is handled by the days/week control itself, which
     // must not throw away days the user has already filled in.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- days_per_week is deliberately omitted — see the comment above; resizing is handled by the days/week control so filled-in days are not discarded.
   }, [showCreateModal]);
 
   // Add or drop day cards to match, keeping the ones already filled in
@@ -156,8 +159,8 @@ export default function Mesocycles() {
       const newMeso = await createMesocycleFromInstance(instanceId, accessToken);
       await loadData();
       navigate(`/mesocycles/${newMeso.id}`);
-    } catch (err: any) {
-      alert(err?.detail || "Could not create a template from that mesocycle.");
+    } catch (err) {
+      alert(apiErrorDetail(err, "Could not create a template from that mesocycle."));
       console.error("Error creating template from instance:", err);
     } finally {
       setBusyAction(null);
@@ -174,8 +177,8 @@ export default function Mesocycles() {
       // Functional update: a second delete started while this one was in
       // flight used to filter the pre-delete list and put the first one back.
       setMesocycles((prev) => prev.filter((m) => m.id !== id));
-    } catch (err: any) {
-      alert(err?.detail || "Could not delete that mesocycle template.");
+    } catch (err) {
+      alert(apiErrorDetail(err, "Could not delete that mesocycle template."));
       console.error('Error deleting mesocycle:', err);
     }
   };
@@ -270,12 +273,8 @@ export default function Mesocycles() {
       } else {
         navigate('/');
       }
-    } catch (err: any) {
-      if (err?.detail) {
-        alert(err.detail);
-      } else {
-        alert('Failed to start mesocycle');
-      }
+    } catch (err) {
+      alert(apiErrorDetail(err, 'Failed to start mesocycle'));
       console.error('Error starting mesocycle:', err);
     }
   };
@@ -309,8 +308,8 @@ export default function Mesocycles() {
       setShowCreateModal(false);
       resetForm();
       loadData();
-    } catch (err: any) {
-      const errorMessage = err?.detail || 'Could not create the template. Please try again.';
+    } catch (err) {
+      const errorMessage = apiErrorDetail(err, 'Could not create the template. Please try again.');
       alert(errorMessage);
       console.error('Error creating mesocycle:', err);
     } finally {

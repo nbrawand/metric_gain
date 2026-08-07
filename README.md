@@ -80,10 +80,19 @@ cd backend
 pytest tests/ -v
 ```
 
-**Frontend:**
+**Frontend:** (Vitest + Testing Library)
 ```bash
 cd frontend
-npm run test
+npm run test           # once
+npm run test:watch     # while working
+npm run test:coverage
+```
+
+**Lint** is clean and gates on warnings too (`--max-warnings 0`), so it is
+usable in CI as-is:
+```bash
+cd frontend
+npm run lint
 ```
 
 ### Full Database Reset
