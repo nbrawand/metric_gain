@@ -408,3 +408,169 @@ def test_client_ip_uses_the_proxy_written_forwarded_hop():
     assert client_ip(make_request({"x-forwarded-for": "203.0.113.9, 198.51.100.7"})) == "198.51.100.7"
     assert client_ip(make_request({"x-forwarded-for": "198.51.100.7"})) == "198.51.100.7"
     assert client_ip(make_request({})) == "10.0.0.1"
+
+
+# --- Admin surface ----------------------------------------------------------
+
+
+@pytest.fixture
+def admin_headers(client, make_auth_headers):
+    """An authenticated admin."""
+    headers = make_auth_headers("audit_admin@example.com", "Audit Admin")
+
+    from tests.conftest import TestingSessionLocal
+
+    db = TestingSessionLocal()
+    try:
+        db.query(User).filter(User.email == "audit_admin@example.com").update(
+            {"is_admin": True}
+        )
+        db.commit()
+    finally:
+        db.close()
+    return headers
+
+
+def _set_status(email: str, subscription_status: str) -> None:
+    from tests.conftest import TestingSessionLocal
+
+    db = TestingSessionLocal()
+    try:
+        db.query(User).filter(User.email == email).update(
+            {"subscription_status": subscription_status}
+        )
+        db.commit()
+    finally:
+        db.close()
+
+
+def _admin_routes():
+    """Every route currently mounted under /v1/admin, with a callable path."""
+    import re
+
+    from app.main import app
+
+    routes = []
+    for route in app.routes:
+        path = getattr(route, "path", "")
+        if not path.startswith("/v1/admin"):
+            continue
+        # Substitute any path params so the URL is requestable
+        concrete = re.sub(r"\{[^}]+\}", "1", path)
+        for method in sorted(getattr(route, "methods", set()) - {"HEAD", "OPTIONS"}):
+            routes.append((method, concrete))
+    return routes
+
+
+def test_every_admin_route_rejects_a_non_admin(client, make_auth_headers):
+    """Enumerated from the app, so a route added later is covered for free.
+
+    The guard used to live only in each endpoint's own signature, which meant a
+    new endpoint that forgot it would be open to any signed-in user with
+    nothing to catch it.
+    """
+    headers = make_auth_headers("nosy_user@example.com", "Nosy User")
+    routes = _admin_routes()
+    assert routes, "no admin routes found — the enumeration is broken, not the app"
+
+    for method, path in routes:
+        response = client.request(method, path, json={}, headers=headers)
+        assert response.status_code == status.HTTP_403_FORBIDDEN, (
+            f"{method} {path} returned {response.status_code} to a non-admin"
+        )
+
+
+def test_every_admin_route_rejects_an_anonymous_caller(client, test_db):
+    for method, path in _admin_routes():
+        response = client.request(method, path, json={})
+        assert response.status_code in (401, 403), (
+            f"{method} {path} returned {response.status_code} with no credentials"
+        )
+
+
+def test_grant_trial_is_audited(client, admin_headers, make_auth_headers):
+    make_auth_headers("audited_target@example.com", "Target")
+    # make_auth_headers creates active subscribers, and grant-trial rightly
+    # refuses those — move the target off "active" first
+    _set_status("audited_target@example.com", "none")
+
+    response = client.post(
+        "/v1/admin/grant-trial",
+        json={"email": "audited_target@example.com", "days": 14},
+        headers=admin_headers,
+    )
+    assert response.status_code == 200
+
+    log = client.get(
+        "/v1/admin/audit-log?target_email=audited_target@example.com",
+        headers=admin_headers,
+    ).json()
+
+    assert len(log) == 1
+    assert log[0]["action"] == "grant_trial"
+    assert log[0]["actor_email"] == "audit_admin@example.com"
+    assert log[0]["target_email"] == "audited_target@example.com"
+    assert log[0]["details"]["days"] == 14
+
+
+def test_set_subscription_records_the_status_it_moved_from(
+    client, admin_headers, make_auth_headers
+):
+    """from_status is what makes the entry useful in a billing dispute."""
+    make_auth_headers("status_target@example.com", "Target")
+
+    client.post(
+        "/v1/admin/set-subscription",
+        json={"email": "status_target@example.com", "status": "canceled"},
+        headers=admin_headers,
+    )
+
+    log = client.get(
+        "/v1/admin/audit-log?target_email=status_target@example.com",
+        headers=admin_headers,
+    ).json()
+
+    assert log[0]["action"] == "set_subscription"
+    assert log[0]["details"] == {"from_status": "active", "to_status": "canceled"}
+
+
+def test_revoke_sessions_is_audited(client, admin_headers, make_auth_headers):
+    make_auth_headers("revoked_target@example.com", "Target")
+
+    client.post(
+        "/v1/admin/revoke-sessions",
+        json={"email": "revoked_target@example.com"},
+        headers=admin_headers,
+    )
+
+    log = client.get(
+        "/v1/admin/audit-log?target_email=revoked_target@example.com",
+        headers=admin_headers,
+    ).json()
+
+    assert log[0]["action"] == "revoke_sessions"
+    assert log[0]["actor_email"] == "audit_admin@example.com"
+
+
+def test_a_failed_admin_action_writes_no_audit_row(
+    client, admin_headers, make_auth_headers
+):
+    """The log must not claim a change that never happened.
+
+    grant-trial refuses a paying customer; the audit row is added to the same
+    transaction as the change, so a rejected call leaves nothing behind.
+    """
+    make_auth_headers("paying_customer@example.com", "Payer")
+
+    response = client.post(
+        "/v1/admin/grant-trial",
+        json={"email": "paying_customer@example.com", "days": 30},
+        headers=admin_headers,
+    )
+    assert response.status_code == 400
+
+    log = client.get(
+        "/v1/admin/audit-log?target_email=paying_customer@example.com",
+        headers=admin_headers,
+    ).json()
+    assert log == []

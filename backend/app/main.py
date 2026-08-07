@@ -77,9 +77,14 @@ from app.routers import auth, exercises, mesocycles, mesocycle_instances, workou
 
 sub_guard = [Depends(require_active_subscription)]
 
+# Guard the whole admin surface at the mount rather than relying on each route
+# to remember. The per-route dependency stays too; this is the half that keeps
+# a newly added endpoint closed by default instead of open by default.
+admin_guard = [Depends(admin.require_admin)]
+
 app.include_router(auth.router, prefix="/v1/auth", tags=["Authentication"])
 app.include_router(billing.router, prefix="/v1/billing", tags=["Billing"])
-app.include_router(admin.router, prefix="/v1/admin", tags=["Admin"])
+app.include_router(admin.router, prefix="/v1/admin", tags=["Admin"], dependencies=admin_guard)
 app.include_router(exercises.router, prefix="/v1/exercises", tags=["Exercises"], dependencies=sub_guard)
 app.include_router(mesocycles.router, prefix="/v1/mesocycles", tags=["Mesocycle Templates"], dependencies=sub_guard)
 app.include_router(mesocycle_instances.router, prefix="/v1/mesocycle-instances", tags=["Mesocycle Instances"], dependencies=sub_guard)
