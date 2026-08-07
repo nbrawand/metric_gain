@@ -327,9 +327,18 @@ sign-in with the browser console open to catch what Google's GSI widget
 actually reaches for, then swap the header name, steps in `frontend/CSP.md`.
 Until then, tokens in localStorage mean an XSS is full account takeover.
 
-[ ] Tests for WorkoutExecution.tsx and Mesocycles.tsx (1,600 and 1,141 lines,
+[~] Tests for WorkoutExecution.tsx and Mesocycles.tsx (1,600 and 1,141 lines,
 no direct coverage). Both need refactoring to be testable; the components and
 stores they compose are covered, which is why this is lower than it looks.
+    WorkoutExecution has 9 tests now, and no refactoring was needed after all:
+    it renders under mocks once the instance fixture carries its nested
+    `mesocycle_template`, which is what the page actually reads the plan from.
+    They cover set logging, editing one field without destroying the other,
+    the skipped rule, and the four offline paths that decide whether a lift
+    survives a failed save. Mutation tested: removing the enqueue fails 4,
+    flattening the skipped rule fails 1, dropping the field-preserving spread
+    fails 3.
+    Mesocycles.tsx is still uncovered.
 
 [ ] Watch autoregulation against real training. The logic is well covered but
 the *policy* is unproven: +1 on a clean week, -1 below 60% of target reps,
