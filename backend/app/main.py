@@ -1,29 +1,18 @@
 """Main FastAPI application."""
 
-from contextlib import asynccontextmanager
-
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.utils.auth import require_active_subscription
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Run startup and shutdown tasks."""
-    yield  # App runs here
-
-    # Shutdown tasks (if any)
-
-
 # Create FastAPI app
 app = FastAPI(
     title="Strength Guider API",
-    description="The evidence-based strength guide that adapts to you",
+    description="Plan a training block, then train it with guided weight and RIR targets",
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
-    lifespan=lifespan,
 )
 
 # Configure CORS

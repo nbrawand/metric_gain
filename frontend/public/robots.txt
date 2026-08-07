@@ -4,7 +4,6 @@ Disallow: /admin
 Disallow: /workout/
 Disallow: /mesocycles/
 Disallow: /exercises
-Disallow: /profile
 Disallow: /subscribe
 Disallow: /billing/
 

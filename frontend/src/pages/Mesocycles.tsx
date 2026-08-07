@@ -195,7 +195,7 @@ export default function Mesocycles() {
     // Check if there's already an active instance
     const hasActiveInstance = instances.some(i => i.status === 'active');
     if (hasActiveInstance) {
-      alert('You already have an active mesocycle. Please complete or end it before starting a new one.');
+      alert('You already have an active mesocycle. End it before starting a new one.');
       return;
     }
 
@@ -509,7 +509,7 @@ export default function Mesocycles() {
                           : 'bg-teal-600 hover:bg-teal-700 text-white'
                       }`}
                     >
-                      {hasActiveInstance ? 'Active Meso Running' : 'Start Instance'}
+                      {hasActiveInstance ? 'Mesocycle Already Active' : 'Start Instance'}
                     </button>
                     <button
                       onClick={(e) => {

@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func
+
 
 from app.database import get_db
 from app.models.mesocycle import Mesocycle, MesocycleInstance, WorkoutTemplate, WorkoutExercise
@@ -313,7 +313,9 @@ async def create_mesocycle_from_instance(
                 exercise_id=exercise_id,
                 order_index=order_idx,
                 target_sets=params.get("target_sets", 2),
-                weekly_set_increment=params.get("weekly_set_increment", 0),
+                # Matches the default a new exercise gets everywhere else, so an
+                # exercise swapped in mid-block doesn't come back as a flat plan
+                weekly_set_increment=params.get("weekly_set_increment", 0.5),
                 target_reps_min=params.get("target_reps_min", 8),
                 target_reps_max=params.get("target_reps_max", 12),
                 starting_rir=params.get("starting_rir", 3),

@@ -203,7 +203,7 @@ export default function Terms() {
           <section id="userreg">
             <h2 className="text-xl font-bold text-white mb-4">4. USER REGISTRATION</h2>
             <p>
-              You may be required to register to use the Services. You agree to keep your password confidential and will be responsible for all use of your account and password. We reserve the right to remove, reclaim, or change a username you select if we determine, in our sole discretion, that such username is inappropriate, obscene, or otherwise objectionable.
+              You may be required to sign in with a supported third-party account (currently Google) to use the Services. You are responsible for all use of your account and for maintaining the security of the third-party account you sign in with. We reserve the right to remove or reclaim a display name if we determine, in our sole discretion, that it is inappropriate, obscene, or otherwise objectionable.
             </p>
           </section>
 
@@ -223,7 +223,7 @@ export default function Terms() {
 
             <h3 className="text-lg font-semibold text-white mt-6 mb-3">Cancellation</h3>
             <p className="mb-4">
-              All purchases are non-refundable. You can cancel your subscription at any time by logging into your account. Your cancellation will take effect at the end of the current paid term. If you have any questions or are unsatisfied with our Services, please email us at{' '}
+              All purchases are non-refundable. You can cancel your subscription at any time from the Manage Subscription link on your home page. Your cancellation will take effect at the end of the current paid term. If you have any questions or are unsatisfied with our Services, please email us at{' '}
               <a href="mailto:strengthguider@gmail.com" className="text-teal-400 hover:text-teal-300 transition-colors">
                 strengthguider@gmail.com
               </a>.

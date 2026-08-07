@@ -1,7 +1,6 @@
 """Mesocycle instance endpoints for starting and managing active training blocks."""
 
 import json
-import logging
 from collections import OrderedDict
 from typing import List, Optional
 from datetime import date
@@ -28,8 +27,6 @@ from app.services.progression import (
     compute_progression_targets,
     find_previous_performance,
 )
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter()
 

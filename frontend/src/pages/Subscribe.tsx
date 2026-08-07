@@ -28,7 +28,7 @@ export default function Subscribe() {
   return (
     <main className="max-w-lg mx-auto px-4 py-16">
       <div className="bg-gray-800 rounded-2xl p-8 text-center">
-        <h1 className="text-3xl font-bold text-white mb-2">Strength Guider Pro</h1>
+        <h1 className="text-3xl font-bold text-white mb-2">Subscribe to Strength Guider</h1>
         {trialExpired && (
           <p className="text-red-400 text-sm mb-4">
             Your free trial has ended. Subscribe to continue.
@@ -43,19 +43,19 @@ export default function Subscribe() {
         <ul className="text-left text-gray-300 space-y-3 mb-8">
           <li className="flex items-start gap-3">
             <span className="text-teal-400 mt-0.5">&#10003;</span>
-            <span>Personalized volume optimization for every muscle group</span>
+            <span>Plan your own volume: starting sets and a weekly ramp per exercise</span>
           </li>
           <li className="flex items-start gap-3">
             <span className="text-teal-400 mt-0.5">&#10003;</span>
-            <span>Auto-generated mesocycle programs</span>
+            <span>Review weekly sets per muscle group before you commit to a block</span>
           </li>
           <li className="flex items-start gap-3">
             <span className="text-teal-400 mt-0.5">&#10003;</span>
-            <span>Workout tracking with adaptive feedback</span>
+            <span>Guided workouts with automatic weight targets and an RIR ramp</span>
           </li>
           <li className="flex items-start gap-3">
             <span className="text-teal-400 mt-0.5">&#10003;</span>
-            <span>Lifter profile with per-muscle tuning</span>
+            <span>Ready-made mesocycle templates and 115+ exercises</span>
           </li>
         </ul>
 

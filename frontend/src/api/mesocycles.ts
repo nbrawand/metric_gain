@@ -12,7 +12,6 @@ import type {
   MesocycleInstanceListItem,
   MesocycleInstanceCreate,
   MesocycleInstanceUpdate,
-  WorkoutTemplate,
   WorkoutTemplateCreate,
 } from '../types/mesocycle';
 
@@ -64,18 +63,6 @@ export async function deleteMesocycle(id: number, accessToken: string): Promise<
 /**
  * Add a workout template to an existing mesocycle
  */
-export async function addWorkoutTemplate(
-  mesocycleId: number,
-  data: WorkoutTemplateCreate,
-  accessToken: string
-): Promise<WorkoutTemplate> {
-  return post<WorkoutTemplate>(
-    `${MESOCYCLES_ENDPOINT}/${mesocycleId}/workout-templates`,
-    data,
-    accessToken
-  );
-}
-
 /**
  * Replace all workout templates for a mesocycle
  */
@@ -162,6 +149,3 @@ export async function updateMesocycleInstance(
 /**
  * Delete a mesocycle instance
  */
-export async function deleteMesocycleInstance(id: number, accessToken: string): Promise<void> {
-  return del<void>(`${INSTANCES_ENDPOINT}/${id}`, accessToken);
-}

@@ -86,7 +86,7 @@ export default function Landing() {
       {/* Key Features */}
       <section className="max-w-5xl mx-auto px-4 pb-16">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Volume Prescription */}
+          {/* Plan Your Volume */}
           <div
             onClick={() => navigate('/how-it-works#volume-model')}
             className="bg-gray-800 rounded-lg border border-gray-700 p-6 cursor-pointer transition-all duration-200 hover:scale-105 hover:border-teal-600 hover:shadow-lg hover:shadow-teal-900/30"
@@ -118,7 +118,7 @@ export default function Landing() {
             </p>
           </div>
 
-          {/* Adaptive Feedback */}
+          {/* Stays on Your Plan */}
           <div
             onClick={() => navigate('/how-it-works#volume-model')}
             className="bg-gray-800 rounded-lg border border-gray-700 p-6 cursor-pointer transition-all duration-200 hover:scale-105 hover:border-teal-600 hover:shadow-lg hover:shadow-teal-900/30"
@@ -146,7 +146,7 @@ export default function Landing() {
             </div>
             <h3 className="text-white font-semibold text-lg mb-2">Learn Exercise Science as You Go</h3>
             <p className="text-gray-400 text-sm leading-relaxed">
-              Strength Guider introduces concepts like progressive overload, fatigue management, and periodization as you train. You learn to structure your training into mesocycles, the building blocks of a structured routine.
+              Strength Guider introduces concepts like progressive overload, RIR-based intensity, and periodization as you train. You learn to structure your training into mesocycles, the building blocks of a structured routine.
             </p>
           </div>
         </div>

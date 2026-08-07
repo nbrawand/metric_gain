@@ -1,22 +1,22 @@
-# Metric Gain - Workout Progressive Web App
+# Strength Guider - Workout Progressive Web App
 
-A progressive web app for optimizing strength training through scientifically-backed progressive overload and auto-regulation.
+A progressive web app for running structured strength training blocks that you plan yourself.
 
 ## Features
 
-- **Mesocycle Management**: Create 3-7 week training blocks
+- **Mesocycle Management**: Create 3-12 week training blocks
 - **Progressive Overload**: Automatic weight and volume progression
-- **Auto-Regulation**: Adjust training based on recovery feedback
+- **Volume Planning**: Pick a starting set count and a 0-2 sets/week ramp per exercise, then review weekly sets per muscle group before committing
 - **Offline Support**: Log workouts without internet connection
-- **Exercise Library**: 50+ pre-loaded exercises + custom exercises
-- **Templates**: Pre-built workout programs
+- **Exercise Library**: 115 pre-loaded exercises + custom exercises
+- **Templates**: 10 stock mesocycle templates
 
 ## Tech Stack
 
 - **Frontend**: React + TypeScript + Vite + Tailwind CSS
 - **Backend**: FastAPI (Python)
 - **Database**: PostgreSQL
-- **Deployment**: Vercel (frontend) + Railway (backend)
+- **Deployment**: Vercel (frontend) + Render (backend)
 
 ## Quick Start
 
@@ -83,7 +83,7 @@ npm run test
 
 ### Full Database Reset
 
-This wipes all data (users, mesocycles, workouts), re-runs migrations, and re-seeds stock data (49 exercises + Push Pull Legs template). The backend seeds automatically on startup.
+This wipes all data (users, mesocycles, workouts), re-runs migrations, and re-seeds stock data. Seeding is a separate command, not part of startup.
 
 ```bash
 # 1. Stop the backend (if running)
@@ -98,15 +98,18 @@ cd backend
 source venv/bin/activate
 alembic upgrade head
 
-# 4. Restart backend (seeds exercises + stock mesocycles on startup)
+# 4. Re-seed stock exercises and templates
+python pre_deploy.py
+
+# 5. Restart backend
 uvicorn app.main:app --reload
 ```
 
-After restart, register a new account at `http://localhost:5173`.
+After restart, sign in with Google at `http://localhost:5173`.
 
-**What gets seeded on startup** (see `backend/app/main.py`):
-- `seed_exercises()` — 49 default exercises across all muscle groups
-- `seed_mesocycles()` — Push Pull Legs 6-day template (stock, available to all users)
+**What gets seeded** (see `backend/pre_deploy.py`):
+- `seed_exercises()` — 115 default exercises across all muscle groups
+- `seed_mesocycles()` — 10 stock templates (Push Pull Legs, 2/3-Day Full Body, 4-Day Upper Lower, 5-Day L/P/P/L/U, Beginner Strength, Beginner Machine Only, Beginner 3-Day Upper/Lower, Bro Split, Glute & Lower Body Focus)
 
 Seed scripts are in `backend/app/utils/seed_exercises.py` and `backend/app/utils/seed_mesocycles.py`. They only run if no stock data exists yet.
 

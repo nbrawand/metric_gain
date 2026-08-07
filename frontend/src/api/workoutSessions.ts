@@ -7,21 +7,12 @@ import { get, post, patch, del } from './client';
 import {
   WorkoutSession,
   WorkoutSessionListItem,
-  WorkoutSessionCreate,
   WorkoutSessionUpdate,
   WorkoutSet,
-  WorkoutSetCreate,
   WorkoutSetUpdate,
 } from '../types/workout_session';
 
 // Workout Session endpoints
-export const createWorkoutSession = async (
-  sessionData: WorkoutSessionCreate,
-  accessToken: string
-): Promise<WorkoutSession> => {
-  return post<WorkoutSession>('/v1/workout-sessions/', sessionData, accessToken);
-};
-
 export const listWorkoutSessions = async (
   filters: {
     mesocycle_instance_id?: number;
@@ -55,29 +46,7 @@ export const updateWorkoutSession = async (
   return patch<WorkoutSession>(`/v1/workout-sessions/${sessionId}`, sessionUpdate, accessToken);
 };
 
-export const deleteWorkoutSession = async (
-  sessionId: number,
-  accessToken: string
-): Promise<void> => {
-  await del(`/v1/workout-sessions/${sessionId}`, accessToken);
-};
-
 // Workout Set endpoints
-export const addWorkoutSet = async (
-  sessionId: number,
-  setData: WorkoutSetCreate,
-  accessToken: string
-): Promise<WorkoutSet> => {
-  return post<WorkoutSet>(`/v1/workout-sessions/${sessionId}/sets`, setData, accessToken);
-};
-
-export const listWorkoutSets = async (
-  sessionId: number,
-  accessToken: string
-): Promise<WorkoutSet[]> => {
-  return get<WorkoutSet[]>(`/v1/workout-sessions/${sessionId}/sets`, accessToken);
-};
-
 export const updateWorkoutSet = async (
   sessionId: number,
   setId: number,
@@ -85,14 +54,6 @@ export const updateWorkoutSet = async (
   accessToken: string
 ): Promise<WorkoutSet> => {
   return patch<WorkoutSet>(`/v1/workout-sessions/${sessionId}/sets/${setId}`, setUpdate, accessToken);
-};
-
-export const deleteWorkoutSet = async (
-  sessionId: number,
-  setId: number,
-  accessToken: string
-): Promise<void> => {
-  await del(`/v1/workout-sessions/${sessionId}/sets/${setId}`, accessToken);
 };
 
 // Exercise Management endpoints (mid-workout swap/remove/add)

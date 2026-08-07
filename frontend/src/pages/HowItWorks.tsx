@@ -82,7 +82,7 @@ export default function HowItWorks() {
           Progressive overload is a core principle of strength training. It refers to gradually increasing the demands placed on your muscles over time so that they continue to adapt. This can be done by increasing the weight lifted, performing more repetitions at a given weight, or adding more sets.
         </p>
         <p className="text-gray-300 leading-relaxed">
-          Strength Guider tracks these variables and suggests small, incremental increases each week. Progressive overload is applied through mesocycles, which are structured training blocks that increase demands week over week before a planned recovery period.
+          Strength Guider tracks these variables and suggests small, incremental increases each week. Progressive overload is applied through mesocycles: structured training blocks that increase demands week over week, peaking in the final week.
         </p>
       </section>
 
@@ -90,7 +90,7 @@ export default function HowItWorks() {
       <section id="mesocycles" className="bg-gray-800 rounded-lg p-6 scroll-mt-16">
         <h2 className="text-xl font-semibold text-teal-400 mb-3">What Is a Mesocycle?</h2>
         <p className="text-gray-300 leading-relaxed mb-3">
-          A mesocycle is a training block, typically three to seven weeks long, where each week builds on the previous one through gradual increases in weight, repetitions, or volume.
+          A mesocycle is a training block, typically three to twelve weeks long, where each week builds on the previous one through gradual increases in weight, repetitions, or volume.
         </p>
         <p className="text-gray-300 leading-relaxed mb-3">
           Training in structured blocks helps ensure that each session has a clear purpose. It also helps balance training stimulus with recovery, reducing the risk of doing too little to see progress or too much to recover from.

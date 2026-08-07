@@ -70,6 +70,13 @@ async def create_checkout_session(
     if not settings.STRIPE_SECRET_KEY:
         raise HTTPException(status_code=501, detail="Stripe not configured")
 
+    # Checking out again would open a second subscription and orphan the first,
+    # which keeps billing with no user attached to its webhooks
+    if current_user.subscription_status == "active":
+        raise HTTPException(
+            status_code=400, detail="You already have an active subscription"
+        )
+
     # Create Stripe Customer if none exists
     if not current_user.stripe_customer_id:
         customer = stripe.Customer.create(
@@ -195,7 +202,7 @@ async def create_portal_session(
 
     portal_session = stripe.billing_portal.Session.create(
         customer=current_user.stripe_customer_id,
-        return_url=f"{settings.FRONTEND_URL}/profile",
+        return_url=f"{settings.FRONTEND_URL}/",
     )
 
     return {"url": portal_session.url}

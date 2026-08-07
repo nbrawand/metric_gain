@@ -124,7 +124,7 @@ export const useAuthStore = create<AuthState>()(
               // Refresh failed, logout
               get().logout();
               set({
-                error: 'Session expired. Please login again.',
+                error: 'Session expired. Please log in again.',
                 isLoading: false,
               });
             }

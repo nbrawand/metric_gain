@@ -15,4 +15,5 @@
     <priority>0.5</priority>
     <changefreq>monthly</changefreq>
   </url>
+  <url><loc>https://www.strength-guider.com/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
 </urlset>

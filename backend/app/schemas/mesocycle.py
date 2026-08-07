@@ -23,32 +23,8 @@ class WorkoutExerciseBase(BaseModel):
     notes: Optional[str] = None
 
 
-class WorkoutExerciseCreate(BaseModel):
-    """Schema for creating a workout exercise."""
-
-    exercise_id: int
-    order_index: int = Field(0, ge=0)
-    target_sets: int = Field(3, ge=1, le=10)  # Week-1 starting sets
-    weekly_set_increment: float = Field(0.0, ge=0, le=3)  # Sets added per week
-    target_reps_min: int = Field(8, ge=1, le=100)  # Default 8 reps
-    target_reps_max: int = Field(12, ge=1, le=100)  # Default 12 reps
-    starting_rir: int = Field(3, ge=0, le=5)  # Default 3 RIR
-    ending_rir: int = Field(0, ge=0, le=5)  # Default 0 RIR
-    notes: Optional[str] = None
-
-
-class WorkoutExerciseUpdate(BaseModel):
-    """Schema for updating a workout exercise."""
-
-    exercise_id: Optional[int] = None
-    order_index: Optional[int] = Field(None, ge=0)
-    target_sets: Optional[int] = Field(None, ge=1, le=10)
-    weekly_set_increment: Optional[float] = Field(None, ge=0, le=3)
-    target_reps_min: Optional[int] = Field(None, ge=1, le=100)
-    target_reps_max: Optional[int] = Field(None, ge=1, le=100)
-    starting_rir: Optional[int] = Field(None, ge=0, le=5)
-    ending_rir: Optional[int] = Field(None, ge=0, le=5)
-    notes: Optional[str] = None
+class WorkoutExerciseCreate(WorkoutExerciseBase):
+    """Schema for creating a workout exercise (same fields as the base)."""
 
 
 class WorkoutExerciseResponse(WorkoutExerciseBase):
@@ -79,14 +55,6 @@ class WorkoutTemplateCreate(WorkoutTemplateBase):
     """Schema for creating a workout template."""
 
     exercises: List[WorkoutExerciseCreate] = []
-
-
-class WorkoutTemplateUpdate(BaseModel):
-    """Schema for updating a workout template."""
-
-    name: Optional[str] = Field(None, min_length=1, max_length=255)
-    description: Optional[str] = None
-    order_index: Optional[int] = Field(None, ge=0)
 
 
 class WorkoutTemplateResponse(WorkoutTemplateBase):

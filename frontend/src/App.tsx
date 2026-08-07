@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Login } from './pages/Login';
 import { Home } from './pages/Home';
@@ -84,14 +84,54 @@ function RootPage() {
 }
 
 function BillingSuccess() {
+  const navigate = useNavigate();
+  const fetchCurrentUser = useAuthStore((s) => s.fetchCurrentUser);
+  const [confirming, setConfirming] = useState(true);
+
+  // Stripe sends the customer back before its webhook has necessarily reached
+  // us, so poll until the account actually flips to active. Navigating away on
+  // the stale status sent someone who had just paid back to the paywall — where
+  // subscribing again would have charged them a second time.
+  useEffect(() => {
+    let cancelled = false;
+    let attempts = 0;
+
+    const poll = async () => {
+      await fetchCurrentUser();
+      if (cancelled) return;
+      attempts += 1;
+      const status = useAuthStore.getState().user?.subscription_status;
+      if (status === 'active' || attempts >= 10) {
+        setConfirming(false);
+        return;
+      }
+      setTimeout(poll, 1500);
+    };
+
+    poll();
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchCurrentUser]);
+
   return (
     <main className="max-w-lg mx-auto px-4 py-16 text-center">
       <div className="bg-gray-800 rounded-2xl p-8">
-        <h1 className="text-2xl font-bold text-white mb-4">Subscription Active!</h1>
-        <p className="text-gray-300 mb-6">Your payment was successful. You now have full access.</p>
-        <a href="/" className="inline-block bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
+        <h1 className="text-2xl font-bold text-white mb-4">
+          {confirming ? 'Confirming your payment...' : 'Subscription active'}
+        </h1>
+        <p className="text-gray-300 mb-6">
+          {confirming
+            ? 'This takes a few seconds. Please keep this page open.'
+            : 'Your payment was successful. You now have full access.'}
+        </p>
+        <button
+          onClick={() => navigate('/')}
+          disabled={confirming}
+          className="inline-block bg-teal-600 hover:bg-teal-700 disabled:bg-teal-800 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+        >
           Go to Dashboard
-        </a>
+        </button>
       </div>
     </main>
   );

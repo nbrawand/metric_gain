@@ -21,13 +21,6 @@ export interface ExerciseCreate {
   equipment?: string;
 }
 
-export interface ExerciseUpdate {
-  name?: string;
-  description?: string;
-  muscle_group?: string;
-  equipment?: string;
-}
-
 export interface ExerciseListParams {
   muscle_group?: string;
   equipment?: string;

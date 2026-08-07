@@ -1,13 +1,10 @@
 """API routes for workout session management."""
 
 from typing import List
-from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
-
-import logging
 
 from app.database import get_db
 from app.models.workout_session import WorkoutSession, WorkoutSet
@@ -21,8 +18,6 @@ from app.services.progression import (
     find_previous_performance,
     round_to_nearest_5,
 )
-
-logger = logging.getLogger(__name__)
 
 from app.schemas.workout_session import (
     WorkoutSessionCreate,
@@ -95,7 +90,7 @@ def create_workout_session(
     current_user: User = Depends(get_current_user),
 ):
     """Create a new workout session and auto-generate sets from template."""
-    from app.models.mesocycle import Mesocycle, MesocycleInstance
+    from app.models.mesocycle import MesocycleInstance
 
     # The instance must be the caller's, and the template must belong to it —
     # otherwise the generated sets would expose another user's plan.
@@ -827,7 +822,7 @@ def add_exercise(
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Exercise already exists in this session",
+            detail="That exercise is already in this session",
         )
 
     # Determine order_index: max existing + 100
@@ -858,6 +853,16 @@ def add_exercise(
     if total_weeks:
         target_rir = compute_target_rir(workout_session.week_number, total_weeks)
 
+    # Seed targets from history like every other set-generating path, so an
+    # exercise added mid-block isn't the only one that starts with no guidance
+    prev_weight, prev_reps = find_previous_performance(
+        db, current_user.id, request.exercise_id,
+        mesocycle_instance_id=workout_session.mesocycle_instance_id,
+        current_week=workout_session.week_number,
+        current_day=workout_session.day_number,
+    )
+    target_weight, target_reps = compute_progression_targets(prev_weight, prev_reps, None)
+
     for set_num in range(1, num_sets + 1):
         workout_set = WorkoutSet(
             workout_session_id=session_id,
@@ -866,8 +871,8 @@ def add_exercise(
             order_index=new_order_index,
             weight=0,
             reps=0,
-            target_weight=None,
-            target_reps=None,
+            target_weight=target_weight,
+            target_reps=target_reps,
             target_rir=target_rir,
         )
         db.add(workout_set)
@@ -917,7 +922,9 @@ def add_set_to_exercise(
         order_index=last_set.order_index,
         weight=0,
         reps=0,
-        target_weight=None,
+        # Carry the whole target across, not just reps — an extra set of the
+        # same exercise has the same target as the ones beside it
+        target_weight=last_set.target_weight,
         target_reps=last_set.target_reps,
         target_rir=last_set.target_rir,
     )

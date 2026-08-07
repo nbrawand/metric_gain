@@ -3,9 +3,8 @@
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from typing import Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -23,24 +22,12 @@ async def require_admin(current_user: User = Depends(get_current_user)) -> User:
 
 class GrantTrialRequest(BaseModel):
     email: EmailStr
-    days: int
+    days: int = Field(..., ge=1, le=365)
 
 
 class SetSubscriptionRequest(BaseModel):
     email: EmailStr
     status: str  # "active", "trialing", "canceled", "none"
-
-
-class UserListItem(BaseModel):
-    id: int
-    email: str
-    full_name: Optional[str] = None
-    subscription_status: str
-    trial_ends_at: Optional[str] = None
-    is_admin: bool
-
-    class Config:
-        from_attributes = True
 
 
 @router.post("/grant-trial")
@@ -53,6 +40,15 @@ async def grant_trial(
     user = db.query(User).filter(User.email == body.email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    if user.subscription_status == "active":
+        # Flipping a paying customer to "trialing" leaves Stripe billing them
+        # while hiding the button they would use to cancel, then locks them out
+        # when the granted trial runs out
+        raise HTTPException(
+            status_code=400,
+            detail="User has an active paid subscription; cancel it before granting a trial",
+        )
 
     now = datetime.now(timezone.utc)
     # Extend from current trial end if still in the future, otherwise from now

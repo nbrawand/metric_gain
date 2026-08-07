@@ -12,7 +12,7 @@ export default defineConfig({
       manifest: {
         name: 'Strength Guider',
         short_name: 'Strength Guider',
-        description: 'The evidence-based strength guide that adapts to you',
+        description: 'Evidence-based training blocks, planned by you',
         theme_color: '#111827',
         background_color: '#111827',
         display: 'standalone',
@@ -37,15 +37,12 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/v1\//],
         runtimeCaching: [
           {
+            // API responses are per-user and must never be served from cache:
+            // the cache outlives logout, so the next account on the device
+            // would read the previous one's data, and a cached 200 also hides
+            // the "can't reach server" banner while showing hours-old state.
             urlPattern: /\/v1\/.*/,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24,
-              },
-            },
+            handler: 'NetworkOnly',
           },
         ],
       },

@@ -75,8 +75,15 @@ export function setAuthStoreRef(setToken: AuthStoreSetter, logout: AuthStoreLogo
 /**
  * Try to refresh the access token using the stored refresh token.
  * Updates both localStorage and Zustand in-memory state.
- * Returns the new access token, or null if refresh failed.
+ *
+ * Returns the new access token, or null when the session is genuinely over
+ * (no stored token, or the server rejected it). Throws RefreshUnavailableError
+ * when the server could not be reached — the refresh token is probably still
+ * good, and treating that as an expiry signed people out mid-workout on a
+ * flaky connection.
  */
+class RefreshUnavailableError extends Error {}
+
 let refreshPromise: Promise<string | null> | null = null;
 
 async function tryRefreshToken(): Promise<string | null> {
@@ -91,11 +98,16 @@ async function tryRefreshToken(): Promise<string | null> {
       const refreshToken = state?.refreshToken;
       if (!refreshToken) return null;
 
-      const response = await fetch(`${API_BASE_URL}/v1/auth/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: refreshToken }),
-      });
+      let response: Response;
+      try {
+        response = await fetch(`${API_BASE_URL}/v1/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+      } catch {
+        throw new RefreshUnavailableError();
+      }
 
       if (!response.ok) return null;
 
@@ -108,8 +120,6 @@ async function tryRefreshToken(): Promise<string | null> {
       }
 
       return newAccessToken;
-    } catch {
-      return null;
     } finally {
       refreshPromise = null;
     }
@@ -153,7 +163,19 @@ async function fetchApi<T>(
 
     // On 401, try refreshing the token once
     if (response.status === 401 && !_isRetry) {
-      const newToken = await tryRefreshToken();
+      let newToken: string | null = null;
+      try {
+        newToken = await tryRefreshToken();
+      } catch (refreshErr) {
+        if (refreshErr instanceof RefreshUnavailableError) {
+          // Could not reach the server to refresh — keep the session and let
+          // the caller handle a transient failure
+          setServerReachable(false);
+          const error: ApiError = { detail: 'An error occurred', status: 0 };
+          throw error;
+        }
+        throw refreshErr;
+      }
       if (newToken) {
         // Build retry headers as a plain object so the spread on line 137 works
         const existingHeaders: Record<string, string> = {};

@@ -59,6 +59,10 @@ export default function Layout() {
   };
 
   const mesocycle = activeInstance?.mesocycle_template;
+  // The snapshot taken when the block started: the template itself can be
+  // edited (or re-seeded on deploy, for stock ones) mid-block, which would
+  // otherwise resize the calendar and hide sessions the user still has to do.
+  const instanceWeeks = activeInstance?.template_weeks || mesocycle?.weeks || 0;
 
   const getDayLabel = (dayNumber: number): string => `Day ${dayNumber}`;
 
@@ -209,10 +213,10 @@ export default function Layout() {
                 {/* Week Headers */}
                 <div className="flex gap-2 mb-2">
                   <div className="w-12"></div>
-                  {Array.from({ length: mesocycle.weeks }, (_, i) => i + 1).map(weekNum => (
+                  {Array.from({ length: instanceWeeks }, (_, i) => i + 1).map(weekNum => (
                     <div key={weekNum} className="flex-1 min-w-[60px] text-center">
                       <div className="text-xs text-gray-400 font-semibold">
-                        {weekNum === mesocycle.weeks ? 'DL' : `${weekNum}`}
+                        {`${weekNum}`}
                       </div>
                     </div>
                   ))}
@@ -224,7 +228,7 @@ export default function Layout() {
                     <div className="w-12 flex items-center">
                       <span className="text-xs text-gray-400">{getDayLabel(dayNum)}</span>
                     </div>
-                    {Array.from({ length: mesocycle.weeks }, (_, i) => i + 1).map(weekNum => {
+                    {Array.from({ length: instanceWeeks }, (_, i) => i + 1).map(weekNum => {
                       const status = getSessionStatus(weekNum, dayNum);
                       return (
                         <div key={weekNum} className="flex-1 min-w-[60px]">

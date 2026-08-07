@@ -30,7 +30,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
         <>
           <p className="text-gray-300 leading-relaxed mb-3">
             A <span className="text-teal-400 font-medium">mesocycle</span> is a
-            structured training block, typically 3-7 weeks long, where each week
+            structured training block, typically 3-12 weeks long, where each week
             builds on the previous one through gradual increases in volume and
             intensity.
           </p>

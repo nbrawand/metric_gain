@@ -2,13 +2,8 @@
  * Exercise API client
  */
 
-import { get, post, put, del } from './client';
-import type {
-  Exercise,
-  ExerciseCreate,
-  ExerciseUpdate,
-  ExerciseListParams,
-} from '../types/exercise';
+import { get, post, del } from './client';
+import type { Exercise, ExerciseCreate, ExerciseListParams } from '../types/exercise';
 
 const EXERCISES_BASE = '/v1/exercises';
 
@@ -44,16 +39,6 @@ export async function getMuscleGroups(accessToken: string): Promise<string[]> {
 }
 
 /**
- * Get a specific exercise by ID
- */
-export async function getExercise(
-  exerciseId: number,
-  accessToken: string
-): Promise<Exercise> {
-  return get<Exercise>(`${EXERCISES_BASE}/${exerciseId}`, accessToken);
-}
-
-/**
  * Create a custom exercise
  */
 export async function createExercise(
@@ -61,17 +46,6 @@ export async function createExercise(
   accessToken: string
 ): Promise<Exercise> {
   return post<Exercise>(`${EXERCISES_BASE}/`, data, accessToken);
-}
-
-/**
- * Update a custom exercise
- */
-export async function updateExercise(
-  exerciseId: number,
-  data: ExerciseUpdate,
-  accessToken: string
-): Promise<Exercise> {
-  return put<Exercise>(`${EXERCISES_BASE}/${exerciseId}`, data, accessToken);
 }
 
 /**

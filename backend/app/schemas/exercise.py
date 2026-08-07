@@ -43,12 +43,3 @@ class ExerciseResponse(ExerciseBase):
         from_attributes = True
 
 
-class ExerciseListParams(BaseModel):
-    """Query parameters for listing exercises."""
-
-    muscle_group: Optional[str] = None
-    equipment: Optional[str] = None
-    search: Optional[str] = None
-    include_custom: bool = True
-    skip: int = Field(0, ge=0)
-    limit: int = Field(100, ge=1, le=500)

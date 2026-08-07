@@ -17,7 +17,7 @@ export function Login() {
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">Strength Guider</h1>
-          <p className="text-gray-400 text-sm italic">The evidence-based strength guide that adapts to you</p>
+          <p className="text-gray-400 text-sm italic">Evidence-based training blocks, planned by you</p>
         </div>
 
         {error && (

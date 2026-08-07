@@ -187,8 +187,9 @@ export default function WorkoutExecution() {
       });
       setSession(updated);
       setShowExerciseMenu(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error removing exercise:', err);
+      setError(err?.detail || 'Could not remove that exercise. Please try again.');
     }
   };
 
@@ -209,8 +210,9 @@ export default function WorkoutExecution() {
     try {
       const updated = await addSetToExercise(session.id, exerciseId, accessToken);
       setSession(updated);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error adding set:', err);
+      setError(err?.detail || 'Could not add a set. Please try again.');
     }
   };
 
@@ -226,8 +228,9 @@ export default function WorkoutExecution() {
         return next;
       });
       setSession(updated);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error removing set:', err);
+      setError(err?.detail || 'Could not remove that set. Please try again.');
     }
   };
 
@@ -464,7 +467,7 @@ export default function WorkoutExecution() {
     }
   };
 
-  // Auto-dismiss completion banner after 3 seconds
+  // Auto-dismiss completion banner
   useEffect(() => {
     if (!completionBanner) return;
     const timer = setTimeout(() => setCompletionBanner(null), 2000);
@@ -555,7 +558,7 @@ export default function WorkoutExecution() {
       );
 
       // Check if all workouts in the mesocycle are now completed
-      const totalWorkouts = mesocycle.weeks * daysPerWeek;
+      const totalWorkouts = (instance.template_weeks || mesocycle.weeks) * daysPerWeek;
       const completedCount = updatedSessions.filter(s => s.status === 'completed').length;
 
       if (completedCount >= totalWorkouts) {
@@ -578,8 +581,9 @@ export default function WorkoutExecution() {
 
       // Show the completion banner for the workout we just finished
       setCompletionBanner({ week: completedWeek, day: completedDay });
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error completing workout:', err);
+      setError(err?.detail || 'Could not complete the workout. Your sets are saved — please try again.');
     }
   };
 
@@ -614,13 +618,18 @@ export default function WorkoutExecution() {
     if (set.weight > 0) return '';
 
     if (set.target_weight && set.target_weight > 0) {
-      return `target: ${Math.round(set.target_weight / 5) * 5} lbs`;
+      // The backend already rounds to the nearest 5; rounding again here made
+      // this disagree with the placeholder showing the same target
+      return `target: ${set.target_weight} lbs`;
     }
 
     return '';
   };
 
   const mesocycle = instance?.mesocycle_template;
+  // Week count is taken from the snapshot made when the block started, so
+  // later edits to the template cannot resize the calendar under the user.
+  const instanceWeeks = instance?.template_weeks || mesocycle?.weeks || 0;
 
   // Look up template exercise to get notes
   const getTemplateExercise = (exerciseId: number) => {
@@ -728,8 +737,9 @@ export default function WorkoutExecution() {
         const newOrderIndex = s.exercise_id === exerciseId ? targetOrderIndex : currentOrderIndex;
         return updateWorkoutSet(session.id, s.id, { order_index: newOrderIndex }, accessToken);
       }));
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error reordering exercises:', err);
+      setError(err?.detail || 'Could not reorder exercises. Please try again.');
     }
   };
 
@@ -802,8 +812,9 @@ export default function WorkoutExecution() {
       await Promise.all(changedSets.map(u =>
         updateWorkoutSet(session.id, u.setId, { order_index: u.newOrderIndex }, accessToken)
       ));
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error reordering muscle groups:', err);
+      setError(err?.detail || 'Could not reorder muscle groups. Please try again.');
     }
   };
 
@@ -902,10 +913,10 @@ export default function WorkoutExecution() {
                 {/* Week Headers */}
                 <div className="flex gap-2 mb-2">
                   <div className="w-12"></div>
-                  {Array.from({ length: mesocycle.weeks }, (_, i) => i + 1).map(weekNum => (
+                  {Array.from({ length: instanceWeeks }, (_, i) => i + 1).map(weekNum => (
                     <div key={weekNum} className="flex-1 min-w-[60px] text-center">
                       <div className="text-xs text-gray-400 font-semibold">
-                        {weekNum === mesocycle.weeks ? 'DL' : `${weekNum}`}
+                        {`${weekNum}`}
                       </div>
                     </div>
                   ))}
@@ -920,7 +931,7 @@ export default function WorkoutExecution() {
                     </div>
 
                     {/* Week Cells */}
-                    {Array.from({ length: mesocycle.weeks }, (_, i) => i + 1).map(weekNum => {
+                    {Array.from({ length: instanceWeeks }, (_, i) => i + 1).map(weekNum => {
                       const status = getSessionStatus(weekNum, dayNum);
                       const sessId = getSessionId(weekNum, dayNum);
                       const isCurrentSession = sessId === session?.id;
@@ -1050,7 +1061,7 @@ export default function WorkoutExecution() {
                       <div className="min-w-0">
                         <h3 className="font-semibold">{exerciseName}</h3>
                         <p className="text-xs text-gray-400">
-                          {exerciseSets[0]?.exercise?.equipment || 'BODYWEIGHT'}
+                          {exerciseSets[0]?.exercise?.equipment || 'Bodyweight'}
                           {collapsedExercises.has(exerciseId) && ` -- ${exerciseSets.length} ${exerciseSets.length === 1 ? 'set' : 'sets'}`}
                         </p>
                       </div>
@@ -1226,7 +1237,7 @@ export default function WorkoutExecution() {
                             {set.reps === 0 && (() => {
                               // Prefer the RIR stored on the set: that is the plan the
                               // backend generated, and recomputing it here can disagree.
-                              const totalWeeks = mesocycle.weeks;
+                              const totalWeeks = instanceWeeks;
                               const weekRir = set.target_rir ?? (
                                 totalWeeks <= 1
                                   ? 0

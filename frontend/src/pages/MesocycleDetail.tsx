@@ -118,7 +118,20 @@ export default function MesocycleDetail() {
   const handleSave = async () => {
     if (!id || !mesocycle || !accessToken) return;
 
-    // Validate
+    // Validate here: there is no <form>, so the `required` attributes on these
+    // inputs never run
+    if (!editData.name.trim()) {
+      alert('Please enter a mesocycle name');
+      return;
+    }
+    if (editTemplates.length === 0) {
+      alert('Please add at least one training day');
+      return;
+    }
+    if (editTemplates.some((w) => !w.name.trim())) {
+      alert('Please give every training day a workout name');
+      return;
+    }
     const hasEmptyWorkouts = editTemplates.some((w) => w.exercises.length === 0);
     if (hasEmptyWorkouts) {
       alert('Please add at least one exercise to each training day');
@@ -128,7 +141,11 @@ export default function MesocycleDetail() {
     try {
       setSaving(true);
 
-      // Update mesocycle metadata
+      // Workouts first: this is the call the backend refuses while an instance
+      // is running, and writing the metadata before it failed left the template
+      // half-saved with the page still showing the old values.
+      await replaceWorkoutTemplates(parseInt(id), editTemplates, accessToken);
+
       await updateMesocycle(
         parseInt(id),
         {
@@ -139,9 +156,6 @@ export default function MesocycleDetail() {
         },
         accessToken
       );
-
-      // Replace workout templates
-      await replaceWorkoutTemplates(parseInt(id), editTemplates, accessToken);
 
       setEditing(false);
       await loadMesocycle();

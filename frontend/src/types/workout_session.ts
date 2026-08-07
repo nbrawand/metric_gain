@@ -29,19 +29,6 @@ export interface WorkoutSet {
 /**
  * Data for creating a workout set
  */
-export interface WorkoutSetCreate {
-  exercise_id: number;
-  set_number: number;
-  order_index: number;
-  weight: number;
-  reps: number;
-  rir?: number;
-  target_weight?: number;
-  target_reps?: number;
-  target_rir?: number;
-  notes?: string;
-}
-
 /**
  * Data for updating a workout set
  */
@@ -101,18 +88,6 @@ export interface WorkoutSessionListItem {
 /**
  * Data for creating a new workout session
  */
-export interface WorkoutSessionCreate {
-  mesocycle_instance_id: number;
-  workout_template_id: number;
-  workout_date: string;
-  week_number: number;
-  day_number: number;
-  duration_minutes?: number;
-  notes?: string;
-  source_instance_id?: number;
-  source_week_number?: number;
-}
-
 /**
  * Data for updating an existing workout session
  */

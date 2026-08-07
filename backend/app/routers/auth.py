@@ -1,6 +1,5 @@
 """Authentication endpoints — Google OAuth only."""
 
-import logging
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -19,8 +18,6 @@ from app.utils.auth import (
     create_refresh_token,
     get_current_user,
 )
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
