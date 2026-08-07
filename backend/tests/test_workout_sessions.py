@@ -457,10 +457,12 @@ def test_start_from_source_includes_exercises_the_source_never_ran(client, auth_
         if s["week_number"] == 1
     )
     detail = client.get(f"/v1/workout-sessions/{source_session['id']}", headers=auth_headers).json()
+    # Hit the target: the weight only progresses off a session that earned it
+    source_reps = detail["workout_sets"][0]["target_reps"] or 12
     for workout_set in detail["workout_sets"]:
         client.patch(
             f"/v1/workout-sessions/{source_session['id']}/sets/{workout_set['id']}",
-            json={"weight": 100, "reps": 10},
+            json={"weight": 100, "reps": source_reps},
             headers=auth_headers,
         )
     client.patch(
@@ -522,7 +524,10 @@ def test_start_from_source_includes_exercises_the_source_never_ran(client, auth_
         if e["id"] == first_exercise
     )
     expected, _ = compute_progression_targets(
-        100, 10, 12, increment=increment_for_equipment(equipment), rep_ceiling=12
+        100, source_reps, 12,
+        increment=increment_for_equipment(equipment),
+        rep_ceiling=12,
+        prev_target_reps=source_reps,
     )
     assert {s["target_weight"] for s in seeded} == {expected}
     # The new exercise has no history to seed from, so it carries no weight target
@@ -627,11 +632,19 @@ def test_adding_a_set_for_an_unknown_exercise_is_rejected(
 
 # Weight targets across weeks
 
-def _complete_session(client, auth_headers, session, weight, reps=8):
+def _complete_session(client, auth_headers, session, weight, reps=None):
+    """Log every set and finish the session.
+
+    reps defaults to each set's own target, because the weight only progresses
+    when the last session hit what it was asked for. Tests about stale targets
+    or set counts want a session that met its target; the ones about missing
+    pass an explicit lower number.
+    """
     for workout_set in session["workout_sets"]:
+        logged_reps = reps if reps is not None else (workout_set.get("target_reps") or 8)
         client.patch(
             f"/v1/workout-sessions/{session['id']}/sets/{workout_set['id']}",
-            json={"weight": weight, "reps": reps},
+            json={"weight": weight, "reps": logged_reps},
             headers=auth_headers,
         )
     client.patch(

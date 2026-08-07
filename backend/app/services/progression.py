@@ -108,6 +108,48 @@ def compute_target_rir(week: int, total_weeks: int) -> int:
 
 WEEKLY_INCREASE = 0.025
 
+# Below this fraction of the rep target the weight itself is wrong, not the day,
+# so the target steps back down instead of just repeating. Proportional rather
+# than a fixed rep count: 8 of 12 is a normal session inside the plan's range,
+# while 8 of 20 on a calf raise is the wrong weight. A fixed margin of 3 called
+# both of those a failure.
+BACK_OFF_REP_RATIO = 0.6
+
+
+def evaluate_last_performance(
+    prev_reps: Optional[int],
+    prev_target_reps: Optional[int],
+    prev_rir: Optional[int] = None,
+    prev_target_rir: Optional[int] = None,
+) -> str:
+    """Classify the last set against what it was asked to do.
+
+    Returns "hit", "miss" or "big_miss". Unknown targets classify as "hit", so
+    history recorded before targets existed still progresses as it used to.
+
+    Reps are the signal. RIR only downgrades a hit: finishing the prescribed
+    reps but at 0 RIR when 2 were asked for means it was already a maximum
+    effort, and adding weight on top of that is how a plan runs a lifter into
+    the ground.
+    """
+    if prev_target_reps is None or prev_reps is None:
+        return "hit"
+
+    if prev_reps < prev_target_reps * BACK_OFF_REP_RATIO:
+        return "big_miss"
+    if prev_reps < prev_target_reps:
+        return "miss"
+
+    if (
+        prev_rir is not None
+        and prev_target_rir is not None
+        and prev_rir < prev_target_rir
+    ):
+        # Hit the reps, but harder than prescribed
+        return "miss"
+
+    return "hit"
+
 
 def compute_progression_targets(
     prev_weight: Optional[float],
@@ -115,6 +157,9 @@ def compute_progression_targets(
     fallback_reps: Optional[int],
     increment: float = DEFAULT_INCREMENT,
     rep_ceiling: Optional[int] = None,
+    prev_target_reps: Optional[int] = None,
+    prev_rir: Optional[int] = None,
+    prev_target_rir: Optional[int] = None,
 ) -> Tuple[Optional[float], Optional[int]]:
     """Progressive-overload targets from the last performance.
 
@@ -122,6 +167,12 @@ def compute_progression_targets(
     with. When the percentage is too small to move a full step, hold the weight
     and ask for one more rep instead — double progression — until reps reach the
     top of the range, at which point the weight goes up one step and reps reset.
+
+    None of that happens unless the last performance actually earned it. This
+    used to ignore the targets entirely, so missing 8 reps at 0 RIR still bought
+    a heavier target the following week, and the plan walked away from the
+    lifter a little further every week. A miss now repeats the same target and a
+    big miss steps the weight back down.
 
     There used to be a `min 2.5` floor under the percentage, which made every
     jump a full +5 lb no matter the lift: 15 -> 20 is +33% and unachievable
@@ -133,6 +184,21 @@ def compute_progression_targets(
     """
     target_weight = None
     target_reps = fallback_reps
+
+    outcome = evaluate_last_performance(
+        prev_reps, prev_target_reps, prev_rir, prev_target_rir
+    )
+
+    if prev_weight is not None and outcome != "hit":
+        # Repeat what was asked for rather than escalating. A big miss also
+        # takes the weight down a step, but never below one step.
+        if outcome == "big_miss":
+            target_weight = max(increment, round_to_increment(
+                prev_weight - increment, increment
+            ))
+        else:
+            target_weight = prev_weight
+        return target_weight, prev_target_reps if prev_target_reps is not None else target_reps
 
     if prev_weight is not None:
         target_weight = round_to_increment(
@@ -167,22 +233,24 @@ def compute_progression_targets(
     return target_weight, target_reps
 
 
-def find_previous_performance(
+def find_previous_set(
     db: Session,
     user_id: int,
     exercise_id: int,
     mesocycle_instance_id: Optional[int] = None,
     current_week: Optional[int] = None,
     current_day: Optional[int] = None,
-) -> Tuple[Optional[float], Optional[int]]:
-    """Find the last completed non-zero weight/reps for an exercise.
+):
+    """Find the last completed non-zero set for an exercise.
 
     Search priority:
       1. Previous week, same day, same meso instance
       2. Any completed session in the same meso instance
       3. Any completed session across all meso instances
 
-    Returns (weight, reps) or (None, None).
+    Returns the WorkoutSet or None. Callers need more than weight and reps off
+    it: what the set was *targeting* is what says whether the lifter earned a
+    heavier target or missed and should hold.
     """
     from app.models.workout_session import WorkoutSession, WorkoutSet
 
@@ -207,7 +275,7 @@ def find_previous_performance(
             .first()
         )
         if result:
-            return (result.weight, result.reps if result.reps > 0 else None)
+            return result
 
     # Tier 2: Any completed session in the same meso instance
     if mesocycle_instance_id:
@@ -228,7 +296,7 @@ def find_previous_performance(
             .first()
         )
         if result:
-            return (result.weight, result.reps if result.reps > 0 else None)
+            return result
 
     # Tier 3: Any completed session across all meso instances
     result = (
@@ -247,6 +315,26 @@ def find_previous_performance(
         .first()
     )
     if result:
-        return (result.weight, result.reps if result.reps > 0 else None)
+        return result
 
-    return (None, None)
+    return None
+
+
+def find_previous_performance(
+    db: Session,
+    user_id: int,
+    exercise_id: int,
+    mesocycle_instance_id: Optional[int] = None,
+    current_week: Optional[int] = None,
+    current_day: Optional[int] = None,
+) -> Tuple[Optional[float], Optional[int]]:
+    """(weight, reps) of the last completed set, or (None, None)."""
+    result = find_previous_set(
+        db, user_id, exercise_id,
+        mesocycle_instance_id=mesocycle_instance_id,
+        current_week=current_week,
+        current_day=current_day,
+    )
+    if result is None:
+        return (None, None)
+    return (result.weight, result.reps if result.reps > 0 else None)

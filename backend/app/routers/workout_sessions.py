@@ -20,6 +20,7 @@ from app.services.progression import (
     compute_target_rir,
     compute_progression_targets,
     find_previous_performance,
+    find_previous_set,
 )
 
 from app.schemas.workout_session import (
@@ -164,22 +165,30 @@ def get_workout_session(
                     ws.target_reps,
                     increment=increment,
                     rep_ceiling=rep_ceiling,
+                    prev_target_reps=prev_set.target_reps,
+                    prev_rir=prev_set.rir,
+                    prev_target_rir=prev_set.target_rir,
                 )
             elif ws.target_weight is None or prev_session is not None:
                 # No matching set last week. This is the normal case for the
                 # sets the weekly increment adds — they have no counterpart in
                 # the previous week but were seeded with an old target, which
                 # left them showing a far lighter weight than their siblings.
-                hist_weight, hist_reps = find_previous_performance(
+                hist_set = find_previous_set(
                     db, current_user.id, ws.exercise_id,
                     mesocycle_instance_id=workout_session.mesocycle_instance_id,
                     current_week=workout_session.week_number,
                     current_day=workout_session.day_number,
                 )
                 new_target, new_reps = compute_progression_targets(
-                    hist_weight, hist_reps, ws.target_reps,
+                    hist_set.weight if hist_set else None,
+                    (hist_set.reps if hist_set and hist_set.reps > 0 else None),
+                    ws.target_reps,
                     increment=increment,
                     rep_ceiling=rep_ceiling,
+                    prev_target_reps=hist_set.target_reps if hist_set else None,
+                    prev_rir=hist_set.rir if hist_set else None,
+                    prev_target_rir=hist_set.target_rir if hist_set else None,
                 )
             else:
                 continue

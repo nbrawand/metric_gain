@@ -152,3 +152,85 @@ class TestRoundToIncrement:
         # 2.5 * 41 in binary floating point is 102.50000000000001
         assert round_to_increment(102.4, 2.5) == 102.5
         assert str(round_to_increment(102.4, 2.5)) == "102.5"
+
+
+class TestPerformanceGating:
+    """Weight only goes up when the last session earned it.
+
+    This used to be ignored entirely: prev weight and reps went in, targets came
+    out, and whether the lifter actually did what was asked never entered into
+    it. A missed session bought a heavier target anyway, so the plan walked
+    away from the lifter a little further every week.
+    """
+
+    def test_hitting_the_target_progresses(self):
+        weight, _ = compute_progression_targets(
+            225, 8, 12, prev_target_reps=8
+        )
+        assert weight == 230
+
+    def test_exceeding_the_target_progresses(self):
+        weight, _ = compute_progression_targets(
+            225, 10, 12, prev_target_reps=8
+        )
+        assert weight == 230
+
+    def test_missing_the_target_holds_the_weight(self):
+        weight, reps = compute_progression_targets(
+            225, 6, 12, prev_target_reps=8
+        )
+        assert weight == 225
+        assert reps == 8, "should ask for the same target again, not a new one"
+
+    def test_a_big_miss_steps_the_weight_back_down(self):
+        # 4 of 12 is the weight being wrong, not a bad day
+        weight, reps = compute_progression_targets(
+            225, 4, 12, prev_target_reps=12
+        )
+        assert weight == 220
+        assert reps == 12
+
+    def test_a_normal_session_inside_the_rep_range_is_not_a_big_miss(self):
+        # 8 of 12 on an 8-12 plan is an ordinary session: hold, don't back off
+        weight, _ = compute_progression_targets(
+            225, 8, 12, prev_target_reps=12
+        )
+        assert weight == 225
+
+    def test_backing_off_never_goes_below_one_step(self):
+        weight, _ = compute_progression_targets(
+            5, 0, 12, prev_target_reps=12, increment=5
+        )
+        assert weight == 5
+
+    def test_hitting_reps_but_harder_than_prescribed_holds(self):
+        """Reps met at 0 RIR when 2 were asked for was already a maximum.
+
+        Adding weight on top of that is how a plan runs a lifter into the
+        ground.
+        """
+        weight, _ = compute_progression_targets(
+            225, 8, 12, prev_target_reps=8, prev_rir=0, prev_target_rir=2
+        )
+        assert weight == 225
+
+    def test_hitting_reps_with_rir_to_spare_progresses(self):
+        weight, _ = compute_progression_targets(
+            225, 8, 12, prev_target_reps=8, prev_rir=3, prev_target_rir=2
+        )
+        assert weight == 230
+
+    def test_unknown_targets_progress_as_before(self):
+        """History predating targets must not be read as a failure."""
+        weight, _ = compute_progression_targets(225, 8, 12)
+        assert weight == 230
+        weight, _ = compute_progression_targets(225, None, 12, prev_target_reps=8)
+        assert weight == 230
+
+    def test_a_miss_does_not_trigger_double_progression(self):
+        """A held light weight must not also collect a rep for a failed set."""
+        weight, reps = compute_progression_targets(
+            60, 6, 12, prev_target_reps=10, rep_ceiling=12
+        )
+        assert weight == 60
+        assert reps == 10

@@ -33,7 +33,7 @@ barely move. Round to the increment actually available for that exercise
 (barbell 5, dumbbell 5, machine/cable per-stack, microplates where relevant),
 and keep the percentage as the driver rather than the floor.
 
-[ ] Only add weight when the last performance actually hit its target.
+[x] Only add weight when the last performance actually hit its target.
 `compute_progression_targets` takes prev weight/reps but ignores `target_reps`
 and `target_rir`, so missing 8 reps at 0 RIR still earns a heavier target next
 week. Hold (or back off) on a miss.

@@ -29,6 +29,7 @@ from app.services.progression import (
     compute_target_rir,
     compute_progression_targets,
     find_previous_performance,
+    find_previous_set,
 )
 
 router = APIRouter()
@@ -221,16 +222,21 @@ def _generate_sets_for_session(
         )
 
         # Look up previous performance for target_weight/target_reps
-        prev_weight, prev_reps = find_previous_performance(
+        prev_set = find_previous_set(
             db, user_id, template_exercise.exercise_id,
             mesocycle_instance_id=mesocycle_instance_id,
             current_week=week_number,
             current_day=day_number,
         )
         hist_target_weight, hist_target_reps = compute_progression_targets(
-            prev_weight, prev_reps, template_exercise.target_reps_max,
+            prev_set.weight if prev_set else None,
+            (prev_set.reps if prev_set and prev_set.reps > 0 else None),
+            template_exercise.target_reps_max,
             increment=increments.get(template_exercise.exercise_id, DEFAULT_INCREMENT),
             rep_ceiling=template_exercise.target_reps_max,
+            prev_target_reps=prev_set.target_reps if prev_set else None,
+            prev_rir=prev_set.rir if prev_set else None,
+            prev_target_rir=prev_set.target_rir if prev_set else None,
         )
 
         for set_num in range(1, num_sets + 1):
@@ -312,21 +318,32 @@ def _generate_sets_from_source(
                     target_reps,
                     increment=increment,
                     rep_ceiling=rep_ceiling,
+                    prev_target_reps=fallback_set.target_reps,
+                    prev_rir=fallback_set.rir,
+                    prev_target_rir=fallback_set.target_rir,
                 )
 
             # Fallback to cascading lookup if source has no weight data
             if target_weight is None:
-                prev_weight, prev_reps = find_previous_performance(
+                prev_set = find_previous_set(
                     db, user_id, exercise_id,
                     mesocycle_instance_id=mesocycle_instance_id,
                     current_week=week_number,
                     current_day=day_number,
                 )
-                if prev_weight is not None:
+                prev_reps = (
+                    prev_set.reps if prev_set and prev_set.reps > 0 else None
+                )
+                if prev_set is not None:
                     target_weight, target_reps = compute_progression_targets(
-                        prev_weight, prev_reps, target_reps,
+                        prev_set.weight,
+                        prev_set.reps if prev_set.reps > 0 else None,
+                        target_reps,
                         increment=increment,
                         rep_ceiling=rep_ceiling,
+                        prev_target_reps=prev_set.target_reps,
+                        prev_rir=prev_set.rir,
+                        prev_target_rir=prev_set.target_rir,
                     )
                 elif prev_reps is not None and target_reps is None:
                     target_reps = prev_reps
