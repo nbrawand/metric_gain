@@ -194,3 +194,33 @@ def test_checkout_completion_without_payment_does_not_activate(client, billing_u
     user = _billing_user_row()
     assert user.subscription_status == "trialing"
     assert user.stripe_subscription_id == "sub_test_9"
+
+
+def test_webhook_does_not_depend_on_the_sdk_object_model(
+    client, billing_user, webhook_secret, monkeypatch
+):
+    """Field access must survive a stripe SDK that returns a non-dict.
+
+    StripeObject subclassed dict until stripe 15.0.0 and then stopped, which
+    turned every `.get()` in the handler into an AttributeError and 500d the
+    whole webhook. The handler reads the verified JSON payload instead, so this
+    stands in for the SDK version CI does not install: construct_event returns
+    something with no mapping interface at all, and the event still applies.
+    """
+    headers, set_status = billing_user
+    set_status("past_due")
+    _billing_user_row(lambda u: setattr(u, "stripe_subscription_id", "sub_test_1"))
+
+    class NotADict:
+        """What construct_event returns in stripe 15, near enough."""
+
+        def __getattr__(self, name):
+            raise AttributeError(name)
+
+    monkeypatch.setattr(
+        "app.routers.billing.stripe.Webhook.construct_event",
+        lambda payload, sig, secret: NotADict(),
+    )
+
+    assert _post_event(client, _subscription_event("evt_sdk", 3_000, "active")).status_code == 200
+    assert _billing_user_row().subscription_status == "active"

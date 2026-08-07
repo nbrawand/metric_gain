@@ -1,5 +1,6 @@
 """Billing endpoints. Stripe subscription management."""
 
+import json
 import logging
 from typing import Optional
 
@@ -170,7 +171,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     sig_header = request.headers.get("stripe-signature")
 
     try:
-        event = stripe.Webhook.construct_event(
+        stripe.Webhook.construct_event(
             payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
         )
     except ValueError:
@@ -178,6 +179,13 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     except stripe.SignatureVerificationError:
         raise HTTPException(status_code=400, detail="Invalid signature")
 
+    # Verify with the SDK, then read the fields off the raw JSON rather than
+    # off the object it returns. The SDK's own object model is not stable
+    # across major versions: StripeObject subclassed dict until 15.0.0 and
+    # stopped, which turned every .get() below into an AttributeError and 500d
+    # the whole handler. The payload itself is just JSON and always has been.
+    # construct_event already parsed it to verify, so this cannot fail here.
+    event = json.loads(payload)
     event_type = event["type"]
     data = event["data"]["object"]
 

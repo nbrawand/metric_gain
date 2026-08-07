@@ -27,12 +27,16 @@ httpx==0.26.0
 slowapi==0.1.9
 
 # Payments
-# Pinned, and it has to stay pinned. Render installs this file on every build,
-# so an open range means the deployed version is whatever PyPI published that
-# morning. stripe 15.0.0 stopped subclassing StripeObject from dict, which
-# turns every `event.data.object.get(...)` in routers/billing.py into an
-# AttributeError and 500s the whole webhook. Bumping past 15 needs that file
-# rewritten off .get() and isinstance(x, dict) first.
+# Pinned because Render installs this file on every build, so an open range
+# means the deployed version is whatever PyPI published that morning. That is
+# how stripe 15.0.0 arrived unannounced and 500d every webhook.
+#
+# The pin is no longer load bearing: billing.py reads the verified JSON payload
+# rather than the SDK's object model, and the suite passes against both 14.4.1
+# and 15.4.0. Moving it is now a deliberate choice rather than a rewrite. What
+# is still unproven is the live API surface (Customer, Subscription, checkout
+# and billing_portal), which no test exercises because it calls Stripe, so a
+# bump wants one test-mode checkout and one portal visit behind it.
 stripe==14.4.1
 
 # Utilities

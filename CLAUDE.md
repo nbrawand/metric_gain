@@ -297,10 +297,22 @@ that is gone and the affected subscriptions need reconciling by hand. Worst
 case is a `checkout.session.completed` that never landed, which is a customer
 who paid and never got access.
 
-[ ] Rewrite `routers/billing.py` off `.get()` and `isinstance(x, dict)` so the
+[x] Rewrite `routers/billing.py` off `.get()` and `isinstance(x, dict)` so the
 stripe pin can move past 15. Small surface: `_id_of`, `_invoice_subscription_id`
 and the event handler body. Until then the pin is load bearing and the comment
 in requirements.txt says so.
+    Done differently to the plan, and better: rather than teaching each helper
+    about StripeObject, the handler verifies with the SDK and then reads the
+    raw JSON payload. The SDK object model stops being part of our contract
+    entirely. Verified by running the whole suite against 14.4.1 and 15.4.0,
+    and by checking the old code does fail under 15. A regression test fakes a
+    non-dict `construct_event` return so CI catches a relapse on the pinned
+    version, where `.get()` would still work.
+
+[ ] Decide whether to move the stripe pin to 15.x. The code no longer needs
+the pin, but nothing tests the live API surface (Customer, Subscription,
+checkout, billing_portal) because those call Stripe. One test-mode checkout and
+one portal visit would settle it.
 
 [ ] Promote the CSP from report-only. It protects nothing today. Needs one real
 sign-in with the browser console open to catch what Google's GSI widget
