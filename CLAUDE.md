@@ -200,23 +200,29 @@ per-muscle volume warnings.
 
 ### Structural gaps both competitors have and we do not
 
-[ ] Add an FAQ. Both use one heavily for objection handling. Candidates: is
+[x] Add an FAQ. Both use one heavily for objection handling. Candidates: is
 this for beginners, what if I miss a workout, do I need particular equipment,
 can I cancel, is there an app to download, what happens to my data if I stop.
 
-[ ] Add an honest comparison table. Alpha Progression does this by name. Four
+[x] Add an honest comparison table. Alpha Progression does this by name. Four
 rows would carry it: price, free trial, works offline, adapts from logged sets
 vs self-reported surveys.
 
-[ ] Add product imagery. One calendar screenshot today; both competitors use
-mockup galleries. The Progress charts, the volume warning and the plate
-calculator all now look like a real product.
+[ ] Add product imagery for the newer screens. Correction to the original
+note: there are already three phone mockups on the page, not one. What is
+missing is the Progress charts, the volume warning and the plate calculator —
+the newest and most visual work. Needs matching device-framed mockups rather
+than raw browser screenshots, which is design work, not copy.
 
-[ ] Social proof — ratings, user counts, testimonials. **Do not manufacture
+[~] Social proof — ratings, user counts, testimonials. **Do not manufacture
 any.** Honest routes: a founder note on why this was built, the App Store
 rating once there is one, or letting How It Works carry the credibility.
+    Partly done: a "Why This Exists" section now stands in, saying plainly that
+    this is small and independent and has no endorsement wall, and pointing at
+    the method instead. Real ratings and testimonials stay open until there are
+    genuine ones to show — this item cannot be finished by writing copy.
 
-[ ] Build a real pricing section. One sentence today: no annual option, no plan
+[x] Build a real pricing section. One sentence today: no annual option, no plan
 comparison, no money-back guarantee. RP anchors high with an annual price;
 inverting that and letting one cheap monthly price be the whole story may work
 better for us.

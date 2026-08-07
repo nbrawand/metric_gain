@@ -297,6 +297,161 @@ export default function Landing() {
         </div>
       </section>
 
+
+      {/* Comparison. Deliberately not naming a competitor: their prices and
+          features change, and a stale claim on our own marketing page is worse
+          than a general one. Every row about us is verifiable in the product. */}
+      <section className="max-w-4xl mx-auto px-4 py-16">
+        <h2 className="text-2xl font-bold text-white text-center mb-3">
+          How We Compare
+        </h2>
+        <p className="text-gray-400 text-sm text-center mb-8">
+          Against the well-known science-based training apps.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-700">
+                <th className="text-left text-gray-400 font-medium py-3 pr-4"></th>
+                <th className="text-left text-teal-400 font-semibold py-3 px-4">Strength Guider</th>
+                <th className="text-left text-gray-400 font-medium py-3 px-4">Typically elsewhere</th>
+              </tr>
+            </thead>
+            <tbody className="text-gray-300">
+              {[
+                ['Price', '$4.99 / month', 'Around $25–35 / month'],
+                ['Free trial', '5 days, no card up front', 'Often none — money back only'],
+                ['Works offline', 'Yes, log everything with no signal', 'Usually needs a connection'],
+                ['How volume adapts', 'From the sets you logged', 'Soreness and pump questions each session'],
+                ['For a first block', '3 beginner blocks, one machines-only', 'Usually aimed at intermediate and up'],
+              ].map(([label, ours, theirs]) => (
+                <tr key={label} className="border-b border-gray-700/50">
+                  <td className="py-3 pr-4 text-gray-400">{label}</td>
+                  <td className="py-3 px-4 text-white font-medium">{ours}</td>
+                  <td className="py-3 px-4 text-gray-400">{theirs}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-gray-500 text-xs mt-4">
+          Other apps' pricing and features are as publicly listed and can change. Ours is
+          what you get today.
+        </p>
+      </section>
+
+      {/* FAQ */}
+      <section className="max-w-3xl mx-auto px-4 py-16">
+        <h2 className="text-2xl font-bold text-white text-center mb-8">
+          Common Questions
+        </h2>
+        <div className="space-y-4">
+          {[
+            {
+              q: 'Do I need to know what a mesocycle is?',
+              a: "No. Pick one of the ready-made blocks and start — the app explains RIR, volume and progression as you go. Three of the blocks are built for people running their first structured programme, including one using only machines.",
+            },
+            {
+              q: 'What if I miss a workout?',
+              a: "Nothing expires. Every session of the block is there from the start, and you open whichever one you are doing next. Miss a week and you carry on where you left off.",
+            },
+            {
+              q: 'What equipment do I need?',
+              a: "Whatever you have. There are blocks for barbells, dumbbells only, and machines only, and 140 exercises to swap between. If a machine is taken, swap the exercise mid-workout and the change carries through the rest of the block.",
+            },
+            {
+              q: 'Do I have to download an app?',
+              a: "No. It runs in your browser on any device. On a phone you can add it to your home screen and it opens full-screen like a native app — no app store, and updates arrive on their own.",
+            },
+            {
+              q: 'Pounds or kilograms?',
+              a: "Either. Pick your unit and everything — including the weight steps it asks you to add — is calculated in it, because 5 lb is not a number any kilo plate rack can make.",
+            },
+            {
+              q: 'Can I cancel?',
+              a: "Any time, from your account, and you keep access until the period you paid for ends. The first 5 days are free and do not ask for a card.",
+            },
+            {
+              q: 'What happens to my training history if I stop?',
+              a: "It stays on your account. Come back later and your logged sets, estimated strength and best lifts are still there.",
+            },
+          ].map(({ q, a }) => (
+            <details key={q} className="bg-gray-800 rounded-lg border border-gray-700 p-4 group">
+              <summary className="text-white font-medium cursor-pointer list-none flex justify-between items-center gap-4">
+                {q}
+                <span className="text-teal-400 shrink-0 group-open:rotate-45 transition-transform">+</span>
+              </summary>
+              <p className="text-gray-400 text-sm leading-relaxed mt-3">{a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      {/* Why this exists. Standing in for the ratings and testimonial walls the
+          bigger apps use — we do not have those yet, and inventing them is not
+          an option. Being straight about being small is the honest version. */}
+      <section className="bg-gray-800 border-t border-b border-gray-700 py-14 px-4">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-2xl font-bold text-white mb-4 text-center">Why This Exists</h2>
+          <p className="text-gray-300 leading-relaxed mb-3">
+            Structured training works, and the apps that do it properly cost more per month
+            than a lot of gym memberships. Strength Guider was built to do the part that
+            actually matters — plan a block, guide every session, and adjust from what you
+            lifted — without the price tag or the questionnaires.
+          </p>
+          <p className="text-gray-300 leading-relaxed">
+            It is small and independent, so there is no wall of celebrity endorsements here.
+            What there is: the full method written out in plain language before you pay a
+            penny, and five days to decide whether it fits how you train.
+          </p>
+          <div className="text-center mt-6">
+            <button
+              onClick={goToHowItWorks}
+              className="border border-teal-400 text-teal-300 hover:bg-teal-900 font-medium py-2 px-6 rounded-lg transition-colors"
+            >
+              Read the Method
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section className="max-w-md mx-auto px-4 py-16">
+        <h2 className="text-2xl font-bold text-white text-center mb-8">One Plan</h2>
+        <div className="bg-gray-800 rounded-lg border-2 border-teal-600 p-6 text-center">
+          <div className="text-4xl font-bold text-white">
+            $4.99<span className="text-lg font-medium text-gray-400">/month</span>
+          </div>
+          <p className="text-teal-400 text-sm font-medium mt-2 mb-5">
+            First 5 days free — no card up front
+          </p>
+          <ul className="text-left space-y-2 mb-6">
+            {[
+              'Every feature — nothing held back for a higher tier',
+              '16 ready-made blocks and 140 exercises',
+              'Sets that adjust from your logged performance',
+              'Full offline training and syncing',
+              'Progress charts, plate maths and warmup ramps',
+              'Cancel any time, from your account',
+            ].map((line) => (
+              <li key={line} className="text-gray-300 text-sm flex gap-2">
+                <span className="text-teal-400 shrink-0">✓</span>
+                {line}
+              </li>
+            ))}
+          </ul>
+          <Link
+            to="/login"
+            className="block bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 rounded-lg transition-colors"
+          >
+            Start Free
+          </Link>
+        </div>
+        <p className="text-gray-500 text-xs text-center mt-4">
+          No annual lock-in, because a monthly price this size does not need one.
+        </p>
+      </section>
+
       {/* Bottom CTA */}
       <section className="py-16 px-4 text-center">
         <h2 className="text-2xl font-bold text-white mb-3">Ready to Train?</h2>
@@ -305,7 +460,7 @@ export default function Landing() {
           to="/login"
           className="bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 px-8 rounded-lg transition-colors text-lg"
         >
-          Get Started
+          Start Free
         </Link>
         <p className="text-gray-500 mt-4 text-sm">
           Already have an account?{' '}
