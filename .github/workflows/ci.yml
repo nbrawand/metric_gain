@@ -1,0 +1,116 @@
+name: CI
+
+# Runs on every push and pull request. The suites and the linter were all
+# green and gating nothing; this is what turns them into a gate.
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+# A second push to the same branch cancels the first: the older run's result is
+# about code nobody is looking at any more.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      # The suite runs against in-memory SQLite (see tests/conftest.py), so no
+      # database service is needed. These only exist because Settings requires
+      # them at import time, and ENVIRONMENT is deliberately not "development",
+      # which would switch SQLAlchemy's echo on and bury the output in SQL.
+      DATABASE_URL: sqlite:///./ci.db
+      SECRET_KEY: ci-only-not-a-real-secret-key
+      ENVIRONMENT: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest tests/ -q
+
+      - name: Check migrations have a single head
+        # Two heads means someone branched the migration chain, which fails the
+        # deploy rather than the test run, and does so in production.
+        run: |
+          heads=$(alembic heads 2>/dev/null | grep -c "(head)" || true)
+          echo "alembic heads: $heads"
+          test "$heads" -eq 1
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        # --max-warnings 0, so this fails on warnings too
+        run: npm run lint
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+  prose:
+    name: Prose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No em dashes
+        # A stylistic house rule rather than a correctness one. They were
+        # stripped from the whole repo once; without a check they come straight
+        # back, because whoever (or whatever) writes the next comment favours
+        # them.
+        run: |
+          # Built from the code point so this file does not contain the very
+          # character it rejects, which would fail the check on every run.
+          dash=$(printf '\u2014')
+          if grep -rn "$dash" \
+              --exclude-dir=node_modules \
+              --exclude-dir=.git \
+              --exclude-dir=venv \
+              --exclude-dir=.venv \
+              --exclude-dir=dist \
+              --exclude-dir=__pycache__ \
+              --exclude-dir=reference_pictures \
+              . ; then
+            echo
+            echo "Em dashes found. Use a comma, colon, full stop or brackets instead."
+            exit 1
+          fi
+          echo "No em dashes found."

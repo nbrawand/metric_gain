@@ -88,12 +88,25 @@ npm run test:watch     # while working
 npm run test:coverage
 ```
 
-**Lint** is clean and gates on warnings too (`--max-warnings 0`), so it is
-usable in CI as-is:
+**Lint** is clean and gates on warnings too (`--max-warnings 0`):
 ```bash
 cd frontend
 npm run lint
 ```
+
+### CI
+
+`.github/workflows/ci.yml` runs on every push to `main`/`develop` and on every
+pull request, in three jobs:
+
+- **Backend**: pytest. The suite uses in-memory SQLite, so no database service
+  is needed; the env vars in the workflow exist only because `Settings`
+  requires them at import. Also asserts Alembic has a single head, since two
+  heads fail the deploy rather than the test run.
+- **Frontend**: lint, typecheck, test, build.
+- **Prose**: rejects em dashes anywhere outside `node_modules` and
+  `reference_pictures`. A house style rule, kept honest by a check rather than
+  by memory.
 
 ### Full Database Reset
 

@@ -264,9 +264,13 @@ deload weeks, unit conversion that rewrites logged history, and a production
 500 still reaches us via a user rather than a page. Nothing is wired up: no
 Sentry, no alerting. Highest-value infrastructure item.
 
-[ ] CI. 264 backend tests, 78 frontend tests, and `npm run lint` now exits 0
+[x] CI. 264 backend tests, 78 frontend tests, and `npm run lint` now exits 0
 including warnings, so there is finally a gate worth wiring to GitHub Actions.
 Before this it could not have gated anything.
+    Done: `.github/workflows/ci.yml`, three jobs (backend, frontend, prose).
+    The prose job rejects em dashes, which otherwise return the moment anyone
+    writes a new comment. Every step verified locally before committing,
+    including that the em dash check actually fails when one is present.
 
 [ ] Promote the CSP from report-only. It protects nothing today. Needs one real
 sign-in with the browser console open to catch what Google's GSI widget
