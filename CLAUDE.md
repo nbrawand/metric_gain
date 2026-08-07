@@ -252,12 +252,20 @@ visit. SEO and content-marketing value going unused.
 
 ## Open
 
-[ ] Self-service account deletion and data export. Writing the privacy policy
+[x] Self-service account deletion and data export. Writing the privacy policy
 made this concrete: there is no endpoint for either, so the policy has to
 promise both by email. Most privacy regimes expect a user to be able to delete
 their account and get a copy of their data without asking a human. The policy
 says we are working on making both self-service, so this is now a promise in
 writing.
+    Done: an Account page, `/v1/account/export` and `DELETE /v1/account`.
+    Neither is behind the subscription guard, a lapsed subscriber is the most
+    likely person to want their data out. Deletion closes the Stripe customer
+    first and refuses to proceed if that fails, because deleting the row loses
+    the only link between the person and a card that is still being charged.
+    The export is column-driven rather than a hand-written field list, so a
+    column added later cannot silently go missing from it. Privacy policy
+    rewritten to describe the buttons instead of promising email.
 
 [ ] Error monitoring. Eighteen commits of behaviour change, autoregulation,
 deload weeks, unit conversion that rewrites logged history, and a production

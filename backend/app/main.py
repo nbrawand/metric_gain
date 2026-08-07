@@ -73,7 +73,7 @@ async def health_check():
 
 
 # Import and include routers
-from app.routers import auth, exercises, mesocycles, mesocycle_instances, workout_sessions, billing, admin, analytics
+from app.routers import account, admin, analytics, auth, billing, exercises, mesocycle_instances, mesocycles, workout_sessions
 
 sub_guard = [Depends(require_active_subscription)]
 
@@ -84,6 +84,9 @@ admin_guard = [Depends(admin.require_admin)]
 
 app.include_router(auth.router, prefix="/v1/auth", tags=["Authentication"])
 app.include_router(billing.router, prefix="/v1/billing", tags=["Billing"])
+# No subscription guard: a lapsed subscriber must still be able to take
+# their data out and close their account.
+app.include_router(account.router, prefix="/v1/account", tags=["Account"])
 app.include_router(admin.router, prefix="/v1/admin", tags=["Admin"], dependencies=admin_guard)
 app.include_router(exercises.router, prefix="/v1/exercises", tags=["Exercises"], dependencies=sub_guard)
 app.include_router(mesocycles.router, prefix="/v1/mesocycles", tags=["Mesocycle Templates"], dependencies=sub_guard)

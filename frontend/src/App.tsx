@@ -12,6 +12,7 @@ import HowItWorks from './pages/HowItWorks';
 import Subscribe from './pages/Subscribe';
 import Admin from './pages/Admin';
 import Progress from './pages/Progress';
+import Account from './pages/Account';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -197,6 +198,9 @@ function AppRoutes() {
           <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
           <Route path="/billing/success" element={<ProtectedRoute><BillingSuccess /></ProtectedRoute>} />
           <Route path="/billing/cancel" element={<ProtectedRoute><BillingCancel /></ProtectedRoute>} />
+          {/* Not subscription-gated on purpose: someone whose subscription has
+              lapsed is the most likely person to want their data out. */}
+          <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
           {/* Protected + subscription-gated routes */}
           <Route path="/" element={<RootPage />} />
           <Route path="/exercises" element={<SubscriptionRoute><Exercises /></SubscriptionRoute>} />

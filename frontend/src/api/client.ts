@@ -338,15 +338,18 @@ export async function patch<T>(
 /**
  * DELETE request
  */
-export async function del<T>(endpoint: string, token?: string): Promise<T> {
+export async function del<T>(endpoint: string, token?: string, data?: unknown): Promise<T> {
   const headers: HeadersInit = {};
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  // A body on DELETE is unusual but legal, and account deletion needs one to
+  // carry the typed confirmation
   return fetchApi<T>(endpoint, {
     method: 'DELETE',
     headers,
+    ...(data === undefined ? {} : { body: JSON.stringify(data) }),
   });
 }

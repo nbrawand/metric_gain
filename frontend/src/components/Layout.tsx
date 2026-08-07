@@ -203,6 +203,9 @@ export default function Layout() {
                   <button onClick={() => handleNav('/progress')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
                     Progress
                   </button>
+                  <button onClick={() => handleNav('/account')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
+                    Account
+                  </button>
                   <button onClick={() => handleNav('/how-it-works')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
                     How It Works
                   </button>

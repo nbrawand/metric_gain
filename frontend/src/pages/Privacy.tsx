@@ -9,9 +9,9 @@ import { Link } from 'react-router-dom';
  * for sign-in, Stripe for payment, Render and Vercel for hosting), the two
  * localStorage keys, and the absence of any analytics or tracking script.
  *
- * Two rights below are honoured by email rather than by a button, because no
- * self-service deletion or export endpoint exists yet. Do not soften that
- * wording without building them first. The policy has to match the product.
+ * Export and deletion are self-service as of the Account page. The wording
+ * below describes what those buttons actually do, so if the endpoints change,
+ * this changes with them. The policy has to match the product.
  */
 export default function Privacy() {
   useEffect(() => {
@@ -166,9 +166,12 @@ export default function Privacy() {
               later resubscribe.
             </p>
             <p>
-              If you ask us to delete your account, we delete it and the training data
-              attached to it. We may keep a minimal billing record where tax or accounting
-              law requires it.
+              When you delete your account, we delete it and the training data attached to
+              it, and your customer record is deleted at Stripe along with any live
+              subscription. We may keep a minimal billing record where tax or accounting
+              law requires it. Where an administrator has previously acted on your account,
+              the log of that action is kept, so that a record of what was done cannot be
+              erased by the account it was done to.
             </p>
           </section>
 
@@ -185,20 +188,24 @@ export default function Privacy() {
               are editable in the menu, and you can delete individual training blocks and
               custom exercises as you go.
             </p>
-            <p>
+            <p className="mb-4">
               <strong className="text-white">
-                Account deletion and a full copy of your data are handled by email rather
-                than a button.
+                You can download a full copy of your data, or delete your account outright,
+                from the Account page.
               </strong>{' '}
-              Write to{' '}
+              The download is a JSON file containing your profile, every training block,
+              every session and every set you have logged. Deleting removes all of it and
+              cancels any subscription at the same time. Neither needs to go through us.
+            </p>
+            <p>
+              For anything else, or if you would rather a person handled it, write to{' '}
               <a
                 href="mailto:strengthguider@gmail.com"
                 className="text-teal-400 hover:text-teal-300 transition-colors"
               >
                 strengthguider@gmail.com
               </a>{' '}
-              from the address on your account and we will action it. We are working on
-              making both self-service.
+              from the address on your account.
             </p>
           </section>
 
