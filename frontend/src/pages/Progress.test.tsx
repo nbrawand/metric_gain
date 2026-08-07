@@ -100,8 +100,13 @@ describe('Progress', () => {
   it('reports the latest estimate and the change since the first session', async () => {
     render(<Progress />);
 
-    expect(await screen.findByText('275 lbs')).toBeInTheDocument();
-    expect(screen.getByText(/\+15 lbs since/)).toBeInTheDocument();
+    // Wait on the trend line itself, not on "275 lbs". Best Lifts shows the
+    // same 275, and the chart loads from a separate request, so awaiting the
+    // number can be satisfied by the table while the chart is still pending.
+    // That is exactly what happened on CI: the assertion below then ran
+    // against a half-rendered page.
+    const trend = await screen.findByText(/\+15 lbs since/);
+    expect(trend.previousElementSibling).toHaveTextContent('275 lbs');
   });
 
   it('does not claim a trend from a single session', async () => {

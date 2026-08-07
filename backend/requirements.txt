@@ -15,7 +15,7 @@ pydantic[email]==2.6.0
 # Authentication
 python-jose[cryptography]==3.5.0  # 3.3.0 has CVE-2024-33663 / CVE-2024-33664
 google-auth==2.29.0
-requests>=2.28.0
+requests==2.32.5
 
 # Testing
 pytest==8.0.0
@@ -27,7 +27,13 @@ httpx==0.26.0
 slowapi==0.1.9
 
 # Payments
-stripe>=8.0.0
+# Pinned, and it has to stay pinned. Render installs this file on every build,
+# so an open range means the deployed version is whatever PyPI published that
+# morning. stripe 15.0.0 stopped subclassing StripeObject from dict, which
+# turns every `event.data.object.get(...)` in routers/billing.py into an
+# AttributeError and 500s the whole webhook. Bumping past 15 needs that file
+# rewritten off .get() and isinstance(x, dict) first.
+stripe==14.4.1
 
 # Utilities
 python-dotenv==1.0.0
