@@ -95,22 +95,32 @@ function BillingSuccess() {
   useEffect(() => {
     let cancelled = false;
     let attempts = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
     const poll = async () => {
-      await fetchCurrentUser();
+      // A failed poll must not end the loop: fetchCurrentUser rejects on any
+      // error, and giving up here left the page stuck on "Confirming..." with
+      // its only button disabled.
+      try {
+        await fetchCurrentUser();
+      } catch {
+        /* keep polling */
+      }
       if (cancelled) return;
+
       attempts += 1;
       const status = useAuthStore.getState().user?.subscription_status;
       if (status === 'active' || attempts >= 10) {
         setConfirming(false);
         return;
       }
-      setTimeout(poll, 1500);
+      timer = setTimeout(poll, 1500);
     };
 
     poll();
     return () => {
       cancelled = true;
+      if (timer) clearTimeout(timer);
     };
   }, [fetchCurrentUser]);
 

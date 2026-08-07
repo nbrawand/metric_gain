@@ -25,6 +25,25 @@ from app.utils.auth import get_current_user
 router = APIRouter()
 
 
+def _reject_duplicate_exercises(workout_data) -> None:
+    """A workout may not list the same exercise twice.
+
+    Sets are numbered per template entry, so two entries for one exercise give
+    it two runs of set numbers in a session — which breaks adding and removing
+    sets and matching next week's targets. The session-level swap and add
+    endpoints already refuse this; template creation has to as well.
+    """
+    seen = set()
+    for exercise_data in workout_data.exercises:
+        if exercise_data.exercise_id in seen:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"'{workout_data.name}' lists the same exercise twice",
+            )
+        seen.add(exercise_data.exercise_id)
+
+
+
 @router.get("/", response_model=List[MesocycleListResponse])
 async def list_mesocycles(
     db: Session = Depends(get_db),
@@ -84,7 +103,7 @@ async def get_mesocycle(
 
     if not mesocycle:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle template not found"
         )
 
     # Check ownership (allow access to stock mesocycles)
@@ -142,6 +161,7 @@ async def create_mesocycle(
         db.flush()  # Get workout template ID
 
         # Create workout exercises
+        _reject_duplicate_exercises(workout_data)
         for exercise_data in workout_data.exercises:
             # Verify exercise exists and user has access
             exercise = db.query(Exercise).filter(Exercise.id == exercise_data.exercise_id).first()
@@ -218,10 +238,10 @@ async def create_mesocycle_from_instance(
     ).first()
 
     if not instance:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle instance not found")
 
     if instance.status != "completed":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Instance must be completed")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You can only create a template from a completed mesocycle")
 
     # Get the original template for exercise parameters (sets, reps, RIR)
     original_template = None
@@ -295,6 +315,11 @@ async def create_mesocycle_from_instance(
         for ws in sets:
             exercise_groups.setdefault(ws.exercise_id, []).append(ws)
 
+        # A day whose exercises were all removed during the run would copy
+        # across as an empty workout, which cannot be trained or started
+        if not exercise_groups:
+            continue
+
         workout_name = original_workout_names.get(day_number, f"Day {day_number}")
         workout_template = WorkoutTemplate(
             mesocycle_id=new_mesocycle.id,
@@ -362,7 +387,7 @@ async def update_mesocycle(
 
     if not mesocycle:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle template not found"
         )
 
     # Prevent editing of stock mesocycles
@@ -424,7 +449,7 @@ async def delete_mesocycle(
 
     if not mesocycle:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle template not found"
         )
 
     # Prevent deletion of stock mesocycles
@@ -453,7 +478,7 @@ async def delete_mesocycle(
     if active_instances > 0:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Cannot delete template with active instances. End the active instance first.",
+            detail="Cannot delete this template while an instance of it is active. End the active mesocycle first.",
         )
 
     db.delete(mesocycle)
@@ -480,7 +505,7 @@ async def add_workout_template(
 
     if not mesocycle:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle template not found"
         )
 
     # Prevent modifying stock mesocycles
@@ -509,6 +534,7 @@ async def add_workout_template(
     db.flush()
 
     # Create workout exercises
+    _reject_duplicate_exercises(workout_data)
     for exercise_data in workout_data.exercises:
         # Verify exercise exists and user has access
         exercise = db.query(Exercise).filter(Exercise.id == exercise_data.exercise_id).first()
@@ -571,7 +597,7 @@ async def replace_workout_templates(
 
     if not mesocycle:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Mesocycle template not found"
         )
 
     if mesocycle.is_stock:
@@ -602,28 +628,41 @@ async def replace_workout_templates(
             detail="Cannot edit workouts while an instance of this template is active. End the active mesocycle first.",
         )
 
-    # Delete all existing workout templates (cascades to exercises)
-    db.query(WorkoutExercise).filter(
-        WorkoutExercise.workout_template_id.in_(
-            db.query(WorkoutTemplate.id).filter(
-                WorkoutTemplate.mesocycle_id == mesocycle_id
-            )
-        )
-    ).delete(synchronize_session=False)
-    db.query(WorkoutTemplate).filter(
-        WorkoutTemplate.mesocycle_id == mesocycle_id
-    ).delete(synchronize_session=False)
+    # Rows are reused rather than deleted and recreated. Instances key their
+    # per-exercise note overrides by workout_exercise_id, so recreating the
+    # rows silently orphaned every note the user had written against this
+    # template's past runs.
+    existing_templates = (
+        db.query(WorkoutTemplate)
+        .filter(WorkoutTemplate.mesocycle_id == mesocycle_id)
+        .order_by(WorkoutTemplate.order_index)
+        .all()
+    )
 
-    # Create new workout templates
-    for workout_data in workout_templates_data:
-        workout_template = WorkoutTemplate(
-            mesocycle_id=mesocycle_id,
-            name=workout_data.name,
-            description=workout_data.description,
-            order_index=workout_data.order_index,
-        )
-        db.add(workout_template)
-        db.flush()
+    for position, workout_data in enumerate(workout_templates_data):
+        _reject_duplicate_exercises(workout_data)
+
+        if position < len(existing_templates):
+            workout_template = existing_templates[position]
+            workout_template.name = workout_data.name
+            workout_template.description = workout_data.description
+            workout_template.order_index = workout_data.order_index
+        else:
+            workout_template = WorkoutTemplate(
+                mesocycle_id=mesocycle_id,
+                name=workout_data.name,
+                description=workout_data.description,
+                order_index=workout_data.order_index,
+            )
+            db.add(workout_template)
+            db.flush()
+
+        # Match a row to the same exercise, so a note follows its lift even if
+        # the day is reordered
+        reusable = {}
+        for workout_exercise in workout_template.exercises:
+            reusable.setdefault(workout_exercise.exercise_id, []).append(workout_exercise)
+        reused = set()
 
         for exercise_data in workout_data.exercises:
             exercise = db.query(Exercise).filter(Exercise.id == exercise_data.exercise_id).first()
@@ -638,8 +677,7 @@ async def replace_workout_templates(
                     detail=f"You don't have access to exercise with ID {exercise_data.exercise_id}",
                 )
 
-            db.add(WorkoutExercise(
-                workout_template_id=workout_template.id,
+            fields = dict(
                 exercise_id=exercise_data.exercise_id,
                 order_index=exercise_data.order_index,
                 target_sets=exercise_data.target_sets,
@@ -649,7 +687,26 @@ async def replace_workout_templates(
                 starting_rir=exercise_data.starting_rir,
                 ending_rir=exercise_data.ending_rir,
                 notes=exercise_data.notes,
-            ))
+            )
+
+            row = next(
+                (r for r in reusable.get(exercise_data.exercise_id, []) if r.id not in reused),
+                None,
+            )
+            if row is not None:
+                reused.add(row.id)
+                for field, value in fields.items():
+                    setattr(row, field, value)
+            else:
+                db.add(WorkoutExercise(workout_template_id=workout_template.id, **fields))
+
+        for workout_exercise in list(workout_template.exercises):
+            if workout_exercise.id is not None and workout_exercise.id not in reused:
+                db.delete(workout_exercise)
+
+    # Drop days the template no longer has
+    for workout_template in existing_templates[len(workout_templates_data):]:
+        db.delete(workout_template)
 
     db.commit()
 

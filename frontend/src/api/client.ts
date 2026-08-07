@@ -90,42 +90,60 @@ async function tryRefreshToken(): Promise<string | null> {
   // Deduplicate concurrent refresh attempts
   if (refreshPromise) return refreshPromise;
 
-  refreshPromise = (async () => {
+  const run = async (): Promise<string | null> => {
+    let refreshToken: string | undefined;
     try {
       const stored = localStorage.getItem('auth-storage');
       if (!stored) return null;
-      const { state } = JSON.parse(stored);
-      const refreshToken = state?.refreshToken;
-      if (!refreshToken) return null;
-
-      let response: Response;
-      try {
-        response = await fetch(`${API_BASE_URL}/v1/auth/refresh`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refresh_token: refreshToken }),
-        });
-      } catch {
-        throw new RefreshUnavailableError();
-      }
-
-      if (!response.ok) return null;
-
-      const data = await response.json();
-      const newAccessToken: string = data.access_token;
-
-      // Update Zustand in-memory state so components get the fresh token
-      if (_setAccessToken) {
-        _setAccessToken(newAccessToken);
-      }
-
-      return newAccessToken;
-    } finally {
-      refreshPromise = null;
+      refreshToken = JSON.parse(stored)?.state?.refreshToken;
+    } catch {
+      // Unreadable storage is indistinguishable from having no session
+      return null;
     }
-  })();
+    if (!refreshToken) return null;
 
-  return refreshPromise;
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}/v1/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+    } catch {
+      throw new RefreshUnavailableError();
+    }
+
+    if (!response.ok) return null;
+
+    // A 200 that isn't the token payload means something in front of the API
+    // answered. Treat it as unreachable rather than as a dead session, and
+    // never let the parse error escape as a non-ApiError.
+    let newAccessToken: string | undefined;
+    try {
+      newAccessToken = (await response.json())?.access_token;
+    } catch {
+      throw new RefreshUnavailableError();
+    }
+    if (!newAccessToken) throw new RefreshUnavailableError();
+
+    // Update Zustand in-memory state so components get the fresh token
+    if (_setAccessToken) {
+      _setAccessToken(newAccessToken);
+    }
+
+    return newAccessToken;
+  };
+
+  const attempt = run();
+  refreshPromise = attempt;
+  // Cleared after the assignment: resetting inside the body would run before
+  // the assignment for a rejection thrown before the first await, caching a
+  // rejected promise for the life of the tab.
+  void attempt.catch(() => undefined).then(() => {
+    refreshPromise = null;
+  });
+
+  return attempt;
 }
 
 /**
@@ -166,15 +184,13 @@ async function fetchApi<T>(
       let newToken: string | null = null;
       try {
         newToken = await tryRefreshToken();
-      } catch (refreshErr) {
-        if (refreshErr instanceof RefreshUnavailableError) {
-          // Could not reach the server to refresh — keep the session and let
-          // the caller handle a transient failure
-          setServerReachable(false);
-          const error: ApiError = { detail: 'An error occurred', status: 0 };
-          throw error;
-        }
-        throw refreshErr;
+      } catch {
+        // Could not reach the server to refresh — keep the session and let the
+        // caller handle it as any other transient failure. Callers branch on
+        // `status`, so nothing but an ApiError may leave here.
+        setServerReachable(false);
+        const error: ApiError = { detail: 'An error occurred', status: 0 };
+        throw error;
       }
       if (newToken) {
         // Build retry headers as a plain object so the spread on line 137 works

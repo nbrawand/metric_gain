@@ -117,8 +117,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     data = event["data"]["object"]
 
     if event_type == "checkout.session.completed":
-        customer_id = data.get("customer")
-        subscription_id = data.get("subscription")
+        customer_id = _id_of(data.get("customer")) or data.get("customer")
+        subscription_id = _id_of(data.get("subscription"))
         # Never look a user up by a missing id: `column == None` compiles to
         # IS NULL and would match an arbitrary user who has no id stored
         user = (

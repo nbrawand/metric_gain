@@ -21,7 +21,7 @@ export default function Landing() {
               Your plan. Your progress.
             </p>
             <p className="text-teal-200 max-w-2xl mb-8">
-              Strength Guider turns your training plan into guided workouts: you choose the volume and weekly ramp, and the app handles weight targets, RIR, and scheduling for the whole block.
+              Strength Guider turns your training plan into guided workouts: you choose the volume and weekly ramp, and the app handles weight targets, RIR, and lays out every session for the whole block.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
               <Link
@@ -40,7 +40,7 @@ export default function Landing() {
             <p className="text-teal-200 mt-4 text-sm">
               Already have an account?{' '}
               <Link to="/login" className="text-white hover:text-teal-300 underline transition-colors">
-                Log in
+                Sign in
               </Link>
             </p>
           </div>
@@ -65,7 +65,7 @@ export default function Landing() {
         <div className="flex flex-col md:flex-row items-center gap-10">
           <div className="flex-1">
             <p className="text-gray-300 leading-relaxed mb-3">
-              Most apps just log what you did. Strength Guider walks you through every session of a structured training block: you plan how many sets each exercise gets and how volume ramps week over week, and the app generates your full schedule with weight targets and RIR goals. With over 100 exercises and ready-made mesocycle templates, you can start training right away or build your own program from scratch.
+              Most apps just log what you did. Strength Guider walks you through every session of a structured training block: you plan how many sets each exercise gets and how volume ramps week over week, and the app generates your full schedule with weight targets and RIR goals. With 115 exercises and ready-made mesocycle templates, you can start training right away or build your own program from scratch.
             </p>
             <p className="text-gray-300 leading-relaxed">
               Think of it as a knowledgeable training guide that keeps you on a structured plan instead of guesswork, at a fraction of the cost of a personal trainer. Along the way, you learn the science just by using the app.
@@ -146,7 +146,7 @@ export default function Landing() {
             </div>
             <h3 className="text-white font-semibold text-lg mb-2">Learn Exercise Science as You Go</h3>
             <p className="text-gray-400 text-sm leading-relaxed">
-              Strength Guider introduces concepts like progressive overload, RIR-based intensity, and periodization as you train. You learn to structure your training into mesocycles, the building blocks of a structured routine.
+              Strength Guider introduces concepts like progressive overload, RIR-based intensity, and periodization as you train. You learn to structure your training into mesocycles, the building blocks of a long-term program.
             </p>
           </div>
         </div>

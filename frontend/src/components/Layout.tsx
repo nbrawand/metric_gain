@@ -63,6 +63,10 @@ export default function Layout() {
   // edited (or re-seeded on deploy, for stock ones) mid-block, which would
   // otherwise resize the calendar and hide sessions the user still has to do.
   const instanceWeeks = activeInstance?.template_weeks || mesocycle?.weeks || 0;
+  // Day count from the same snapshot, so a template edited or re-seeded
+  // mid-block cannot resize the calendar under the user
+  const instanceDays =
+    activeInstance?.template_days_per_week || mesocycle?.workout_templates?.length || 0;
 
   const getDayLabel = (dayNumber: number): string => `Day ${dayNumber}`;
 
@@ -223,7 +227,7 @@ export default function Layout() {
                 </div>
 
                 {/* Day Rows */}
-                {Array.from({ length: mesocycle.workout_templates?.length || mesocycle.days_per_week }, (_, i) => i + 1).map(dayNum => (
+                {Array.from({ length: instanceDays }, (_, i) => i + 1).map(dayNum => (
                   <div key={dayNum} className="flex gap-2 mb-2">
                     <div className="w-12 flex items-center">
                       <span className="text-xs text-gray-400">{getDayLabel(dayNum)}</span>

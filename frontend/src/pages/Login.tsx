@@ -2,14 +2,19 @@
  * Login page — Google OAuth only
  */
 
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { useAuthStore } from '../stores/authStore';
 import { useGoogleAuthAvailable } from '../contexts/GoogleAuthContext';
 
 export function Login() {
   const navigate = useNavigate();
-  const { googleLogin, error, clearError } = useAuthStore();
+  const { googleLogin, error } = useAuthStore();
+  // ProtectedRoute records where the user was headed; sending everyone to the
+  // dashboard meant a deep link (a workout URL reopened from the PWA) was lost
+  const location = useLocation();
+  const redirectTo =
+    (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/';
   const googleAvailable = useGoogleAuthAvailable();
 
   return (
@@ -32,12 +37,14 @@ export function Login() {
                 onSuccess={(credentialResponse: CredentialResponse) => {
                   if (credentialResponse.credential) {
                     googleLogin(credentialResponse.credential)
-                      .then(() => navigate('/'))
+                      .then(() => navigate(redirectTo, { replace: true }))
                       .catch(() => {});
                   }
                 }}
                 onError={() => {
-                  clearError();
+                  // The only failure callback the Google flow gives us: it used
+                  // to clear the error area, leaving a dead button and no message
+                  useAuthStore.setState({ error: 'Google sign-in failed. Please try again.' });
                 }}
                 theme="filled_black"
                 size="large"

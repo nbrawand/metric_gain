@@ -11,8 +11,10 @@ export default function HowItWorks() {
 
   useEffect(() => {
     if (hash) {
-      const el = document.querySelector(hash);
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
+      // getElementById rather than querySelector: a fragment that is not a
+      // valid CSS selector (from a tracking link, say) threw and blanked the page
+      const el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView({ behavior: "smooth" });
     }
   }, [hash]);
 
@@ -133,7 +135,7 @@ export default function HowItWorks() {
           You are in full control of your training volume. When creating a mesocycle, each exercise gets two numbers: a <span className="text-white font-medium">starting set count</span> for week one and a <span className="text-white font-medium">weekly increase</span> — how many sets to add each week.
         </p>
         <div className="bg-gray-700 rounded-lg p-4 mb-3 font-mono text-sm space-y-1">
-          <p className="text-gray-300"><span className="text-teal-400">sets in week N</span> = starting sets + weekly increase × (N − 1)</p>
+          <p className="text-gray-300"><span className="text-teal-400">sets in week N</span> = round(starting sets + weekly increase × (N − 1)), minimum 1</p>
         </div>
         <p className="text-gray-300 leading-relaxed mb-3">
           Half-set increases are allowed — an increase of 0.5 with 3 starting sets gives 3, 4, 4, 5, 5, 6 sets across a six-week block. Before confirming your mesocycle, you review bar charts of the total weekly sets for each muscle group so you can sanity-check the whole plan at a glance.

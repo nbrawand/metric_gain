@@ -680,3 +680,87 @@ def test_adding_a_set_for_an_unknown_exercise_is_rejected(
         headers=auth_headers,
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+# Weight targets across weeks
+
+def _complete_session(client, auth_headers, session, weight, reps=8):
+    for workout_set in session["workout_sets"]:
+        client.patch(
+            f"/v1/workout-sessions/{session['id']}/sets/{workout_set['id']}",
+            json={"weight": weight, "reps": reps},
+            headers=auth_headers,
+        )
+    client.patch(
+        f"/v1/workout-sessions/{session['id']}",
+        json={"status": "completed"},
+        headers=auth_headers,
+    )
+
+
+def _instance_with_history(client, auth_headers, exercise_id, history_weight=100):
+    """Log a completed block at history_weight, then start a fresh one.
+
+    The fresh block's sets are seeded from that history at instance creation,
+    which is what makes a stale target possible later.
+    """
+    old_template = _make_template(
+        client, auth_headers, "History Block", [_exercise_entry(exercise_id, 0, 2)]
+    )
+    old_instance = client.post(
+        "/v1/mesocycle-instances/",
+        json={"mesocycle_template_id": old_template["id"]},
+        headers=auth_headers,
+    ).json()
+    _complete_session(
+        client, auth_headers,
+        _session_detail(client, auth_headers, old_instance["id"], week=1, day=1),
+        weight=history_weight,
+    )
+    client.patch(
+        f"/v1/mesocycle-instances/{old_instance['id']}",
+        json={"status": "completed"},
+        headers=auth_headers,
+    )
+
+    template = _make_template(
+        client, auth_headers, "Current Block",
+        [_exercise_entry(exercise_id, 0, 2, increment=0.5)],
+    )
+    return client.post(
+        "/v1/mesocycle-instances/",
+        json={"mesocycle_template_id": template["id"]},
+        headers=auth_headers,
+    ).json()
+
+
+def test_sets_added_by_the_weekly_increment_get_a_current_target(client, auth_headers, sample_exercise_id):
+    """The extra set a weekly increment adds must not keep a stale light target.
+
+    Week 2 goes 2 -> 3 sets. The third set has no counterpart in week 1, so it
+    used to keep the target seeded from older history while its siblings
+    progressed off what was actually lifted.
+    """
+    instance = _instance_with_history(client, auth_headers, sample_exercise_id, history_weight=100)
+
+    week_one = _session_detail(client, auth_headers, instance["id"], week=1, day=1)
+    _complete_session(client, auth_headers, week_one, weight=200)
+
+    week_two = _session_detail(client, auth_headers, instance["id"], week=2, day=1)
+
+    assert len(week_two["workout_sets"]) == 3  # 2 + 0.5/week, rounded up
+    targets = {s["target_weight"] for s in week_two["workout_sets"]}
+    assert targets == {205}, f"expected every set to progress off 200, got {targets}"
+
+
+def test_an_untouched_week_does_not_freeze_later_targets(client, auth_headers, sample_exercise_id):
+    """Skipping a week must not pin later weeks to the weight they were seeded with."""
+    instance = _instance_with_history(client, auth_headers, sample_exercise_id, history_weight=100)
+
+    week_one = _session_detail(client, auth_headers, instance["id"], week=1, day=1)
+    _complete_session(client, auth_headers, week_one, weight=200)
+
+    # Week 2 is left untouched; week 3 must still build on week 1's 200
+    week_three = _session_detail(client, auth_headers, instance["id"], week=3, day=1)
+    targets = {s["target_weight"] for s in week_three["workout_sets"]}
+    assert targets == {205}, f"expected targets off the last completed week, got {targets}"

@@ -106,7 +106,7 @@ export function Home() {
                 <p className="text-teal-100 text-sm sm:text-base">
                   Week {currentWeek} of {totalWeeks}
                   {' • '}
-                  {completedCount} workouts completed
+                  {completedCount} workout{completedCount === 1 ? "" : "s"} completed
                 </p>
               </div>
               <button
@@ -128,7 +128,7 @@ export function Home() {
             <h3 className="text-lg sm:text-xl font-semibold text-white mb-3">Getting Started</h3>
             <ol className="space-y-2 text-gray-300 list-decimal list-inside">
               <li>Check out <Link to="/how-it-works" className="text-teal-400 font-medium hover:text-teal-300">How It Works</Link> to learn the basics</li>
-              <li>Click <Link to="/mesocycles" className="text-teal-400 font-medium hover:text-teal-300">Mesocycles</Link> in the menu above</li>
+              <li>Open the menu and choose <Link to="/mesocycles" className="text-teal-400 font-medium hover:text-teal-300">Mesocycles</Link></li>
               <li>Create a new mesocycle template with your workouts</li>
               <li>Click Start Instance to begin training</li>
               <li>Return here and click {activeInstance ? <a href="#" onClick={(e) => { e.preventDefault(); handleContinueMesocycle(); }} className="text-teal-400 font-medium hover:text-teal-300">Continue Mesocycle</a> : <span>Continue Mesocycle</span>} to log workouts</li>

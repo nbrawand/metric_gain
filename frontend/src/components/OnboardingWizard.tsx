@@ -14,8 +14,8 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
         <>
           <p className="text-gray-300 leading-relaxed mb-3">
             Strength Guider is an evidence-based hypertrophy training app that helps
-            you build muscle more effectively by managing your training volume,
-            intensity, and progression.
+            you build muscle more effectively by putting your training volume,
+            intensity, and progression on a structured plan.
           </p>
           <p className="text-gray-300 leading-relaxed">
             This quick walkthrough will explain the core concepts so you can get

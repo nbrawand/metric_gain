@@ -64,6 +64,24 @@ export default function MesocycleDetail() {
     }
   };
 
+  const templatesOf = (meso: Mesocycle) =>
+    meso.workout_templates.map((wt) => ({
+      name: wt.name,
+      description: wt.description,
+      order_index: wt.order_index,
+      exercises: wt.exercises.map((ex) => ({
+        exercise_id: ex.exercise_id,
+        order_index: ex.order_index,
+        target_sets: ex.target_sets,
+        weekly_set_increment: ex.weekly_set_increment ?? 0,
+        target_reps_min: ex.target_reps_min,
+        target_reps_max: ex.target_reps_max,
+        starting_rir: ex.starting_rir,
+        ending_rir: ex.ending_rir,
+        notes: ex.notes,
+      })),
+    }));
+
   const populateEditState = (meso: Mesocycle) => {
     setEditData({
       name: meso.name,
@@ -143,8 +161,14 @@ export default function MesocycleDetail() {
 
       // Workouts first: this is the call the backend refuses while an instance
       // is running, and writing the metadata before it failed left the template
-      // half-saved with the page still showing the old values.
-      await replaceWorkoutTemplates(parseInt(id), editTemplates, accessToken);
+      // half-saved with the page still showing the old values. Skipped entirely
+      // when the workouts are untouched, so renaming a template still works
+      // while its instance is running.
+      const workoutsChanged =
+        JSON.stringify(editTemplates) !== JSON.stringify(templatesOf(mesocycle));
+      if (workoutsChanged) {
+        await replaceWorkoutTemplates(parseInt(id), editTemplates, accessToken);
+      }
 
       await updateMesocycle(
         parseInt(id),
@@ -231,6 +255,16 @@ export default function MesocycleDetail() {
     // Fix order indices
     updated.forEach((wt, i) => (wt.order_index = i));
     setEditTemplates(updated);
+    // Collapsed state is keyed by position, so removing a day would otherwise
+    // fold whichever day shifted into that slot
+    setCollapsedDays((prev) => {
+      const next = new Set<number>();
+      prev.forEach((i) => {
+        if (i < index) next.add(i);
+        else if (i > index) next.add(i - 1);
+      });
+      return next;
+    });
     setEditData((prev) => ({ ...prev, days_per_week: Math.max(1, updated.length) }));
   };
 

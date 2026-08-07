@@ -37,6 +37,7 @@ export default function WorkoutExecution() {
   const [availableExercises, setAvailableExercises] = useState<Exercise[]>([]);
   const [exerciseSearch, setExerciseSearch] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
+  const latestSessionRequestRef = useRef<string | undefined>(undefined);
 
   // Notes editing state
   const [editingNotesExerciseId, setEditingNotesExerciseId] = useState<number | null>(null);
@@ -270,7 +271,7 @@ export default function WorkoutExecution() {
       }
       setSession(updated);
     } catch (err: any) {
-      const msg = err?.response?.data?.detail || 'Failed to update exercise';
+      const msg = err?.detail || 'Could not update that exercise. Please try again.';
       alert(msg);
       console.error('Error in exercise picker:', err);
     } finally {
@@ -282,9 +283,17 @@ export default function WorkoutExecution() {
   const loadWorkoutSession = async () => {
     if (!accessToken || !sessionId) return;
 
+    // Two overlapping loads (finishing a workout, then picking another from
+    // the calendar) could leave the earlier one on screen while the URL said
+    // the later one, so every save went to the wrong session.
+    const requestedSessionId = sessionId;
+    const isStale = () => requestedSessionId !== latestSessionRequestRef.current;
+    latestSessionRequestRef.current = requestedSessionId;
+
     try {
       setLoading(true);
       const sessionData = await getWorkoutSession(parseInt(sessionId), accessToken);
+      if (isStale()) return;
       setSession(sessionData);
 
       // Sets saved while offline are only in the queue, not on the server yet.
@@ -310,21 +319,28 @@ export default function WorkoutExecution() {
 
       // Load mesocycle instance data
       const instanceData = await getMesocycleInstance(sessionData.mesocycle_instance_id, accessToken);
+      if (isStale()) return;
       setInstance(instanceData);
 
       // Load all sessions for this instance
       const sessions = await listWorkoutSessions(
-        { mesocycle_instance_id: sessionData.mesocycle_instance_id },
+        { mesocycle_instance_id: sessionData.mesocycle_instance_id, limit: 500 },
         accessToken
       );
+      if (isStale()) return;
       setAllSessions(sessions);
 
       setError(null);
-    } catch (err) {
-      setError('Failed to load workout session');
+    } catch (err: any) {
+      if (isStale()) return;
+      setError(
+        err?.status === 0
+          ? "You're offline, so this workout can't be opened right now."
+          : 'Failed to load workout session'
+      );
       console.error('Error loading workout session:', err);
     } finally {
-      setLoading(false);
+      if (!isStale()) setLoading(false);
     }
   };
 
@@ -460,10 +476,18 @@ export default function WorkoutExecution() {
       };
     });
 
+    const cleared = { weight: 0, reps: 0, skipped: 0 as 0 | 1 };
     try {
-      await updateWorkoutSet(session.id, setId, { weight: 0, reps: 0, skipped: 0 }, accessToken);
-    } catch (err) {
-      console.error('Error resetting set:', err);
+      await updateWorkoutSet(session.id, setId, cleared, accessToken);
+    } catch (err: any) {
+      if (err?.status === 0) {
+        // Offline: queue the clear like a save, or the server keeps the old
+        // numbers and the set reappears logged after a reload
+        enqueue(session.id, setId, cleared);
+      } else {
+        console.error('Error resetting set:', err);
+        setError(err?.detail || 'Could not clear that set. Please try again.');
+      }
     }
   };
 
@@ -475,6 +499,20 @@ export default function WorkoutExecution() {
   }, [completionBanner]);
 
   const handleCompleteWorkoutClick = async () => {
+    if (!session || !accessToken) return;
+    // Held for the whole flow, not just the save step: the button used to stay
+    // live through the completion request, and a second tap ran a second
+    // completion whose navigation raced the first.
+    if (completingWorkout) return;
+    setCompletingWorkout(true);
+    try {
+      await runCompleteWorkout();
+    } finally {
+      setCompletingWorkout(false);
+    }
+  };
+
+  const runCompleteWorkout = async () => {
     if (!session || !accessToken) return;
 
     // Try to drain any pending offline saves first
@@ -495,7 +533,6 @@ export default function WorkoutExecution() {
       .map(s => s.id);
 
     if (unloggedSetIds.length > 0) {
-      setCompletingWorkout(true);
       setSavingSetIds(new Set(unloggedSetIds));
 
       try {
@@ -521,15 +558,13 @@ export default function WorkoutExecution() {
           return next;
         });
       } catch (err) {
-        console.error('Error saving sets:', err);
-        setCompletingWorkout(false);
+        console.error("Error saving sets:", err);
         setSavingSetIds(new Set());
-        setError('Failed to save some sets. Please retry individual sets and try again.');
+        setError("Could not save some sets. Fix them individually, then finish again.");
         return;
       } finally {
         setSavingSetIds(new Set());
       }
-      setCompletingWorkout(false);
     }
 
     await handleCompleteWorkout();
@@ -542,7 +577,7 @@ export default function WorkoutExecution() {
     if (!mesocycle) return;
     const completedWeek = session.week_number;
     const completedDay = session.day_number;
-    const daysPerWeek = mesocycle.workout_templates?.length || mesocycle.days_per_week;
+    const daysPerWeek = instance.template_days_per_week || mesocycle.workout_templates?.length || 0;
 
     try {
       await updateWorkoutSession(
@@ -630,6 +665,10 @@ export default function WorkoutExecution() {
   // Week count is taken from the snapshot made when the block started, so
   // later edits to the template cannot resize the calendar under the user.
   const instanceWeeks = instance?.template_weeks || mesocycle?.weeks || 0;
+  // Day count from the same snapshot as the weeks, so a template edited
+  // mid-block cannot change how many workouts this block is thought to have
+  const instanceDays =
+    instance?.template_days_per_week || mesocycle?.workout_templates?.length || 0;
 
   // Look up template exercise to get notes
   const getTemplateExercise = (exerciseId: number) => {
@@ -679,8 +718,12 @@ export default function WorkoutExecution() {
           exercise_notes: updatedNotes,
         };
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error updating exercise notes:', err);
+      // Reopen the editor with the text still in it — closing on failure made
+      // the note the user just typed simply vanish
+      setEditingNotesExerciseId(exerciseId);
+      setError(err?.detail || 'Could not save that note. Please try again.');
     }
   };
 
@@ -715,6 +758,7 @@ export default function WorkoutExecution() {
     const targetOrderIndex = exercises[targetIdx].orderIndex;
     const targetExerciseId = exercises[targetIdx].id;
 
+    const previousSession = session;
     // Swap order_index in local state immediately
     setSession(prev => {
       if (!prev) return prev;
@@ -739,6 +783,9 @@ export default function WorkoutExecution() {
       }));
     } catch (err: any) {
       console.error('Error reordering exercises:', err);
+      // Put the order back: leaving the optimistic swap on screen next to a
+      // failure message told the user two different things
+      setSession(previousSession);
       setError(err?.detail || 'Could not reorder exercises. Please try again.');
     }
   };
@@ -790,6 +837,7 @@ export default function WorkoutExecution() {
       });
     });
 
+    const previousSession = session;
     // Update local state immediately
     setSession(prev => {
       if (!prev) return prev;
@@ -814,6 +862,7 @@ export default function WorkoutExecution() {
       ));
     } catch (err: any) {
       console.error('Error reordering muscle groups:', err);
+      setSession(previousSession);
       setError(err?.detail || 'Could not reorder muscle groups. Please try again.');
     }
   };
@@ -841,8 +890,22 @@ export default function WorkoutExecution() {
   // the page out for an error message would strand them mid-workout.
   if (!session || !instance || !mesocycle) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-red-600">{error || 'Workout not found'}</div>
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4 px-6 text-center">
+        <p className="text-red-400">{error || "Workout not found"}</p>
+        <div className="flex gap-3">
+          <button
+            onClick={() => loadWorkoutSession()}
+            className="bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 px-5 rounded-lg transition-colors"
+          >
+            Try again
+          </button>
+          <button
+            onClick={() => navigate("/")}
+            className="border border-gray-600 text-gray-300 hover:bg-gray-800 font-medium py-2 px-5 rounded-lg transition-colors"
+          >
+            Back to Home
+          </button>
+        </div>
       </div>
     );
   }
@@ -923,7 +986,7 @@ export default function WorkoutExecution() {
                 </div>
 
                 {/* Day Rows - use actual number of workout templates */}
-                {Array.from({ length: mesocycle.workout_templates?.length || mesocycle.days_per_week }, (_, i) => i + 1).map(dayNum => (
+                {Array.from({ length: instanceDays }, (_, i) => i + 1).map(dayNum => (
                   <div key={dayNum} className="flex gap-2 mb-2">
                     {/* Day Label */}
                     <div className="w-12 flex items-center">
@@ -990,13 +1053,15 @@ export default function WorkoutExecution() {
             return minA - minB;
           })
           .map(([muscleGroup, sets], mgIdx, mgArr) => {
-          // Group sets by exercise
+          // Group sets by exercise id, not by name: two exercises can share a
+          // name (a custom one may duplicate a stock one), and merging them
+          // into one card made add/remove/swap act on only half of it.
           const exerciseGroups = sets.reduce((acc, set) => {
-            const exerciseName = set.exercise?.name || 'Unknown';
-            if (!acc[exerciseName]) {
-              acc[exerciseName] = [];
+            const key = String(set.exercise_id);
+            if (!acc[key]) {
+              acc[key] = [];
             }
-            acc[exerciseName].push(set);
+            acc[key].push(set);
             return acc;
           }, {} as Record<string, WorkoutSet[]>);
 
@@ -1037,12 +1102,13 @@ export default function WorkoutExecution() {
               {/* Exercise Cards */}
               {Object.entries(exerciseGroups)
                 .sort((a, b) => (a[1][0]?.order_index ?? 0) - (b[1][0]?.order_index ?? 0))
-                .map(([exerciseName, exerciseSets], exIdx, exArr) => {
+                .map(([exerciseKey, exerciseSets], exIdx, exArr) => {
                 const exerciseId = exerciseSets[0]?.exercise_id;
+                const exerciseName = exerciseSets[0]?.exercise?.name || "Unknown";
                 const isFirstInGroup = exIdx === 0;
                 const isLastInGroup = exIdx === exArr.length - 1;
                 return (
-                <div key={exerciseName} className="bg-gray-800 rounded-lg mb-3">
+                <div key={exerciseKey} className="bg-gray-800 rounded-lg mb-3">
                   <div className="flex items-center justify-between p-4 pb-0">
                     <div
                       className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer"
@@ -1062,7 +1128,7 @@ export default function WorkoutExecution() {
                         <h3 className="font-semibold">{exerciseName}</h3>
                         <p className="text-xs text-gray-400">
                           {exerciseSets[0]?.exercise?.equipment || 'Bodyweight'}
-                          {collapsedExercises.has(exerciseId) && ` -- ${exerciseSets.length} ${exerciseSets.length === 1 ? 'set' : 'sets'}`}
+                          {collapsedExercises.has(exerciseId) && ` • ${exerciseSets.length} ${exerciseSets.length === 1 ? 'set' : 'sets'}`}
                         </p>
                       </div>
                     </div>
@@ -1246,7 +1312,7 @@ export default function WorkoutExecution() {
                               return (
                                 <div className="text-xs text-teal-400 text-center mt-1">
                                   {set.target_reps
-                                    ? `target: ${set.target_reps} reps or ${weekRir} RIR`
+                                    ? `target: ${set.target_reps} reps at ${weekRir} RIR`
                                     : `target: 6-15 reps at ${weekRir} RIR`}
                                 </div>
                               );
@@ -1275,7 +1341,7 @@ export default function WorkoutExecution() {
                               <button
                                 onClick={() => handleUnlogSet(set.id)}
                                 className="w-8 h-8 rounded bg-teal-500 border-2 border-teal-500 flex items-center justify-center text-white hover:bg-teal-600 transition-colors"
-                                title="Unsave this set"
+                                title="Clear this set"
                               >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -1414,7 +1480,7 @@ export default function WorkoutExecution() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-white">Quick Guide</h3>
+              <h3 className="text-lg font-semibold text-white">Weight Guide</h3>
               <button
                 onClick={() => setShowWeightInfo(false)}
                 className="text-gray-400 hover:text-white text-xl"

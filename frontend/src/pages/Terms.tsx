@@ -244,7 +244,7 @@ export default function Terms() {
             <p className="mb-4">As a user of the Services, you agree not to:</p>
             <ul className="list-disc list-inside space-y-2">
               <li>Systematically retrieve data or other content from the Services to create or compile, directly or indirectly, a collection, compilation, database, or directory without written permission from us.</li>
-              <li>Trick, defraud, or mislead us and other users, especially in any attempt to learn sensitive account information such as user passwords.</li>
+              <li>Trick, defraud, or mislead us and other users, especially in any attempt to learn sensitive account information such as account credentials.</li>
               <li>Circumvent, disable, or otherwise interfere with security-related features of the Services, including features that prevent or restrict the use or copying of any Content or enforce limitations on the use of the Services and/or the Content contained therein.</li>
               <li>Disparage, tarnish, or otherwise harm, in our opinion, us and/or the Services.</li>
               <li>Use any information obtained from the Services in order to harass, abuse, or harm another person.</li>
@@ -380,7 +380,7 @@ export default function Terms() {
           <section id="privacy">
             <h2 className="text-xl font-bold text-white mb-4">13. PRIVACY POLICY</h2>
             <p className="mb-4">
-              We care about data privacy and security. By using the Services, you agree to be bound by our Privacy Policy posted on the Services, which is incorporated into these Legal Terms. Please be advised the Services are hosted in the United States. If you access the Services from any other region of the world with laws or other requirements governing personal data collection, use, or disclosure that differ from applicable laws in the United States, then through your continued use of the Services, you are transferring your data to the United States, and you expressly consent to have your data transferred to and processed in the United States.
+              We care about data privacy and security. By using the Services, you agree to be bound by the data handling described in these Terms, which is incorporated into these Legal Terms. Please be advised the Services are hosted in the United States. If you access the Services from any other region of the world with laws or other requirements governing personal data collection, use, or disclosure that differ from applicable laws in the United States, then through your continued use of the Services, you are transferring your data to the United States, and you expressly consent to have your data transferred to and processed in the United States.
             </p>
           </section>
 

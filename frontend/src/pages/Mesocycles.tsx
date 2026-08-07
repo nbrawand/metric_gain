@@ -75,9 +75,16 @@ export default function Mesocycles() {
     loadData();
   }, []);
 
-  // Build the day cards when the create modal opens and whenever days_per_week
-  // changes. Keying this on days_per_week alone left the modal empty on every
-  // reopen, since resetForm puts days_per_week back to its default.
+  const blankDay = (index: number): WorkoutTemplateCreate => ({
+    name: `Day ${index + 1} Workout`,
+    description: '',
+    order_index: index,
+    exercises: [],
+  });
+
+  // Build the day cards when the create modal opens. Keying this on
+  // days_per_week alone left the modal empty on every reopen, since resetForm
+  // puts days_per_week back to its default.
   useEffect(() => {
     if (!showCreateModal) return;
     if (pendingTemplatesRef.current) {
@@ -85,17 +92,25 @@ export default function Mesocycles() {
       pendingTemplatesRef.current = null;
       return;
     }
-    const newTemplates: WorkoutTemplateCreate[] = [];
-    for (let i = 0; i < mesocycleData.days_per_week; i++) {
-      newTemplates.push({
-        name: `Day ${i + 1} Workout`,
-        description: '',
-        order_index: i,
-        exercises: [],
-      });
-    }
-    setWorkoutTemplates(newTemplates);
-  }, [mesocycleData.days_per_week, showCreateModal]);
+    setWorkoutTemplates(
+      Array.from({ length: mesocycleData.days_per_week }, (_, i) => blankDay(i))
+    );
+    // Only on open: resizing is handled by the days/week control itself, which
+    // must not throw away days the user has already filled in.
+  }, [showCreateModal]);
+
+  // Add or drop day cards to match, keeping the ones already filled in
+  const setDaysPerWeek = (days: number) => {
+    setMesocycleData((prev) => ({ ...prev, days_per_week: days }));
+    setWorkoutTemplates((prev) => {
+      if (days === prev.length) return prev;
+      if (days < prev.length) return prev.slice(0, days);
+      return [
+        ...prev,
+        ...Array.from({ length: days - prev.length }, (_, i) => blankDay(prev.length + i)),
+      ];
+    });
+  };
 
   const loadData = async () => {
     if (!accessToken) return;
@@ -119,20 +134,27 @@ export default function Mesocycles() {
     }
   };
 
+  // Guards the async buttons that had no in-flight state: a double tap used to
+  // create two templates, or fire two copies/instance-ends
+  const [busyAction, setBusyAction] = useState<string | null>(null);
+
   const handleCreateFromInstance = async (instanceId: number) => {
-    if (!accessToken) return;
+    if (!accessToken || busyAction) return;
+    setBusyAction("create-from-instance");
     try {
       const newMeso = await createMesocycleFromInstance(instanceId, accessToken);
       await loadData();
       navigate(`/mesocycles/${newMeso.id}`);
     } catch (err: any) {
-      alert(err?.detail || 'Failed to create template from instance');
-      console.error('Error creating template from instance:', err);
+      alert(err?.detail || "Could not create a template from that mesocycle.");
+      console.error("Error creating template from instance:", err);
+    } finally {
+      setBusyAction(null);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!accessToken || !confirm('Are you sure you want to delete this mesocycle?')) {
+    if (!accessToken || !confirm("Are you sure you want to delete this mesocycle template?")) {
       return;
     }
 
@@ -140,13 +162,14 @@ export default function Mesocycles() {
       await deleteMesocycle(id, accessToken);
       setMesocycles(mesocycles.filter((m) => m.id !== id));
     } catch (err: any) {
-      alert(err?.detail || 'Failed to delete mesocycle');
+      alert(err?.detail || "Could not delete that mesocycle template.");
       console.error('Error deleting mesocycle:', err);
     }
   };
 
   const handleCopyMesocycle = async (id: number) => {
-    if (!accessToken) return;
+    if (!accessToken || busyAction) return;
+    setBusyAction("copy-template");
 
     try {
       const original = await getMesocycle(id, accessToken);
@@ -180,8 +203,10 @@ export default function Mesocycles() {
 
       setShowCreateModal(true);
     } catch (err) {
-      alert('Failed to load mesocycle for copying');
-      console.error('Error copying mesocycle:', err);
+      alert("Could not load that mesocycle to copy.");
+      console.error("Error copying mesocycle:", err);
+    } finally {
+      setBusyAction(null);
     }
   };
 
@@ -432,8 +457,8 @@ export default function Mesocycles() {
         {/* Mesocycles grid */}
         {mesocycles.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-300 text-lg">No mesocycles yet</p>
-            <p className="text-gray-400 mt-2">Create your first training block to get started</p>
+            <p className="text-gray-300 text-lg">No mesocycle templates yet</p>
+            <p className="text-gray-400 mt-2">Create your first mesocycle template to get started</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -550,7 +575,7 @@ export default function Mesocycles() {
         {/* Completed Mesocycles */}
         {instances.filter(i => i.status === 'completed').length > 0 && (
           <div className="mt-10">
-            <h2 className="text-2xl font-bold text-white mb-4">Completed Mesocycles</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">Past Mesocycles</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {instances
                 .filter(i => i.status === 'completed')
@@ -585,6 +610,7 @@ export default function Mesocycles() {
                     </div>
                     <button
                       onClick={() => handleCreateFromInstance(inst.id)}
+                      disabled={busyAction !== null}
                       className="mt-4 w-full bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium py-2 px-4 rounded transition-colors"
                     >
                       Create Template from This
@@ -706,7 +732,7 @@ export default function Mesocycles() {
                               ))}
                             </select>
                             <p className="text-xs text-gray-500 mt-1 italic">
-                              Week 1 target weights are seeded from this week's results.
+                              Week 1 target weights and reps are seeded from this week's results.
                             </p>
                           </div>
                         )}
@@ -751,7 +777,7 @@ export default function Mesocycles() {
               <div className="p-6 border-b border-gray-700 sticky top-0 bg-gray-800 z-10">
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-white">
-                    {createStep === 'build' ? 'Create New Mesocycle' : 'Review Weekly Volume'}
+        {createStep === "build" ? "Create New Mesocycle Template" : "Review Weekly Sets"}
                   </h2>
                   <button
                     type="button"
@@ -843,7 +869,7 @@ export default function Mesocycles() {
                     <select
                       value={mesocycleData.days_per_week}
                       onChange={(e) =>
-                        setMesocycleData({ ...mesocycleData, days_per_week: parseInt(e.target.value) })
+                        setDaysPerWeek(parseInt(e.target.value))
                       }
                       className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                       required

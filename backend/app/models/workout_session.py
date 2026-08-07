@@ -43,7 +43,14 @@ class WorkoutSession(Base):
     user = relationship("User", back_populates="workout_sessions")
     mesocycle_instance = relationship("MesocycleInstance", back_populates="workout_sessions")
     workout_template = relationship("WorkoutTemplate")
-    workout_sets = relationship("WorkoutSet", back_populates="workout_session", cascade="all, delete-orphan")
+    workout_sets = relationship(
+        "WorkoutSet",
+        back_populates="workout_session",
+        cascade="all, delete-orphan",
+        # Ordered so the API returns sets the way they are performed rather
+        # than in whatever order the rows come back
+        order_by="WorkoutSet.order_index, WorkoutSet.set_number",
+    )
 
     def __repr__(self):
         return f"<WorkoutSession(id={self.id}, date={self.workout_date}, week={self.week_number}, status='{self.status}')>"

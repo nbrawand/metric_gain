@@ -93,9 +93,12 @@ PUSH_PULL_LEGS_TEMPLATE = {
 def _set_workout_exercises(db: Session, workout_template: WorkoutTemplate, exercise_list: list) -> None:
     """Update a workout template's exercises in place to match the given list.
 
-    Rows are reused by position rather than deleted and recreated: instances
-    key their per-exercise note overrides by workout_exercise_id, and new ids
-    on every seed run would orphan every note a user has written.
+    Rows are reused rather than deleted and recreated, because instances key
+    their per-exercise note overrides by workout_exercise_id and new ids on
+    every seed run would orphan every note a user has written. A row is matched
+    to the same exercise rather than to the same position, so reordering the
+    template — or failing to resolve one exercise — cannot move a note onto a
+    different lift.
     """
     existing = (
         db.query(WorkoutExercise)
@@ -103,8 +106,12 @@ def _set_workout_exercises(db: Session, workout_template: WorkoutTemplate, exerc
         .order_by(WorkoutExercise.order_index)
         .all()
     )
+    reusable = {}
+    for workout_exercise in existing:
+        reusable.setdefault(workout_exercise.exercise_id, []).append(workout_exercise)
 
-    kept = 0
+    reused = set()
+    order_index = 0
     for exercise_data in exercise_list:
         exercise = get_exercise_by_name(db, exercise_data["name"])
         if not exercise:
@@ -113,7 +120,7 @@ def _set_workout_exercises(db: Session, workout_template: WorkoutTemplate, exerc
 
         fields = dict(
             exercise_id=exercise.id,
-            order_index=kept,
+            order_index=order_index,
             target_sets=exercise_data["sets"],
             weekly_set_increment=exercise_data.get("increment", 0.5),
             target_reps_min=exercise_data["reps_min"],
@@ -122,17 +129,20 @@ def _set_workout_exercises(db: Session, workout_template: WorkoutTemplate, exerc
             ending_rir=0,
         )
 
-        if kept < len(existing):
-            workout_exercise = existing[kept]
+        pool = reusable.get(exercise.id, [])
+        row = next((r for r in pool if r.id not in reused), None)
+        if row is not None:
+            reused.add(row.id)
             for field, value in fields.items():
-                setattr(workout_exercise, field, value)
+                setattr(row, field, value)
         else:
             db.add(WorkoutExercise(workout_template_id=workout_template.id, **fields))
-        kept += 1
+        order_index += 1
 
-    # Drop any trailing rows the template no longer has
-    for workout_exercise in existing[kept:]:
-        db.delete(workout_exercise)
+    # Drop rows for exercises the template no longer lists
+    for workout_exercise in existing:
+        if workout_exercise.id not in reused:
+            db.delete(workout_exercise)
 
 
 def _update_stock_mesocycle(db: Session, existing: Mesocycle, template: dict) -> None:

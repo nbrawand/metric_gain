@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { updateWorkoutSet } from '../api/workoutSessions';
+import { useAuthStore } from './authStore';
 import type { WorkoutSetUpdate } from '../types/workout_session';
 
 interface PendingSetSave {
@@ -13,7 +14,21 @@ interface PendingSetSave {
   setId: number;
   data: WorkoutSetUpdate;
   queuedAt: number;
+  attempts?: number;
+  userId?: number;
 }
+
+// The queue is retried on every drain, so this is generous — it exists only so
+// an item the server will never accept cannot be retried forever.
+const MAX_SYNC_ATTEMPTS = 25;
+
+// The queue outlives logout, so entries are tagged with their owner: another
+// account signing in on the same device must not sync — or discard — the
+// previous one's unsent sets. Entries with no owner predate this and are
+// treated as the current user's so nothing already queued is stranded.
+const currentUserId = () => useAuthStore.getState().user?.id;
+const belongsToCurrentUser = (item: PendingSetSave) =>
+  item.userId === undefined || item.userId === currentUserId();
 
 interface OfflineSyncState {
   pendingItems: Record<string, PendingSetSave>;
@@ -39,7 +54,7 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
         set((state) => ({
           pendingItems: {
             ...state.pendingItems,
-            [key]: { sessionId, setId, data, queuedAt: Date.now() },
+            [key]: { sessionId, setId, data, queuedAt: Date.now(), userId: currentUserId() },
           },
         }));
       },
@@ -57,7 +72,7 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
         const state = get();
         if (state.syncInProgress) return { syncedSetIds: [] };
 
-        const entries = Object.entries(state.pendingItems);
+        const entries = Object.entries(state.pendingItems).filter(([, item]) => belongsToCurrentUser(item));
         if (entries.length === 0) return { syncedSetIds: [] };
 
         set({ syncInProgress: true });
@@ -70,15 +85,33 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
             syncedSetIds.push(item.setId);
           } catch (err: any) {
             const status = err?.status;
-            // Only drop work the server can never accept. Anything else — no
-            // connection, an expired token, a 500 or a proxy error mid-deploy —
-            // must keep the sets queued, or the whole workout is lost.
+
+            // No connection: nothing else will get through either
+            if (status === 0) break;
+
+            // Only drop work the server can never accept. Anything else — an
+            // expired token, a 500, a proxy error mid-deploy — keeps the sets
+            // queued, or the whole workout is lost.
             if (status === 400 || status === 404 || status === 422) {
               console.warn(`Offline sync: dropping rejected item ${key}`, err);
               get().remove(key);
               continue;
             }
-            break;
+
+            // Keep going rather than stopping at the first failure: one item
+            // the server keeps refusing must not block everything queued
+            // behind it. Give up on it only after many attempts.
+            const attempts = (item.attempts || 0) + 1;
+            if (attempts >= MAX_SYNC_ATTEMPTS) {
+              console.warn(`Offline sync: giving up on ${key} after ${attempts} attempts`, err);
+              get().remove(key);
+            } else {
+              set((state) => ({
+                pendingItems: state.pendingItems[key]
+                  ? { ...state.pendingItems, [key]: { ...state.pendingItems[key], attempts } }
+                  : state.pendingItems,
+              }));
+            }
           }
         }
 
@@ -90,7 +123,7 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
         const items = get().pendingItems;
         const ids = new Set<number>();
         for (const item of Object.values(items)) {
-          if (item.sessionId === sessionId) {
+          if (item.sessionId === sessionId && belongsToCurrentUser(item)) {
             ids.add(item.setId);
           }
         }
@@ -98,9 +131,11 @@ export const useOfflineSyncStore = create<OfflineSyncState>()(
       },
 
       getPendingForSession: (sessionId) =>
-        Object.values(get().pendingItems).filter((item) => item.sessionId === sessionId),
+        Object.values(get().pendingItems).filter(
+          (item) => item.sessionId === sessionId && belongsToCurrentUser(item)
+        ),
 
-      hasPending: () => Object.keys(get().pendingItems).length > 0,
+      hasPending: () => Object.values(get().pendingItems).some(belongsToCurrentUser),
     }),
     {
       name: 'offline-sync-storage',

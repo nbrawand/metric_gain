@@ -138,7 +138,8 @@ class WorkoutExercise(Base):
     # RIR (Reps In Reserve) progression
     # Week 1 RIR (e.g., 3 RIR = could do 3 more reps)
     starting_rir = Column(Integer, default=3, nullable=False)
-    # Final week RIR before deload (e.g., 0 RIR = going to failure)
+    # Final week RIR (e.g., 0 RIR = going to failure). Not currently read:
+    # the RIR ramp is computed in services/progression.py
     ending_rir = Column(Integer, default=0, nullable=False)
 
     # Optional notes for the exercise

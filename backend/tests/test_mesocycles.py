@@ -692,3 +692,82 @@ def test_cannot_replace_workouts_while_an_instance_is_active(client, auth_header
     ).json()
     assert sessions
     assert all(s["workout_template_id"] is not None for s in sessions)
+
+
+def test_editing_workouts_keeps_exercise_row_ids(client, auth_headers, sample_exercise_id):
+    """Instances key their exercise notes by workout_exercise_id, so an edit
+    must not recreate the rows those notes point at."""
+    exercises = client.get("/v1/exercises/", headers=auth_headers).json()
+    second_exercise = next(e["id"] for e in exercises if e["id"] != sample_exercise_id)
+
+    mesocycle = client.post(
+        "/v1/mesocycles/",
+        json={
+            "name": "Note Keeper",
+            "weeks": 4,
+            "days_per_week": 1,
+            "workout_templates": [
+                {
+                    "name": "Day 1",
+                    "order_index": 0,
+                    "exercises": [
+                        {"exercise_id": sample_exercise_id, "order_index": 0,
+                         "target_sets": 3, "target_reps_min": 8, "target_reps_max": 12},
+                    ],
+                }
+            ],
+        },
+        headers=auth_headers,
+    ).json()
+    original_id = mesocycle["workout_templates"][0]["exercises"][0]["id"]
+
+    # Rename the day and add a second exercise
+    updated = client.put(
+        f"/v1/mesocycles/{mesocycle['id']}/workout-templates",
+        json=[
+            {
+                "name": "Renamed Day",
+                "order_index": 0,
+                "exercises": [
+                    {"exercise_id": sample_exercise_id, "order_index": 0,
+                     "target_sets": 4, "target_reps_min": 8, "target_reps_max": 12},
+                    {"exercise_id": second_exercise, "order_index": 1,
+                     "target_sets": 2, "target_reps_min": 8, "target_reps_max": 12},
+                ],
+            }
+        ],
+        headers=auth_headers,
+    )
+    assert updated.status_code == status.HTTP_200_OK
+
+    day = updated.json()["workout_templates"][0]
+    assert day["name"] == "Renamed Day"
+    kept = next(e for e in day["exercises"] if e["exercise_id"] == sample_exercise_id)
+    assert kept["id"] == original_id  # same row, so any note on it survives
+    assert kept["target_sets"] == 4
+
+
+def test_a_workout_cannot_list_the_same_exercise_twice(client, auth_headers, sample_exercise_id):
+    """Two entries for one exercise would give it two runs of set numbers."""
+    response = client.post(
+        "/v1/mesocycles/",
+        json={
+            "name": "Duplicated",
+            "weeks": 4,
+            "days_per_week": 1,
+            "workout_templates": [
+                {
+                    "name": "Day 1",
+                    "order_index": 0,
+                    "exercises": [
+                        {"exercise_id": sample_exercise_id, "order_index": 0,
+                         "target_sets": 2, "target_reps_min": 8, "target_reps_max": 12},
+                        {"exercise_id": sample_exercise_id, "order_index": 1,
+                         "target_sets": 3, "target_reps_min": 8, "target_reps_max": 12},
+                    ],
+                }
+            ],
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST

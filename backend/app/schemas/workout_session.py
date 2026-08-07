@@ -31,10 +31,13 @@ class WorkoutSetCreate(WorkoutSetBase):
 
 
 class WorkoutSetUpdate(BaseModel):
-    """Schema for updating a workout set."""
+    """Schema for updating a workout set.
 
-    exercise_id: Optional[int] = None
-    set_number: Optional[int] = Field(None, ge=1)
+    Deliberately cannot move a set to a different exercise or renumber it:
+    an unchecked exercise_id violated the foreign key as a 500, and changing
+    set_number produced duplicates. Swapping goes through /exercises/swap.
+    """
+
     order_index: Optional[int] = Field(None, ge=0)
     weight: Optional[float] = Field(None, ge=0)
     reps: Optional[int] = Field(None, ge=0)  # Allow 0 for sets not yet performed

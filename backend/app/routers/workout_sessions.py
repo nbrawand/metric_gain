@@ -1,5 +1,6 @@
 """API routes for workout session management."""
 
+from datetime import datetime, timezone
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -57,8 +58,11 @@ def list_workout_sessions(
     if status_filter:
         query = query.filter(WorkoutSession.status == status_filter)
 
+    # week/day break ties so paging is stable even when sessions share a date
     sessions_with_counts = query.order_by(
-        WorkoutSession.workout_date.desc()
+        WorkoutSession.workout_date.desc(),
+        WorkoutSession.week_number.asc(),
+        WorkoutSession.day_number.asc(),
     ).offset(skip).limit(limit).all()
 
     # Format response with set count
@@ -108,10 +112,15 @@ def get_workout_session(
     if workout_session.status == "in_progress":
         # Try per-set matching from previous week first (preserves per-set weight differences)
         prev_map = {}
+        prev_session = None
         if workout_session.week_number > 1:
+            # Only a session that was actually performed: an untouched or
+            # skipped week has zero-weight sets, and matching it froze every
+            # later week's targets at the value they were seeded with.
             prev_session = db.query(WorkoutSession).filter(
                 WorkoutSession.mesocycle_instance_id == workout_session.mesocycle_instance_id,
                 WorkoutSession.user_id == current_user.id,
+                WorkoutSession.status == "completed",
                 WorkoutSession.week_number < workout_session.week_number,
                 WorkoutSession.day_number == workout_session.day_number,
             ).order_by(WorkoutSession.week_number.desc()).first()
@@ -137,8 +146,11 @@ def get_workout_session(
                     prev_set.reps if prev_set.reps > 0 else None,
                     ws.target_reps,
                 )
-            elif ws.target_weight is None:
-                # Cascading fallback when no per-set match
+            elif ws.target_weight is None or prev_session is not None:
+                # No matching set last week. This is the normal case for the
+                # sets the weekly increment adds — they have no counterpart in
+                # the previous week but were seeded with an old target, which
+                # left them showing a far lighter weight than their siblings.
                 hist_weight, hist_reps = find_previous_performance(
                     db, current_user.id, ws.exercise_id,
                     mesocycle_instance_id=workout_session.mesocycle_instance_id,
@@ -190,11 +202,13 @@ def update_workout_session(
     for field, value in update_data.items():
         setattr(workout_session, field, value)
 
-    # If marking as completed, set completed_at timestamp
-    if update_data.get("status") == "completed" and not workout_session.completed_at:
-        from datetime import datetime
-
-        workout_session.completed_at = datetime.now()
+    # Timestamp completion, and clear it if the session is reopened so that
+    # "most recently completed" ordering stays truthful
+    if update_data.get("status") == "completed":
+        if not workout_session.completed_at:
+            workout_session.completed_at = datetime.now(timezone.utc)
+    elif update_data.get("status") is not None:
+        workout_session.completed_at = None
 
     db.commit()
     db.refresh(workout_session)
@@ -244,6 +258,8 @@ def add_workout_set(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Workout session not found"
         )
+
+    _reject_if_completed(workout_session)
 
     # Without this the insert fails the foreign key on Postgres and surfaces as
     # a 500 instead of a 404
@@ -351,6 +367,11 @@ def delete_workout_set(
             detail="Workout session not found"
         )
 
+    # Deleting a set changes the shape of a finished workout. Editing one is
+    # deliberately still allowed: the offline queue can only replay weight and
+    # reps, and it may well drain after the session was completed.
+    _reject_if_completed(workout_session)
+
     workout_set = db.query(WorkoutSet).filter(
         WorkoutSet.id == set_id,
         WorkoutSet.workout_session_id == session_id
@@ -443,11 +464,16 @@ def swap_exercise(
             detail="Old exercise not found in this session",
         )
 
-    # Update all sets: swap exercise, reset performance data
+    # Update all sets: swap exercise, reset performance data. Everything the
+    # user recorded about the old lift has to go, including the RIR they rated
+    # it at and any note — otherwise the new exercise comes back carrying a
+    # rating for a set that was never performed on it.
     for ws in old_sets:
         ws.exercise_id = request.new_exercise_id
         ws.weight = 0
         ws.reps = 0
+        ws.rir = None
+        ws.notes = None
         ws.target_weight = None
         ws.skipped = 0
 

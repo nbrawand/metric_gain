@@ -3,7 +3,7 @@
 import json
 from collections import OrderedDict
 from typing import List, Optional
-from datetime import date
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -415,17 +415,29 @@ async def start_mesocycle_instance(
         .all()
     )
 
+    # Otherwise the user ends up with an active block containing nothing to
+    # train, which also blocks them from starting any other mesocycle
+    if not workout_templates:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This template has no workouts. Add at least one before starting it.",
+        )
+
     # Create all workout sessions
-    today = instance_data.start_date or date.today()
+    start = instance_data.start_date or date.today()
     for week in range(1, total_weeks + 1):
         for day_idx, wt in enumerate(workout_templates):
             day_number = day_idx + 1
+            # A planned date per session rather than today's date on all of
+            # them: they are listed by date, so identical dates left the order
+            # up to the database.
+            planned_date = start + timedelta(weeks=week - 1, days=day_idx)
 
             session = WorkoutSession(
                 user_id=current_user.id,
                 mesocycle_instance_id=new_instance.id,
                 workout_template_id=wt.id,
-                workout_date=today,
+                workout_date=planned_date,
                 week_number=week,
                 day_number=day_number,
                 status="in_progress",

@@ -55,7 +55,7 @@ export default function Subscribe() {
           </li>
           <li className="flex items-start gap-3">
             <span className="text-teal-400 mt-0.5">&#10003;</span>
-            <span>Ready-made mesocycle templates and 115+ exercises</span>
+            <span>Ready-made mesocycle templates and 115 exercises</span>
           </li>
         </ul>
 

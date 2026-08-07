@@ -2,7 +2,7 @@
  * Exercise Library page
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { getExercises, getMuscleGroups, createExercise, deleteExercise } from '../api/exercises';
 import type { Exercise, ExerciseCreate } from '../types/exercise';
@@ -33,14 +33,24 @@ export function Exercises() {
     equipment: '',
   });
 
-  // Load exercises and muscle groups
+  // Debounced so typing does not fire a request per keystroke, and guarded by
+  // a request id so an earlier response cannot overwrite a later one.
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const searchRequestRef = useRef(0);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   useEffect(() => {
     loadData();
-  }, [searchTerm, selectedMuscleGroup, showCustomOnly]);
+  }, [debouncedSearch, selectedMuscleGroup]);
 
   const loadData = async () => {
     if (!accessToken) return;
 
+    const requestId = ++searchRequestRef.current;
     setIsLoading(true);
     setError(null);
 
@@ -48,7 +58,7 @@ export function Exercises() {
       const [exercisesData, muscleGroupsData] = await Promise.all([
         getExercises(
           {
-            search: searchTerm || undefined,
+            search: debouncedSearch || undefined,
             muscle_group: selectedMuscleGroup || undefined,
             // Custom exercises are filtered in below; excluding them here left
             // "custom only" with nothing to show
@@ -60,12 +70,14 @@ export function Exercises() {
         getMuscleGroups(accessToken),
       ]);
 
-      setExercises(showCustomOnly ? exercisesData.filter((e) => e.is_custom) : exercisesData);
+      if (requestId !== searchRequestRef.current) return;
+      setExercises(exercisesData);
       setMuscleGroups(muscleGroupsData);
     } catch (err: any) {
-      setError(err.detail || 'Failed to load exercises');
+      if (requestId !== searchRequestRef.current) return;
+      setError(err.detail || "Failed to load exercises");
     } finally {
-      setIsLoading(false);
+      if (requestId === searchRequestRef.current) setIsLoading(false);
     }
   };
 
@@ -99,6 +111,11 @@ export function Exercises() {
       setError(err.detail || 'Failed to delete exercise');
     }
   };
+
+  // Applied here rather than in the request, so ticking the box costs no round trip
+  const visibleExercises = showCustomOnly
+    ? exercises.filter((e) => e.is_custom)
+    : exercises;
 
   return (
     <div className="min-h-screen bg-gray-900">
@@ -188,13 +205,13 @@ export function Exercises() {
         {/* Exercise List */}
         {isLoading ? (
           <div className="text-center py-12 text-gray-400">Loading exercises...</div>
-        ) : exercises.length === 0 ? (
+        ) : visibleExercises.length === 0 ? (
           <div className="text-center py-12 text-gray-400">
             No exercises found. Try adjusting your filters.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {exercises.map((exercise) => (
+            {visibleExercises.map((exercise) => (
               <div
                 key={exercise.id}
                 className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 hover:border-gray-600 transition-colors"
@@ -338,6 +355,7 @@ export function Exercises() {
                   type="button"
                   onClick={() => {
                     setCreateError(null);
+                    setCreateFormData({ name: '', description: '', muscle_group: '', equipment: '' });
                     setShowCreateModal(false);
                   }}
                   className="flex-1 px-4 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
