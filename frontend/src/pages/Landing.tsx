@@ -265,10 +265,13 @@ export default function Landing() {
       <section className="bg-gray-800 border-t border-b border-gray-700 py-16 px-4">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-2xl font-bold text-white text-center mb-4">
-            Use It Anywhere
+            Nothing to Install
           </h2>
           <p className="text-gray-300 text-center leading-relaxed max-w-2xl mx-auto mb-10">
-            Strength Guider works in your browser on any device: phone, tablet, or computer. You can also install it as an app on your home screen for a full-screen, native-app experience.
+            Open it and train. Strength Guider runs on your phone, tablet and computer from
+            the same account, so the session you log on the gym floor is already there on
+            the laptop afterwards. Improvements reach you the moment they ship, without an
+            update to approve or a store to visit.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
             <div className="text-center">
@@ -277,9 +280,10 @@ export default function Landing() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                 </svg>
               </div>
-              <h3 className="text-white font-semibold mb-2">Use the Website</h3>
+              <h3 className="text-white font-semibold mb-2">Start in Seconds</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Just go to <span className="text-teal-400">strength-guider.com</span> on any browser. No download needed. Just sign in and start training.
+                Go to <span className="text-teal-400">strength-guider.com</span>, sign in, and
+                you are training. Nothing to download, nothing taking up space on your phone.
               </p>
             </div>
             <div className="text-center">
@@ -290,7 +294,9 @@ export default function Landing() {
               </div>
               <h3 className="text-white font-semibold mb-2">Install as an App</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                On your phone, tap <span className="text-teal-400 inline-flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0-12L8 8m4-4l4 4" /></svg>Share</span> and select <span className="text-teal-400 inline-flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="3" y="3" width="18" height="18" rx="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v8m-4-4h8" /></svg>Add to Home Screen</span>. Strength Guider launches full-screen like a native app. No app store required.
+                On your phone, tap <span className="text-teal-400 inline-flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0-12L8 8m4-4l4 4" /></svg>Share</span> and select <span className="text-teal-400 inline-flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="3" y="3" width="18" height="18" rx="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v8m-4-4h8" /></svg>Add to Home Screen</span>. It opens
+                full screen and sits alongside your other apps, and it keeps itself up to
+                date.
               </p>
             </div>
           </div>
@@ -361,7 +367,7 @@ export default function Landing() {
             },
             {
               q: 'Do I have to download an app?',
-              a: "No. It runs in your browser on any device. On a phone you can add it to your home screen and it opens full-screen like a native app. No app store, and updates arrive on their own.",
+              a: "There is nothing to install. It runs in your browser on any device, and on a phone you can add it to your home screen so it opens full screen and sits with your other apps. It updates itself, so you are always on the current version.",
             },
             {
               q: 'Pounds or kilograms?',

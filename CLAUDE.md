@@ -235,9 +235,14 @@ Stripe, this is a trust signal and probably a compliance gap.
     **Not reviewed by a lawyer**, treat it as an accurate description of our
     practices that still needs professional review before it is relied on.
 
-[ ] Reframe the PWA angle. "No download needed" reads apologetic. It is a
+[x] Reframe the PWA angle. "No download needed" reads apologetic. It is a
 benefit: nothing to install, no app store, updates instantly, works on any
 device.
+    The section was defined entirely by what it is not, with a native app as
+    the implied standard: "no download needed", "no app store required", "like
+    a native app". It is "Nothing to Install" now, and leads with starting in
+    seconds, the same account across devices, and improvements arriving without
+    an update to approve. The FAQ answer went the same way.
 
 [ ] Let people see the product without signing up. Alpha's free tier is
 "genuinely usable, forever". A read-only demo block or an annotated screenshot
