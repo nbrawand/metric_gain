@@ -60,12 +60,10 @@ export default defineConfig({
     setupFiles: './src/test/setup.ts',
     // The build output is a copy of src; without this every test runs twice
     exclude: ['node_modules', 'dist'],
-    // Pinned, and deliberately not UTC. Dates here are built from local parts
-    // because a block started on a weekday evening west of UTC must not be
-    // dated tomorrow, and a suite running in UTC cannot tell the difference
-    // between that and the toISOString it replaced. CI runs in UTC, so
-    // without this the timezone tests pass by accident.
-    env: { TZ: 'America/Los_Angeles' },
+    // TZ is deliberately NOT set here. Node reads the zone once, before
+    // vitest applies this, so setting it had no effect and only looked like
+    // it worked on a machine already in that zone. It is set on the `test`
+    // script instead, which is before the process starts.
   },
   server: {
     port: 5173,

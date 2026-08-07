@@ -108,6 +108,21 @@ pull request, in three jobs:
   `reference_pictures`. A house style rule, kept honest by a check rather than
   by memory.
 
+CI runs the frontend on **node 20**. Local development on a newer node is fine,
+but the two have disagreed twice: both times a test threw inside an event
+handler, which the newer node let pass as an unhandled rejection and node 20
+failed outright. A green local run is not proof, so wait for CI before calling
+a frontend change done.
+
+The frontend suite pins `TZ=America/Los_Angeles`, on the `test` script rather
+than in `vite.config.ts`. Deliberately not UTC: dates are built from local parts
+so an evening start west of UTC is not filed as tomorrow, and a suite running in
+UTC cannot tell that apart from the `toISOString` it replaced. It has to be set
+before the process starts, because node reads the zone once; setting it through
+vitest's `env` looked like it worked only on a machine already in that zone.
+`TZ=UTC npm run test` is the way to check a timezone test locally the way CI
+would see it.
+
 ### Full Database Reset
 
 This wipes all data (users, mesocycles, workouts), re-runs migrations, and re-seeds stock data. Seeding is a separate command, not part of startup.
