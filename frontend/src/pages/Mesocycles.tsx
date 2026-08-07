@@ -27,6 +27,7 @@ import {
 import { Exercise } from '../types/exercise';
 import { computeWeeklyVolumeByMuscleGroup } from '../utils/volume';
 import MuscleGroupVolumeChart from '../components/MuscleGroupVolumeChart';
+import ClampedNumberInput from '../components/ClampedNumberInput';
 
 export default function Mesocycles() {
   const navigate = useNavigate();
@@ -64,6 +65,10 @@ export default function Mesocycles() {
 
   // Ref to hold pre-populated workout templates (from copy) so the days_per_week effect doesn't overwrite them
   const pendingTemplatesRef = useRef<WorkoutTemplateCreate[] | null>(null);
+
+  // Which template the start modal is currently previewing, so a slow response
+  // for a previously opened one cannot paint its charts over a newer modal
+  const startDetailRequestRef = useRef<number | null>(null);
 
   // Load mesocycles and exercises
   useEffect(() => {
@@ -290,6 +295,16 @@ export default function Mesocycles() {
   };
 
   const handleReviewPlan = () => {
+    // The build fields are hidden during review, so validate here — the browser
+    // cannot report a constraint violation on an input it cannot focus.
+    if (!mesocycleData.name.trim()) {
+      alert('Please enter a mesocycle name');
+      return;
+    }
+    if (workoutTemplates.some(w => !w.name.trim())) {
+      alert('Please give every training day a workout name');
+      return;
+    }
     // Check if all days have at least one exercise
     const hasEmptyWorkouts = workoutTemplates.some(w => w.exercises.length === 0);
     if (hasEmptyWorkouts) {
@@ -466,9 +481,16 @@ export default function Mesocycles() {
                         setSelectedSourceWeek(null);
                         setShowStartModal(true);
                         if (accessToken) {
+                          startDetailRequestRef.current = mesocycle.id;
                           getMesocycle(mesocycle.id, accessToken)
-                            .then(setStartingMesocycleDetail)
-                            .catch(() => {});
+                            .then((detail) => {
+                              if (startDetailRequestRef.current === mesocycle.id) {
+                                setStartingMesocycleDetail(detail);
+                              }
+                            })
+                            .catch((err) => {
+                              console.error('Failed to load template for the start preview:', err);
+                            });
                         }
                       }}
                       disabled={hasActiveInstance}
@@ -729,7 +751,7 @@ export default function Mesocycles() {
                 </div>
               </div>
 
-              <form onSubmit={handleCreateMesocycle} className="p-6">
+              <form onSubmit={handleCreateMesocycle} className="p-6" noValidate>
                 {/* Review step: per-muscle-group weekly volume charts */}
                 {createStep === 'review' && (
                   <div className="mb-6">
@@ -787,16 +809,12 @@ export default function Mesocycles() {
                     <label className="block text-gray-300 text-sm font-medium mb-2">
                       Weeks (3-12) *
                     </label>
-                    <input
-                      type="number"
-                      min="3"
-                      max="12"
+                    <ClampedNumberInput
                       value={mesocycleData.weeks}
-                      onChange={(e) =>
-                        setMesocycleData({ ...mesocycleData, weeks: parseInt(e.target.value) })
-                      }
+                      min={3}
+                      max={12}
+                      onChange={(weeks) => setMesocycleData({ ...mesocycleData, weeks })}
                       className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                      required
                     />
                   </div>
 
@@ -999,18 +1017,12 @@ export default function Mesocycles() {
                                     <div className="grid grid-cols-2 gap-3">
                                       <div>
                                         <label className="block text-gray-300 text-xs font-medium mb-1">Starting Sets (Week 1)</label>
-                                        <input
-                                          type="number"
+                                        <ClampedNumberInput
+                                          value={exercise.target_sets}
                                           min={1}
                                           max={10}
-                                          value={exercise.target_sets}
-                                          onChange={(e) =>
-                                            updateExercise(
-                                              dayIndex,
-                                              exerciseIndex,
-                                              'target_sets',
-                                              Math.max(1, Math.min(10, parseInt(e.target.value) || 1))
-                                            )
+                                          onChange={(sets) =>
+                                            updateExercise(dayIndex, exerciseIndex, 'target_sets', sets)
                                           }
                                           className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                                         />

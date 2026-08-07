@@ -627,3 +627,108 @@ def test_completing_session_does_not_change_other_sessions(client, auth_headers,
     for session_id, count in before.items():
         if session_id != first["id"]:
             assert after[session_id] == count
+
+
+# Starting an instance seeded from a previous instance
+
+def _make_template(client, auth_headers, name, exercises, weeks=4):
+    payload = {
+        "name": name,
+        "weeks": weeks,
+        "days_per_week": 1,
+        "workout_templates": [
+            {"name": "Day 1", "order_index": 0, "exercises": exercises}
+        ],
+    }
+    response = client.post("/v1/mesocycles/", json=payload, headers=auth_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    return response.json()
+
+
+def _exercise_entry(exercise_id, order_index, target_sets, increment=0.0):
+    return {
+        "exercise_id": exercise_id,
+        "order_index": order_index,
+        "target_sets": target_sets,
+        "weekly_set_increment": increment,
+        "target_reps_min": 8,
+        "target_reps_max": 12,
+    }
+
+
+def test_start_from_source_includes_exercises_the_source_never_ran(client, auth_headers):
+    """A template exercise missing from the source session still gets week-1 sets."""
+    exercises = client.get("/v1/exercises/", headers=auth_headers).json()
+    first_exercise, second_exercise = exercises[0]["id"], exercises[1]["id"]
+
+    # Run one instance of a template that only has the first exercise
+    old_template = _make_template(
+        client, auth_headers, "Old Template", [_exercise_entry(first_exercise, 0, 2)]
+    )
+    old_instance = client.post(
+        "/v1/mesocycle-instances/",
+        json={"mesocycle_template_id": old_template["id"]},
+        headers=auth_headers,
+    ).json()
+
+    source_session = next(
+        s for s in _sessions_for_instance(client, auth_headers, old_instance["id"])
+        if s["week_number"] == 1
+    )
+    detail = client.get(f"/v1/workout-sessions/{source_session['id']}", headers=auth_headers).json()
+    for workout_set in detail["workout_sets"]:
+        client.patch(
+            f"/v1/workout-sessions/{source_session['id']}/sets/{workout_set['id']}",
+            json={"weight": 100, "reps": 10},
+            headers=auth_headers,
+        )
+    client.patch(
+        f"/v1/workout-sessions/{source_session['id']}",
+        json={"status": "completed"},
+        headers=auth_headers,
+    )
+    client.patch(
+        f"/v1/mesocycle-instances/{old_instance['id']}",
+        json={"status": "completed"},
+        headers=auth_headers,
+    )
+
+    # The new template adds a second exercise the source instance never ran
+    new_template = _make_template(
+        client,
+        auth_headers,
+        "New Template",
+        [_exercise_entry(first_exercise, 0, 2), _exercise_entry(second_exercise, 1, 3)],
+    )
+    response = client.post(
+        "/v1/mesocycle-instances/",
+        json={
+            "mesocycle_template_id": new_template["id"],
+            "source_instance_id": old_instance["id"],
+            "source_week_number": 1,
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    new_instance = response.json()
+
+    week_one = next(
+        s for s in _sessions_for_instance(client, auth_headers, new_instance["id"])
+        if s["week_number"] == 1
+    )
+    sets = client.get(f"/v1/workout-sessions/{week_one['id']}", headers=auth_headers).json()["workout_sets"]
+
+    counts = {}
+    for workout_set in sets:
+        counts[workout_set["exercise_id"]] = counts.get(workout_set["exercise_id"], 0) + 1
+
+    # Both planned exercises appear at their planned set counts
+    assert counts.get(first_exercise) == 2
+    assert counts.get(second_exercise) == 3
+
+    # The exercise the source ran is seeded with what was actually lifted
+    seeded = [s for s in sets if s["exercise_id"] == first_exercise]
+    assert all(s["target_weight"] == 100 for s in seeded)
+    # The new exercise has no history to seed from, so it carries no weight target
+    fresh = [s for s in sets if s["exercise_id"] == second_exercise]
+    assert all(s["target_weight"] is None for s in fresh)

@@ -27,11 +27,13 @@ def compute_sets_for_week(target_sets: int, increment: float, week: int) -> int:
 def compute_target_rir(week: int, total_weeks: int) -> int:
     """Target RIR ramps from 3 (week 1) down to 0 (final week).
 
-    Formula: round(3 * (total_weeks - week) / (total_weeks - 1))
+    Formula: round_half_up(3 * (total_weeks - week) / (total_weeks - 1)).
+    Half-up (not Python's banker's rounding) so the ramp matches Math.round in
+    the frontend, as with compute_sets_for_week.
     """
     if total_weeks <= 1:
         return 0
-    return round(3 * (total_weeks - week) / (total_weeks - 1))
+    return int(3 * (total_weeks - week) / (total_weeks - 1) + 0.5)
 
 
 def compute_progression_targets(

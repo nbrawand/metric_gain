@@ -110,14 +110,20 @@ def create_workout_session(
 
     total_weeks = template.mesocycle.weeks if (template and template.mesocycle) else 0
 
-    # Planned set counts come straight from the template
-    template_exercises = {te.exercise_id: te for te in template.exercises} if template else {}
+    # Planned set counts come straight from the template. An exercise listed
+    # more than once in a workout contributes each entry's sets.
+    template_exercises = {}
+    for te in (template.exercises if template else []):
+        template_exercises.setdefault(te.exercise_id, []).append(te)
 
     def _planned_sets(exercise_id, week, fallback_count):
         """Set count from the user's plan; fall back for exercises not in the template."""
-        te = template_exercises.get(exercise_id)
-        if te:
-            return compute_sets_for_week(te.target_sets, te.weekly_set_increment, week)
+        entries = template_exercises.get(exercise_id)
+        if entries:
+            return sum(
+                compute_sets_for_week(te.target_sets, te.weekly_set_increment, week)
+                for te in entries
+            )
         return fallback_count
 
     def _target_rir(week):
@@ -785,15 +791,15 @@ def add_exercise(
     num_sets = 3
     target_rir = 3
     if template:
-        template_exercise = next(
-            (te for te in template.exercises if te.exercise_id == request.exercise_id),
-            None,
-        )
-        if template_exercise:
-            num_sets = compute_sets_for_week(
-                template_exercise.target_sets,
-                template_exercise.weekly_set_increment,
-                workout_session.week_number,
+        planned_entries = [
+            te for te in template.exercises if te.exercise_id == request.exercise_id
+        ]
+        if planned_entries:
+            num_sets = sum(
+                compute_sets_for_week(
+                    te.target_sets, te.weekly_set_increment, workout_session.week_number
+                )
+                for te in planned_entries
             )
     if total_weeks:
         target_rir = compute_target_rir(workout_session.week_number, total_weeks)

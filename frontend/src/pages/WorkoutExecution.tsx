@@ -1165,10 +1165,14 @@ export default function WorkoutExecution() {
                               placeholder={set.target_reps ? set.target_reps.toString() : "0"}
                             />
                             {set.reps === 0 && (() => {
+                              // Prefer the RIR stored on the set: that is the plan the
+                              // backend generated, and recomputing it here can disagree.
                               const totalWeeks = mesocycle.weeks;
-                              const weekRir = totalWeeks <= 1
-                                ? 0
-                                : Math.round(3 * (totalWeeks - session.week_number) / (totalWeeks - 1));
+                              const weekRir = set.target_rir ?? (
+                                totalWeeks <= 1
+                                  ? 0
+                                  : Math.round(3 * (totalWeeks - session.week_number) / (totalWeeks - 1))
+                              );
                               return (
                                 <div className="text-xs text-teal-400 text-center mt-1">
                                   {set.target_reps

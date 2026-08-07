@@ -255,40 +255,34 @@ def _generate_sets_from_source(
 ):
     """Generate sets for week 1 by copying from a source session (previous instance).
 
-    Uses source session's actual weights/reps as targets. Set counts come from
-    the template plan; source exercises no longer in the template keep their
-    source set count.
+    The template drives which exercises appear and how many sets each gets, so a
+    newly added exercise still gets its week-1 sets even though the source
+    session predates it. Weights and reps are seeded from the source session
+    where it has them. Exercises the source ran but the template no longer lists
+    (swapped mid-run) carry over at their source set count.
     """
     source_sets = db.query(WorkoutSet).filter(
         WorkoutSet.workout_session_id == source_session.id
     ).order_by(WorkoutSet.order_index, WorkoutSet.set_number).all()
 
-    exercise_groups = OrderedDict()
+    source_by_exercise = OrderedDict()
     for ss in source_sets:
-        exercise_groups.setdefault(ss.exercise_id, []).append(ss)
+        source_by_exercise.setdefault(ss.exercise_id, []).append(ss)
 
     target_rir = compute_target_rir(week_number, total_weeks)
 
-    # Planned set counts from the template
-    template_exercises = {te.exercise_id: te for te in workout_template.exercises}
-
-    # Create sets from source
-    for exercise_id, source_exercise_sets in exercise_groups.items():
-        template_exercise = template_exercises.get(exercise_id)
-        if template_exercise:
-            num_sets = compute_sets_for_week(
-                template_exercise.target_sets,
-                template_exercise.weekly_set_increment,
-                week_number,
-            )
-        else:
-            num_sets = len(source_exercise_sets)
+    def _create_sets(exercise_id, num_sets, order_base, fallback_reps, source_exercise_sets):
         for set_num in range(1, num_sets + 1):
-            source_set = next((s for s in source_exercise_sets if s.set_number == set_num), None)
-            fallback_set = source_set or source_exercise_sets[-1]
+            source_set = None
+            fallback_set = None
+            if source_exercise_sets:
+                source_set = next(
+                    (s for s in source_exercise_sets if s.set_number == set_num), None
+                )
+                fallback_set = source_set or source_exercise_sets[-1]
 
             target_weight = None
-            target_reps = fallback_set.target_reps
+            target_reps = fallback_set.target_reps if fallback_set else fallback_reps
             if source_set:
                 if source_set.weight > 0:
                     target_weight = source_set.weight
@@ -314,7 +308,7 @@ def _generate_sets_from_source(
                 workout_session_id=workout_session.id,
                 exercise_id=exercise_id,
                 set_number=set_num,
-                order_index=fallback_set.order_index,
+                order_index=order_base + set_num,
                 weight=0,
                 reps=0,
                 target_weight=target_weight,
@@ -322,6 +316,35 @@ def _generate_sets_from_source(
                 target_rir=target_rir,
             )
             db.add(workout_set)
+
+    for template_exercise in workout_template.exercises:
+        _create_sets(
+            template_exercise.exercise_id,
+            compute_sets_for_week(
+                template_exercise.target_sets,
+                template_exercise.weekly_set_increment,
+                week_number,
+            ),
+            template_exercise.order_index * 100,
+            template_exercise.target_reps_max,
+            source_by_exercise.get(template_exercise.exercise_id),
+        )
+
+    # Anything the source ran that the template dropped goes after the plan
+    template_exercise_ids = {te.exercise_id for te in workout_template.exercises}
+    extra_base = (
+        max((te.order_index for te in workout_template.exercises), default=-1) + 1
+    ) * 100
+    for offset, (exercise_id, exercise_sets) in enumerate(
+        (eid, s) for eid, s in source_by_exercise.items() if eid not in template_exercise_ids
+    ):
+        _create_sets(
+            exercise_id,
+            len(exercise_sets),
+            extra_base + offset * 100,
+            exercise_sets[-1].target_reps,
+            exercise_sets,
+        )
 
 
 @router.post("/", response_model=MesocycleInstanceResponse, status_code=status.HTTP_201_CREATED)

@@ -12,6 +12,7 @@ import {
 } from '../api/mesocycles';
 import { getExercises } from '../api/exercises';
 import { useAuthStore } from '../stores/authStore';
+import ClampedNumberInput from '../components/ClampedNumberInput';
 import type { Mesocycle, WorkoutTemplateCreate, WorkoutExerciseCreate } from '../types/mesocycle';
 import type { Exercise } from '../types/exercise';
 
@@ -370,12 +371,11 @@ export default function MesocycleDetail() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-gray-300 text-sm font-medium mb-2">Weeks (3-12) *</label>
-                  <input
-                    type="number"
-                    min="3"
-                    max="12"
+                  <ClampedNumberInput
                     value={editData.weeks}
-                    onChange={(e) => setEditData({ ...editData, weeks: parseInt(e.target.value) })}
+                    min={3}
+                    max={12}
+                    onChange={(weeks) => setEditData({ ...editData, weeks })}
                     className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   />
                 </div>
@@ -617,18 +617,12 @@ export default function MesocycleDetail() {
                                 <div className="grid grid-cols-2 gap-3">
                                   <div>
                                     <label className="block text-gray-300 text-xs font-medium mb-1">Starting Sets (Week 1)</label>
-                                    <input
-                                      type="number"
+                                    <ClampedNumberInput
+                                      value={exercise.target_sets}
                                       min={1}
                                       max={10}
-                                      value={exercise.target_sets}
-                                      onChange={(e) =>
-                                        updateExercise(
-                                          dayIndex,
-                                          exerciseIndex,
-                                          'target_sets',
-                                          Math.max(1, Math.min(10, parseInt(e.target.value) || 1))
-                                        )
+                                      onChange={(sets) =>
+                                        updateExercise(dayIndex, exerciseIndex, 'target_sets', sets)
                                       }
                                       className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                                     />

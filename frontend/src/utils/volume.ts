@@ -20,12 +20,14 @@ export const computeWeeklyVolumeByMuscleGroup = (
   exercises: { muscleGroup: string; targetSets: number; increment: number }[],
   weeks: number
 ): Record<string, number[]> => {
+  // A partially-typed week count must not reach Array(), which throws on NaN.
+  const weekCount = Number.isFinite(weeks) ? Math.max(0, Math.floor(weeks)) : 0;
   const result: Record<string, number[]> = {};
   for (const ex of exercises) {
     if (!result[ex.muscleGroup]) {
-      result[ex.muscleGroup] = Array(weeks).fill(0);
+      result[ex.muscleGroup] = Array(weekCount).fill(0);
     }
-    for (let week = 1; week <= weeks; week++) {
+    for (let week = 1; week <= weekCount; week++) {
       result[ex.muscleGroup][week - 1] += computeSetsForWeek(ex.targetSets, ex.increment, week);
     }
   }

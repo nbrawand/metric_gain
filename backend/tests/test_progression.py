@@ -31,6 +31,11 @@ class TestComputeTargetRir:
     def test_four_week_ramp(self):
         assert [compute_target_rir(w, 4) for w in range(1, 5)] == [3, 2, 1, 0]
 
+    def test_rounds_half_up_like_the_frontend(self):
+        # 7 weeks lands on .5 twice; Python's round() would give 2 and 0 there,
+        # disagreeing with Math.round in the workout page.
+        assert [compute_target_rir(w, 7) for w in range(1, 8)] == [3, 3, 2, 2, 1, 1, 0]
+
     def test_final_week_is_zero(self):
         for total in (2, 4, 6, 8):
             assert compute_target_rir(total, total) == 0
