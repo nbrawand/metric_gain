@@ -137,6 +137,7 @@ export interface MesocycleInstance {
   template_weeks: number | null;
   template_days_per_week: number | null;
   includes_deload?: boolean;
+  autoregulate_volume?: boolean;
   /** Weeks of real sessions: training weeks plus the deload. */
   total_weeks?: number;
   exercise_notes?: Record<string, string>;
@@ -160,6 +161,7 @@ export interface MesocycleInstanceListItem {
   template_weeks: number;
   template_days_per_week: number;
   includes_deload?: boolean;
+  autoregulate_volume?: boolean;
   /** Weeks of real sessions: training weeks plus the deload. */
   total_weeks?: number;
 }
@@ -172,6 +174,11 @@ export interface MesocycleInstanceCreate {
   start_date?: string;
   source_instance_id?: number;
   source_week_number?: number;
+  /**
+   * Let logged performance drive set counts. Off replays the template's weekly
+   * increase for the whole block, whatever gets logged.
+   */
+  autoregulate_volume?: boolean;
 }
 
 /**

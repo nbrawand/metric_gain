@@ -84,7 +84,8 @@ def block(client, auth_headers, sample_exercise_id):
 
     instance = client.post(
         "/v1/mesocycle-instances/",
-        json={"mesocycle_template_id": template["id"]},
+        # Manual mode so the deload can be compared against a known ramp
+        json={"mesocycle_template_id": template["id"], "autoregulate_volume": False},
         headers=auth_headers,
     ).json()
     return instance

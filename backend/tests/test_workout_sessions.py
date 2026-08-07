@@ -89,8 +89,11 @@ def sample_mesocycle_instance(client, auth_headers, sample_mesocycle_with_workou
     """Create a mesocycle instance from the template for testing."""
     mesocycle = sample_mesocycle_with_workouts
 
+    # Manual mode: these tests pin the fixed weekly-increment formula, which
+    # autoregulation replaces. The autoregulated path has its own tests.
     instance_data = {
-        "mesocycle_template_id": mesocycle["id"]
+        "mesocycle_template_id": mesocycle["id"],
+        "autoregulate_volume": False,
     }
 
     response = client.post("/v1/mesocycle-instances/", json=instance_data, headers=auth_headers)
@@ -380,7 +383,11 @@ def test_final_week_follows_the_same_formula(client, auth_headers, sample_mesocy
 
 
 def test_completing_session_does_not_change_other_sessions(client, auth_headers, sample_mesocycle_with_workouts, sample_mesocycle_instance):
-    """Completing a workout must not re-adjust any other session's sets."""
+    """In manual mode, completing a workout leaves every other session alone.
+
+    Autoregulated blocks deliberately resize next week on completion; this
+    fixture is manual, so the fixed plan must stay exactly as generated.
+    """
     instance = sample_mesocycle_instance
     before = {s["id"]: s["set_count"] for s in _sessions_for_instance(client, auth_headers, instance["id"])}
 

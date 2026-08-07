@@ -133,6 +133,10 @@ class MesocycleInstanceCreate(BaseModel):
 
     mesocycle_template_id: int
     start_date: Optional[date] = None  # Defaults to today if not provided
+    # Let logged performance drive set counts. Off means the weekly increment
+    # chosen on the template is replayed for the whole block, which is the
+    # override for lifters who want to drive volume themselves.
+    autoregulate_volume: bool = True
     source_instance_id: Optional[int] = None  # Previous instance to seed week 1 weights from
     source_week_number: Optional[int] = None  # Which week in the source instance to copy from
 
@@ -159,6 +163,7 @@ class MesocycleInstanceResponse(BaseModel):
     template_name: Optional[str] = None
     template_weeks: Optional[int] = None  # Planned training weeks
     includes_deload: bool = False
+    autoregulate_volume: bool = False
     total_weeks: int = 0  # Training weeks + deload, i.e. weeks of real sessions
     template_days_per_week: Optional[int] = None
 
@@ -195,6 +200,7 @@ class MesocycleInstanceListResponse(BaseModel):
     template_name: str
     template_weeks: int  # Planned training weeks
     includes_deload: bool = False
+    autoregulate_volume: bool = False
     total_weeks: int = 0  # Training weeks + deload, i.e. weeks of real sessions
     template_days_per_week: int
 

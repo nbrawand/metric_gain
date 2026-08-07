@@ -88,6 +88,7 @@ async def list_mesocycle_instances(
                 template_weeks=t_weeks,
                 template_days_per_week=t_days,
                 includes_deload=instance.includes_deload,
+                autoregulate_volume=instance.autoregulate_volume,
                 total_weeks=instance.total_weeks,
             )
         )
@@ -210,11 +211,16 @@ def _generate_sets_for_session(
     mesocycle_instance_id,
     day_number,
     unit=LB,
+    autoregulate=False,
 ):
     """Generate workout sets from a template for a given session.
 
     Set count follows the user's plan: target_sets + weekly_set_increment
     per week. RIR ramps 3 -> 0 across the mesocycle.
+
+    When the block autoregulates, every week starts at target_sets instead and
+    grows or shrinks from the previous week's logged performance. Pre-ramping
+    and then autoregulating would apply two increases to the same week.
     """
     target_rir = compute_target_rir(week_number, total_weeks)
 
@@ -223,10 +229,14 @@ def _generate_sets_for_session(
     )
 
     for template_exercise in workout_template.exercises:
-        num_sets = compute_sets_for_week(
-            template_exercise.target_sets,
-            template_exercise.weekly_set_increment,
-            week_number,
+        num_sets = (
+            max(1, template_exercise.target_sets)
+            if autoregulate
+            else compute_sets_for_week(
+                template_exercise.target_sets,
+                template_exercise.weekly_set_increment,
+                week_number,
+            )
         )
 
         # Look up previous performance for target_weight/target_reps
@@ -516,6 +526,7 @@ async def start_mesocycle_instance(
         template_weeks=total_weeks,
         template_days_per_week=days_per_week,
         includes_deload=True,
+        autoregulate_volume=instance_data.autoregulate_volume,
         status="active",
         start_date=instance_data.start_date or date.today(),
     )
@@ -587,7 +598,7 @@ async def start_mesocycle_instance(
                     _generate_sets_for_session(
                         db, session, wt, week, total_weeks,
                         current_user.id, new_instance.id, day_number,
-                        unit=unit,
+                        unit=unit, autoregulate=instance_data.autoregulate_volume,
                     )
             elif is_deload_week(week, total_weeks):
                 _generate_deload_sets(
@@ -600,7 +611,7 @@ async def start_mesocycle_instance(
                 _generate_sets_for_session(
                     db, session, wt, week, total_weeks,
                     current_user.id, new_instance.id, day_number,
-                    unit=unit,
+                    unit=unit, autoregulate=instance_data.autoregulate_volume,
                 )
 
     db.commit()

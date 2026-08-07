@@ -74,6 +74,15 @@ class MesocycleInstance(Base):
     # would give them a phantom final week that can never be completed.
     includes_deload = Column(Boolean, default=True, nullable=False, server_default="false")
 
+    # Whether set counts respond to logged performance instead of replaying the
+    # weekly increment picked at creation. Stored per instance for the same
+    # reason as includes_deload: blocks started before this shipped were
+    # generated with the ramp already baked into every week, and autoregulating
+    # them halfway through would fight those pre-computed counts.
+    autoregulate_volume = Column(
+        Boolean, default=True, nullable=False, server_default="false"
+    )
+
     # Per-exercise note overrides, JSON: {"workout_exercise_id": "notes"}
     exercise_notes = Column(Text, nullable=True)
 

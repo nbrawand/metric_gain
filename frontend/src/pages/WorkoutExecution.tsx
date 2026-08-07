@@ -637,11 +637,29 @@ export default function WorkoutExecution() {
     const daysPerWeek = instance.template_days_per_week || mesocycle.workout_templates?.length || 0;
 
     try {
-      await updateWorkoutSession(
+      const completed = await updateWorkoutSession(
         session.id,
         { status: 'completed' },
         accessToken
       );
+
+      // Autoregulation resized next week off what was just logged. Say so —
+      // the sets changing on their own next week is otherwise unexplained.
+      const adjustments = completed.volume_adjustments ?? [];
+      if (adjustments.length > 0) {
+        const added = adjustments.filter((a) => a.delta > 0).length;
+        const dropped = adjustments.filter((a) => a.delta < 0).length;
+        const capped = adjustments.filter((a) => a.capped).length;
+        const parts: string[] = [];
+        if (added) parts.push(`added a set to ${added} exercise${added === 1 ? '' : 's'}`);
+        if (dropped) parts.push(`dropped a set from ${dropped} exercise${dropped === 1 ? '' : 's'}`);
+        if (capped) {
+          parts.push(
+            `held ${capped} at your weekly limit for that muscle group`
+          );
+        }
+        if (parts.length) setNotice(`Next week: ${parts.join(', ')}.`);
+      }
 
       // Re-fetch sessions to find the next uncompleted workout
       const updatedSessions = await listWorkoutSessions(

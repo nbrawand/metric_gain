@@ -46,6 +46,9 @@ export default function Mesocycles() {
   const [showStartModal, setShowStartModal] = useState(false);
   const [startingMesocycle, setStartingMesocycle] = useState<MesocycleListItem | null>(null);
   const [startingMesocycleDetail, setStartingMesocycleDetail] = useState<Mesocycle | null>(null);
+  // On by default: set counts follow what gets logged. Off replays the
+  // template's weekly increase regardless, for lifters driving it themselves.
+  const [autoregulateVolume, setAutoregulateVolume] = useState(true);
   const [selectedSourceInstance, setSelectedSourceInstance] = useState<number | null>(null);
   const [selectedSourceWeek, setSelectedSourceWeek] = useState<number | null>(null);
 
@@ -243,6 +246,7 @@ export default function Mesocycles() {
       const instanceData: import('../types/mesocycle').MesocycleInstanceCreate = {
         mesocycle_template_id: mesocycle.id,
         start_date: today,
+        autoregulate_volume: autoregulateVolume,
       };
 
       if (sourceInstanceId && sourceWeekNumber) {
@@ -679,7 +683,12 @@ export default function Mesocycles() {
                   {/* Planned weekly volume per muscle group */}
                   {startVolumeByMuscleGroup && (
                     <div>
-                      <h3 className="text-sm font-medium text-gray-300 mb-3">Planned Weekly Sets per Muscle Group</h3>
+                      <h3 className="text-sm font-medium text-gray-300 mb-1">Planned Weekly Sets per Muscle Group</h3>
+                      <p className="text-xs text-gray-400 mb-3">
+                        {autoregulateVolume
+                          ? "With performance-based sets on, this is the template's plan — what you actually get each week follows what you log."
+                          : 'The fixed plan this block will follow.'}
+                      </p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {Object.entries(startVolumeByMuscleGroup)
                           .sort(([a], [b]) => a.localeCompare(b))
@@ -693,6 +702,29 @@ export default function Mesocycles() {
                       </div>
                     </div>
                   )}
+
+                  {/* Volume mode */}
+                  <div className="border border-gray-700 rounded-lg p-4">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={autoregulateVolume}
+                        onChange={(e) => setAutoregulateVolume(e.target.checked)}
+                        className="mt-1 h-4 w-4 accent-teal-500"
+                      />
+                      <span>
+                        <span className="block text-sm font-medium text-white">
+                          Adjust sets from my performance
+                        </span>
+                        <span className="block text-xs text-gray-400 mt-1">
+                          Hit every target and you get an extra set next week; miss most of
+                          them and you get one fewer, capped at a recoverable weekly total
+                          per muscle group. Turn this off to follow the template's fixed
+                          weekly increase instead.
+                        </span>
+                      </span>
+                    </label>
+                  </div>
 
                   {/* Start Fresh */}
                   <button
@@ -831,7 +863,9 @@ export default function Mesocycles() {
                   <div className="mb-6">
                     <p className="text-sm text-gray-300 mb-4">
                       Total sets per muscle group each week, based on your starting sets and weekly increases.
-                      Go back to adjust, or confirm to create the template.
+                      Go back to adjust, or confirm to create the template. If you leave
+                      performance-based sets on when you start a block, this is the plan
+                      rather than a promise — your actual sets each week follow what you log.
                     </p>
 
                     {reviewVolumeWarnings.length > 0 && (

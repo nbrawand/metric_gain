@@ -98,7 +98,7 @@ export default function Landing() {
             </div>
             <h3 className="text-white font-semibold text-lg mb-2">Plan Your Volume</h3>
             <p className="text-gray-400 text-sm leading-relaxed">
-              Choose a starting set count and weekly increase for every exercise, then review per-muscle-group volume charts before you commit. Your plan ramps progressively, exactly the way you designed it.
+              Choose a starting set count for every exercise, then review per-muscle-group volume charts before you commit — with a warning if a plan runs past what most lifters recover from. From there your sets adjust each week from what you actually log, capped per muscle group.
             </p>
           </div>
 
@@ -114,7 +114,7 @@ export default function Landing() {
             </div>
             <h3 className="text-white font-semibold text-lg mb-2">Complete Workout Guide</h3>
             <p className="text-gray-400 text-sm leading-relaxed">
-              Every session comes with target weights, rep ranges, and RIR (reps in reserve) goals. You know exactly what to do when you walk into the gym. Just follow the guide and log your sets.
+              Every session comes with target weights, rep ranges, and RIR (reps in reserve) goals, in pounds or kilograms. Weights only go up when you hit the last session's targets, and every block ends with a deload week. Just follow the guide and log your sets.
             </p>
           </div>
 

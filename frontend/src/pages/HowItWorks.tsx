@@ -48,7 +48,7 @@ export default function HowItWorks() {
             <div>
               <h3 className="text-white font-medium mb-1">Start a Mesocycle</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Once your template is ready, start a mesocycle from it to generate your training schedule. Every session is created up front from your plan, with set counts increasing each week exactly as you configured.
+                Once your template is ready, start a mesocycle from it to generate your training schedule. Every session is created up front, including an extra deload week at the end. By default set counts adjust each week from what you actually log; you can switch that off to follow your template's fixed weekly increase instead.
               </p>
             </div>
           </div>
@@ -59,7 +59,7 @@ export default function HowItWorks() {
             <div>
               <h3 className="text-white font-medium mb-1">Train and Log Your Workouts</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Work through your mesocycle session by session, recording the weight and reps for each set. The app provides target recommendations based on your previous performance, including a small weekly load increase and an RIR target that decreases as the weeks progress.
+                Work through your mesocycle session by session, recording the weight and reps for each set. The app provides target recommendations based on your previous performance, including a load increase sized to the smallest step that exercise can actually be loaded with, and an RIR target that decreases as the weeks progress. Weights only go up when the previous session hit its targets.
               </p>
             </div>
           </div>
@@ -84,7 +84,7 @@ export default function HowItWorks() {
           Progressive overload is a core principle of strength training. It refers to gradually increasing the demands placed on your muscles over time so that they continue to adapt. This can be done by increasing the weight lifted, performing more repetitions at a given weight, or adding more sets.
         </p>
         <p className="text-gray-300 leading-relaxed">
-          Strength Guider tracks these variables and suggests small, incremental increases each week. Progressive overload is applied through mesocycles: structured training blocks that increase demands week over week, peaking in the final week.
+          Strength Guider tracks these variables and suggests small, incremental increases each week. Progressive overload is applied through mesocycles: structured training blocks that increase demands week over week, peaking in the final training week and then unloading in a deload week.
         </p>
       </section>
 
@@ -98,10 +98,27 @@ export default function HowItWorks() {
           Training in structured blocks helps ensure that each session has a clear purpose. It also helps balance training stimulus with recovery, reducing the risk of doing too little to see progress or too much to recover from.
         </p>
         <p className="text-gray-300 leading-relaxed mb-3">
-          Intensity also progresses across the mesocycle through RIR (Reps In Reserve) targets. Week one begins at 3 RIR, a moderate effort level that allows for technique focus and volume accumulation. Each week the target steps down toward 0 RIR (failure) in the final week. In longer blocks the same RIR carries across two weeks, since the ramp is spread evenly over however many weeks you chose.
+          Intensity also progresses across the mesocycle through RIR (Reps In Reserve) targets. Week one begins at 3 RIR, a moderate effort level that allows for technique focus and volume accumulation. Each week the target steps down toward 0 RIR (failure) in the final training week. In longer blocks the same RIR carries across two weeks, since the ramp is spread evenly over however many weeks you chose. The deload week that follows sits above the ramp at 4 RIR, well short of failure.
         </p>
         <p className="text-gray-300 leading-relaxed">
-          Volume progresses the same way: each exercise starts at the set count you chose and increases by your chosen weekly increase, so each week builds on the last.
+          Volume progresses from your own results. Each exercise starts at the set count you chose. Hit every target in a session and that exercise gets one more set next week; miss one and it holds; miss most of them and it drops a set. Increases stop at a recoverable weekly total for each muscle group, since recovery happens per muscle rather than per exercise. If you would rather drive it yourself, turn performance-based sets off when you start a block and your template's fixed weekly increase is used instead.
+        </p>
+      </section>
+
+      {/* Deload */}
+      <section id="deload" className="bg-gray-800 rounded-lg p-6 scroll-mt-16">
+        <h2 className="text-xl font-semibold text-teal-400 mb-3">The Deload Week</h2>
+        <p className="text-gray-300 leading-relaxed mb-3">
+          Every block runs one extra week after the training weeks you planned. A block
+          that ended on its hardest week would hand the next block a fully fatigued
+          lifter, and fatigue carried forward is fatigue you train through rather than
+          adapt to.
+        </p>
+        <p className="text-gray-300 leading-relaxed">
+          The deload keeps the same exercises at about half the sets, roughly ten percent
+          lighter, at a 4 RIR target. It is meant to feel easy. A six-week block therefore
+          schedules seven weeks of sessions, and the block is complete once the deload is
+          done.
         </p>
       </section>
 
@@ -132,16 +149,24 @@ export default function HowItWorks() {
       <section id="volume-model" className="bg-gray-800 rounded-lg p-6 scroll-mt-16">
         <h2 className="text-xl font-semibold text-teal-400 mb-3">Planning Your Volume</h2>
         <p className="text-gray-300 leading-relaxed mb-3">
-          You are in full control of your training volume. When creating a mesocycle, each exercise gets two numbers: a <span className="text-white font-medium">starting set count</span> for week one and a <span className="text-white font-medium">weekly increase</span> — how many sets to add each week.
+          When creating a mesocycle, each exercise gets a <span className="text-white font-medium">starting set count</span> for week one. Before confirming, you review bar charts of the total weekly sets for each muscle group, with a warning if any group runs past what most lifters recover from.
         </p>
-        <div className="bg-gray-700 rounded-lg p-4 mb-3 font-mono text-sm space-y-1">
-          <p className="text-gray-300"><span className="text-teal-400">sets in week N</span> = round(starting sets + weekly increase × (N − 1)), minimum 1</p>
+        <p className="text-gray-300 leading-relaxed mb-3">
+          From there, volume follows your results rather than a formula:
+        </p>
+        <div className="bg-gray-700 rounded-lg p-4 mb-3 text-sm space-y-1">
+          <p className="text-gray-300"><span className="text-teal-400">every set hit its target</span> — one more set next week</p>
+          <p className="text-gray-300"><span className="text-teal-400">one set missed</span> — hold at the same number</p>
+          <p className="text-gray-300"><span className="text-teal-400">most sets missed</span> — one fewer set next week</p>
         </div>
         <p className="text-gray-300 leading-relaxed mb-3">
-          Half-set increases are allowed — an increase of 0.5 with 3 starting sets gives 3, 4, 4, 5, 5, 6 sets across a six-week block. Before confirming your mesocycle, you review bar charts of the total weekly sets for each muscle group so you can sanity-check the whole plan at a glance.
+          Increases stop at a recoverable weekly total for each muscle group. Recovery happens per muscle, not per exercise: three chest movements each creeping up by one set is nine extra chest sets a week, which no per-exercise limit would notice.
+        </p>
+        <p className="text-gray-300 leading-relaxed mb-3">
+          Prefer to drive it yourself? Turn off <span className="text-white font-medium">Adjust sets from my performance</span> when you start a block, and it follows the fixed weekly increase from your template instead — <span className="font-mono text-xs">round(starting sets + weekly increase × (N − 1))</span>, minimum 1. Half-set increases are allowed, so 0.5 with 3 starting sets gives 3, 4, 4, 5, 5, 6 across six weeks.
         </p>
         <p className="text-gray-300 leading-relaxed">
-          Once a mesocycle starts, the plan is fixed. You can add or remove sets during any workout, but those changes only apply to that session — every future session follows the plan you reviewed. Weight targets still progress automatically from your logged performance, and RIR ramps from 3 down to 0 across the block.
+          Adding, removing or swapping an exercise mid-workout carries into the same day in every later week of the block, since that is nearly always a decision about the block rather than about today. Weeks you have already completed are never rewritten.
         </p>
       </section>
 

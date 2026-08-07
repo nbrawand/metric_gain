@@ -74,7 +74,7 @@ sane weekly ceiling instead of rendering the number silently.
 
 ### The strategic bet
 
-[ ] Performance-driven volume autoregulation, from data we already store. Every
+[x] Performance-driven volume autoregulation, from data we already store. Every
 set records target weight/reps/RIR and actual weight/reps, which is enough to
 score performance vs target with **zero extra taps from the lifter**. Replace
 the fixed `weekly_set_increment` (chosen once at creation, replayed for the
@@ -84,6 +84,13 @@ per-muscle-group ceiling. Note RP manages volume per *muscle group* while we
 increment per *exercise* — recovery happens per muscle, so the cap belongs at
 the muscle-group level. Keep the manual increment as an override for lifters
 who want to drive it themselves.
+    Done. On by default for new blocks (toggle when starting one), which also
+    means sessions generate flat instead of pre-ramped — pre-ramping and then
+    autoregulating would apply two increases to the same week. Cap enforced at
+    the muscle-group level; ceilings are duplicated in
+    `backend/app/services/autoregulation.py` and `frontend/src/utils/volume.ts`
+    with a test asserting they match. Blocks already running keep their fixed
+    plan (`autoregulate_volume` is stored, not derived).
 
 ### Table stakes we're missing
 

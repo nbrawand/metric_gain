@@ -5,11 +5,14 @@ A progressive web app for running structured strength training blocks that you p
 ## Features
 
 - **Mesocycle Management**: Create 3-12 week training blocks
-- **Progressive Overload**: Automatic weight and volume progression
-- **Volume Planning**: Pick a starting set count and a 0-2 sets/week ramp per exercise, then review weekly sets per muscle group before committing
+- **Progressive Overload**: Weight targets rise only when the last session hit them, sized to the smallest step the exercise can actually be loaded with
+- **Performance-Driven Volume**: Sets adjust each week from what you log — hit every target and gain a set, miss most and drop one — capped at a recoverable weekly total per muscle group. A fixed weekly ramp is available as an override
+- **Deload Week**: Every block runs one extra week at about half the sets, lighter, at 4 RIR
+- **Pounds or Kilograms**: Per-user unit preference; switching converts your logged history
+- **Volume Planning**: Review weekly sets per muscle group before committing, with a warning when a plan exceeds what most lifters recover from
 - **Offline Support**: Log workouts without internet connection
-- **Exercise Library**: 115 pre-loaded exercises + custom exercises
-- **Templates**: 10 stock mesocycle templates
+- **Exercise Library**: 140 pre-loaded exercises + custom exercises
+- **Templates**: 16 stock mesocycle templates
 
 ## Tech Stack
 
@@ -108,8 +111,8 @@ uvicorn app.main:app --reload
 After restart, sign in with Google at `http://localhost:5173`.
 
 **What gets seeded** (see `backend/pre_deploy.py`):
-- `seed_exercises()` — 115 default exercises across all muscle groups
-- `seed_mesocycles()` — 10 stock templates (Push Pull Legs, 2/3-Day Full Body, 4-Day Upper Lower, 5-Day L/P/P/L/U, Beginner Strength, Beginner Machine Only, Beginner 3-Day Upper/Lower, Bro Split, Glute & Lower Body Focus)
+- `seed_exercises()` — 140 default exercises across all muscle groups
+- `seed_mesocycles()` — 16 stock templates (Push Pull Legs 6-day and 3-day, 2/3/4-Day Full Body, 4-Day Upper Lower, 5-Day L/P/P/L/U, Chest & Back / Shoulders & Arms / Legs, Beginner Strength, Beginner Machine Only, Beginner 3-Day Upper/Lower, Dumbbell Only Full Body, Bro Split, and the Glute, Chest and Arm focus blocks)
 
 Seed scripts are in `backend/app/utils/seed_exercises.py` and `backend/app/utils/seed_mesocycles.py`. They only run if no stock data exists yet.
 

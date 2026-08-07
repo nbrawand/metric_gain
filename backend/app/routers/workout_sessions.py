@@ -38,6 +38,7 @@ from app.schemas.workout_session import (
 )
 from app.utils.auth import get_current_user
 from app.utils.db import apply_update, user_weight_unit
+from app.services.autoregulation import autoregulate_next_week
 
 
 router = APIRouter(prefix="/workout-sessions", tags=["workout-sessions"])
@@ -255,14 +256,20 @@ def update_workout_session(
 
     # Timestamp completion, and clear it if the session is reopened so that
     # "most recently completed" ordering stays truthful
+    adjustments = []
     if update_data.get("status") == "completed":
         if not workout_session.completed_at:
             workout_session.completed_at = datetime.now(timezone.utc)
+        # Resize next week off what was just logged. Done here rather than when
+        # next week is opened so the lifter is told now, while the session they
+        # just finished is still the thing on their mind.
+        adjustments = autoregulate_next_week(db, workout_session)
     elif update_data.get("status") is not None:
         workout_session.completed_at = None
 
     db.commit()
     db.refresh(workout_session)
+    workout_session.volume_adjustments = [a.as_dict() for a in adjustments]
     return workout_session
 
 

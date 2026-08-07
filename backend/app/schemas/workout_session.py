@@ -109,6 +109,10 @@ class WorkoutSessionResponse(WorkoutSessionBase):
     # changed. Only set on those endpoints; None everywhere else.
     future_sessions_updated: Optional[int] = None
 
+    # Set-count changes autoregulation made to next week off this session's
+    # performance. Only set when completing a session.
+    volume_adjustments: Optional[List[dict]] = None
+
     class Config:
         from_attributes = True
 

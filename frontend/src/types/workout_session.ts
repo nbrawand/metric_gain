@@ -46,6 +46,15 @@ export interface WorkoutSetUpdate {
 /**
  * Full workout session with nested sets
  */
+export interface VolumeAdjustment {
+  exercise_id: number;
+  /** +1, 0 or -1 sets for next week. 0 with capped=true means it was earned but the muscle group is at its weekly limit. */
+  delta: number;
+  from_sets: number;
+  to_sets: number;
+  capped: boolean;
+}
+
 export interface WorkoutSession {
   id: number;
   user_id: number;
@@ -66,6 +75,11 @@ export interface WorkoutSession {
    * changed. Only present on those responses.
    */
   future_sessions_updated?: number | null;
+  /**
+   * Set-count changes autoregulation made to next week off this session's
+   * performance. Only present when completing a session.
+   */
+  volume_adjustments?: VolumeAdjustment[] | null;
 }
 
 /**
