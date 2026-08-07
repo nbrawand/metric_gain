@@ -25,7 +25,11 @@ import {
   MesocycleInstanceListItem,
 } from '../types/mesocycle';
 import { Exercise } from '../types/exercise';
-import { computeWeeklyVolumeByMuscleGroup, findVolumeWarnings } from '../utils/volume';
+import {
+  computeWeeklyVolumeByMuscleGroup,
+  findVolumeWarnings,
+  volumeInputsForTemplate,
+} from '../utils/volume';
 import MuscleGroupVolumeChart from '../components/MuscleGroupVolumeChart';
 import ClampedNumberInput from '../components/ClampedNumberInput';
 import { apiErrorDetail } from '../api/client';
@@ -59,6 +63,10 @@ export default function Mesocycles() {
     description: '',
     weeks: 6,
     days_per_week: 4,
+    // Default volume mode for blocks started from this template. Chosen here
+    // rather than only at start time, because it decides whether the weekly
+    // increases below do anything at all.
+    autoregulate_volume: true,
   });
 
   // Workout templates state
@@ -214,6 +222,7 @@ export default function Mesocycles() {
         name: `${original.name} (Copy)`,
         description: original.description || '',
         weeks: original.weeks,
+        autoregulate_volume: original.autoregulate_volume ?? true,
         days_per_week: original.days_per_week,
       });
 
@@ -332,6 +341,7 @@ export default function Mesocycles() {
       description: '',
       weeks: 6,
       days_per_week: 4,
+      autoregulate_volume: true,
     });
     setWorkoutTemplates([]);
     setCollapsedDays(new Set());
@@ -366,12 +376,10 @@ export default function Mesocycles() {
 
   // Weekly set totals per muscle group for the create-form review charts
   const reviewVolumeByMuscleGroup = computeWeeklyVolumeByMuscleGroup(
-    workoutTemplates.flatMap(wt =>
-      wt.exercises.map(ex => ({
-        muscleGroup: exercises.find(e => e.id === ex.exercise_id)?.muscle_group || 'Other',
-        targetSets: ex.target_sets,
-        increment: ex.weekly_set_increment,
-      }))
+    volumeInputsForTemplate(
+      workoutTemplates,
+      (id) => exercises.find((e) => e.id === id)?.muscle_group,
+      mesocycleData.autoregulate_volume
     ),
     mesocycleData.weeks
   );
@@ -546,6 +554,9 @@ export default function Mesocycles() {
                         setStartingMesocycleDetail(null);
                         setSelectedSourceInstance(null);
                         setSelectedSourceWeek(null);
+                        // Default to what the template was built for; this modal
+                        // is the per-run override, not the primary choice
+                        setAutoregulateVolume(mesocycle.autoregulate_volume ?? true);
                         setShowStartModal(true);
                         if (accessToken) {
                           startDetailRequestRef.current = mesocycle.id;
@@ -719,7 +730,8 @@ export default function Mesocycles() {
                           Hit every target and you get an extra set next week; miss most of
                           them and you get one fewer, capped at a recoverable weekly total
                           per muscle group. Turn this off to follow the template's fixed
-                          weekly increase instead.
+                          weekly increase instead. Defaults to how the template was built —
+                          changing it here applies to this block only.
                         </span>
                       </span>
                     </label>
@@ -861,10 +873,10 @@ export default function Mesocycles() {
                 {createStep === 'review' && (
                   <div className="mb-6">
                     <p className="text-sm text-gray-300 mb-4">
-                      Total sets per muscle group each week, based on your starting sets and weekly increases.
-                      Go back to adjust, or confirm to create the template. If you leave
-                      performance-based sets on when you start a block, this is the plan
-                      rather than a promise — your actual sets each week follow what you log.
+                      {mesocycleData.autoregulate_volume
+                        ? 'Where every muscle group starts. Sets grow or shrink from here each week based on what you log, so this is the floor rather than the whole picture.'
+                        : 'Total sets per muscle group each week, from your starting sets and weekly increases.'}
+                      {' '}Go back to adjust, or confirm to create the template.
                     </p>
 
                     {reviewVolumeWarnings.length > 0 && (
@@ -977,6 +989,31 @@ export default function Mesocycles() {
                   <p className="text-sm text-gray-400 mb-4">
                     Assign a workout to each training day. You're training {mesocycleData.days_per_week} {mesocycleData.days_per_week === 1 ? 'day' : 'days'} per week.
                   </p>
+
+                  {/* Volume mode. Here rather than only at start time, because
+                      it decides whether the weekly increases below do anything. */}
+                  <div className="border border-gray-600 rounded-lg p-4 mb-4 bg-gray-700/40">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={mesocycleData.autoregulate_volume}
+                        onChange={(e) =>
+                          setMesocycleData({ ...mesocycleData, autoregulate_volume: e.target.checked })
+                        }
+                        className="mt-1 h-4 w-4 accent-teal-500"
+                      />
+                      <span>
+                        <span className="block text-sm font-medium text-white">
+                          Adjust sets from my performance
+                        </span>
+                        <span className="block text-xs text-gray-400 mt-1">
+                          {mesocycleData.autoregulate_volume
+                            ? 'Hit every target in a session and that exercise gets one more set next week; miss most of them and it drops one, capped at a recoverable weekly total per muscle group. Every week starts at your starting set count.'
+                            : "Each exercise follows the fixed weekly increase you set below, whatever you log. You can still change this when you start a block."}
+                        </span>
+                      </span>
+                    </label>
+                  </div>
 
                   {workoutTemplates.map((workout, dayIndex) => (
                       <div key={dayIndex} className="border border-gray-600 rounded-lg mb-4 bg-gray-700 overflow-hidden">
@@ -1155,27 +1192,38 @@ export default function Mesocycles() {
                                           className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                                         />
                                       </div>
-                                      <div>
-                                        <label className="block text-gray-300 text-xs font-medium mb-1">
-                                          Weekly Increase: <span className="text-teal-400">+{exercise.weekly_set_increment} sets/week</span>
-                                        </label>
-                                        <input
-                                          type="range"
-                                          min={0}
-                                          max={2}
-                                          step={0.5}
-                                          value={exercise.weekly_set_increment}
-                                          onChange={(e) =>
-                                            updateExercise(
-                                              dayIndex,
-                                              exerciseIndex,
-                                              'weekly_set_increment',
-                                              parseFloat(e.target.value)
-                                            )
-                                          }
-                                          className="w-full mt-2 accent-teal-500"
-                                        />
-                                      </div>
+                                      {mesocycleData.autoregulate_volume ? (
+                                        <div>
+                                          <label className="block text-gray-300 text-xs font-medium mb-1">
+                                            Weekly Increase
+                                          </label>
+                                          <p className="text-xs text-gray-400 mt-2">
+                                            Set from your performance each week.
+                                          </p>
+                                        </div>
+                                      ) : (
+                                        <div>
+                                          <label className="block text-gray-300 text-xs font-medium mb-1">
+                                            Weekly Increase: <span className="text-teal-400">+{exercise.weekly_set_increment} sets/week</span>
+                                          </label>
+                                          <input
+                                            type="range"
+                                            min={0}
+                                            max={2}
+                                            step={0.5}
+                                            value={exercise.weekly_set_increment}
+                                            onChange={(e) =>
+                                              updateExercise(
+                                                dayIndex,
+                                                exerciseIndex,
+                                                'weekly_set_increment',
+                                                parseFloat(e.target.value)
+                                              )
+                                            }
+                                            className="w-full mt-2 accent-teal-500"
+                                          />
+                                        </div>
+                                      )}
                                     </div>
                                     <p className="text-xs text-gray-400 italic">
                                       Reps and RIR targets are set automatically; RIR ramps 3 → 0 across the mesocycle.

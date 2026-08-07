@@ -203,6 +203,26 @@ CORS_ORIGINS=http://localhost:5173
 VITE_API_URL=http://localhost:8000
 ```
 
+### Deployment
+
+**Backend (Render).** Build Command — keep this in step with the repo; it is the
+only place migrations and seeding run:
+
+```
+pip install -r requirements.txt && alembic upgrade head && python pre_deploy.py
+```
+
+`alembic upgrade head` applies schema changes. `python pre_deploy.py` seeds new
+stock exercises and mesocycle templates; both seeders are additive and match on
+name, so re-running every deploy is safe — existing exercises are skipped and
+stock templates are updated in place rather than duplicated.
+
+Health check is `/health`, which deliberately does **not** touch the database,
+so a green deploy does not by itself prove the schema is current.
+
+**Frontend (Vercel).** Security headers live in `frontend/vercel.json`. The CSP
+there is report-only — see [frontend/CSP.md](frontend/CSP.md).
+
 ### Production notes
 
 Setting `ENVIRONMENT=production` changes behaviour deliberately:

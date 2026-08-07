@@ -311,3 +311,112 @@ def test_the_deload_week_is_never_grown(client, auth_headers, sample_exercise_id
 
     assert response.json()["volume_adjustments"] == []
     assert len(_sets_for(client, auth_headers, weeks[deload_week])) == before
+
+
+class TestTemplateVolumeMode:
+    """The mode is chosen where the increments it overrides are set.
+
+    Picking "+2 sets/week" per exercise and then having autoregulation silently
+    ignore it was the confusing part; the template now carries the default.
+    """
+
+    def _template(self, client, auth_headers, exercise_id, **extra):
+        body = {
+            "name": extra.pop("name", "Mode Template"),
+            "weeks": 4,
+            "days_per_week": 1,
+            "workout_templates": [
+                {
+                    "name": "Day 1",
+                    "order_index": 0,
+                    "exercises": [
+                        {
+                            "exercise_id": exercise_id,
+                            "order_index": 0,
+                            "target_sets": 3,
+                            "weekly_set_increment": 1.0,
+                            "target_reps_min": 8,
+                            "target_reps_max": 10,
+                            "starting_rir": 3,
+                            "ending_rir": 0,
+                        }
+                    ],
+                }
+            ],
+        }
+        body.update(extra)
+        return client.post("/v1/mesocycles/", json=body, headers=auth_headers).json()
+
+    def _set_counts(self, client, auth_headers, instance_id):
+        sessions = client.get(
+            f"/v1/workout-sessions/?mesocycle_instance_id={instance_id}",
+            headers=auth_headers,
+        ).json()
+        return [s["set_count"] for s in sorted(sessions, key=lambda s: s["week_number"])]
+
+    def test_templates_default_to_autoregulating(
+        self, client, auth_headers, sample_exercise_id
+    ):
+        template = self._template(client, auth_headers, sample_exercise_id)
+        assert template["autoregulate_volume"] is True
+
+    def test_a_manual_template_starts_manual_blocks(
+        self, client, auth_headers, sample_exercise_id
+    ):
+        """The weekly increment is honoured, because the template asked for it."""
+        template = self._template(
+            client, auth_headers, sample_exercise_id,
+            name="Manual Template", autoregulate_volume=False,
+        )
+        instance = client.post(
+            "/v1/mesocycle-instances/",
+            json={"mesocycle_template_id": template["id"]},
+            headers=auth_headers,
+        ).json()
+
+        assert instance["autoregulate_volume"] is False
+        # 3 sets +1/week across 4 training weeks, then the deload
+        assert self._set_counts(client, auth_headers, instance["id"])[:4] == [3, 4, 5, 6]
+
+    def test_an_autoregulated_template_starts_flat(
+        self, client, auth_headers, sample_exercise_id
+    ):
+        template = self._template(client, auth_headers, sample_exercise_id)
+        instance = client.post(
+            "/v1/mesocycle-instances/",
+            json={"mesocycle_template_id": template["id"]},
+            headers=auth_headers,
+        ).json()
+
+        assert instance["autoregulate_volume"] is True
+        assert self._set_counts(client, auth_headers, instance["id"])[:4] == [3, 3, 3, 3]
+
+    def test_starting_a_block_can_override_the_template(
+        self, client, auth_headers, sample_exercise_id
+    ):
+        """The per-run escape hatch survives."""
+        template = self._template(
+            client, auth_headers, sample_exercise_id,
+            name="Override Template", autoregulate_volume=False,
+        )
+        instance = client.post(
+            "/v1/mesocycle-instances/",
+            json={"mesocycle_template_id": template["id"], "autoregulate_volume": True},
+            headers=auth_headers,
+        ).json()
+
+        assert instance["autoregulate_volume"] is True
+        assert self._set_counts(client, auth_headers, instance["id"])[:4] == [3, 3, 3, 3]
+
+    def test_the_mode_can_be_edited_on_the_template(
+        self, client, auth_headers, sample_exercise_id
+    ):
+        template = self._template(
+            client, auth_headers, sample_exercise_id, name="Editable Template"
+        )
+        updated = client.put(
+            f"/v1/mesocycles/{template['id']}",
+            json={"autoregulate_volume": False},
+            headers=auth_headers,
+        ).json()
+        assert updated["autoregulate_volume"] is False

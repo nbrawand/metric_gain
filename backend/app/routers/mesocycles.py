@@ -169,6 +169,7 @@ async def create_mesocycle(
         description=mesocycle_data.description,
         weeks=mesocycle_data.weeks,
         days_per_week=mesocycle_data.days_per_week,
+        autoregulate_volume=mesocycle_data.autoregulate_volume,
     )
 
     db.add(new_mesocycle)

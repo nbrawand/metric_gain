@@ -25,6 +25,14 @@ class Mesocycle(Base):
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
 
+    # Default volume mode for blocks started from this template. Stored here so
+    # the choice is made where the weekly increments it overrides are set —
+    # picking "+2 sets/week" per exercise and then having it silently ignored
+    # was the confusing part. Still overridable per run when starting a block.
+    autoregulate_volume = Column(
+        Boolean, default=True, nullable=False, server_default="true"
+    )
+
     # Duration configuration
     weeks = Column(Integer, nullable=False)  # Total weeks in mesocycle (e.g., 4)
     days_per_week = Column(Integer, nullable=False, default=4)  # Number of training days per week

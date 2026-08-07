@@ -5,6 +5,7 @@ import {
   computeWeeklyVolumeByMuscleGroup,
   DELOAD_TARGET_RIR,
   findVolumeWarnings,
+  volumeInputsForTemplate,
   WEEKLY_SET_CEILINGS,
 } from './volume';
 
@@ -122,5 +123,54 @@ describe('ceilingForMuscleGroup', () => {
   it('falls back for anything unrecognised', () => {
     expect(ceilingForMuscleGroup('Grip')).toBe(25);
     expect(ceilingForMuscleGroup('')).toBe(25);
+  });
+});
+
+describe('volumeInputsForTemplate', () => {
+  const days = [
+    {
+      exercises: [
+        { exercise_id: 1, target_sets: 3, weekly_set_increment: 2 },
+        { exercise_id: 2, target_sets: 4, weekly_set_increment: 1 },
+      ],
+    },
+    { exercises: [{ exercise_id: 1, target_sets: 2, weekly_set_increment: 0.5 }] },
+  ];
+  const groups: Record<number, string> = { 1: 'Chest', 2: 'Back' };
+  const lookup = (id: number) => groups[id];
+
+  it('flattens every day into per-exercise inputs', () => {
+    const inputs = volumeInputsForTemplate(days, lookup, false);
+    expect(inputs).toHaveLength(3);
+    expect(inputs[0]).toEqual({ muscleGroup: 'Chest', targetSets: 3, increment: 2 });
+  });
+
+  it('zeroes the increment when the block autoregulates', () => {
+    /**
+     * An autoregulated block generates flat and grows from what gets logged.
+     * Charting the template's ramp would show a plan that will not happen —
+     * which is what made the weekly-increase control feel load-bearing when it
+     * was being ignored.
+     */
+    const inputs = volumeInputsForTemplate(days, lookup, true);
+    expect(inputs.every((i) => i.increment === 0)).toBe(true);
+    // Starting sets still matter; only the ramp is dropped
+    expect(inputs.map((i) => i.targetSets)).toEqual([3, 4, 2]);
+  });
+
+  it('produces a flat chart when autoregulating and a ramp when not', () => {
+    const flat = computeWeeklyVolumeByMuscleGroup(
+      volumeInputsForTemplate(days, lookup, true), 4
+    );
+    const ramped = computeWeeklyVolumeByMuscleGroup(
+      volumeInputsForTemplate(days, lookup, false), 4
+    );
+    expect(flat.Chest).toEqual([5, 5, 5, 5]);
+    expect(ramped.Chest).toEqual([5, 8, 10, 13]);
+  });
+
+  it('falls back to Other for an exercise it cannot resolve', () => {
+    const inputs = volumeInputsForTemplate(days, () => undefined, false);
+    expect(inputs.every((i) => i.muscleGroup === 'Other')).toBe(true);
   });
 });

@@ -515,6 +515,14 @@ async def start_mesocycle_instance(
             detail="You can only start your own templates or stock templates."
         )
 
+    # Unspecified means the template's default; an explicit value is the
+    # per-run override offered when starting the block
+    autoregulate = (
+        template.autoregulate_volume
+        if instance_data.autoregulate_volume is None
+        else instance_data.autoregulate_volume
+    )
+
     total_weeks = template.weeks
     days_per_week = template.days_per_week
 
@@ -526,7 +534,7 @@ async def start_mesocycle_instance(
         template_weeks=total_weeks,
         template_days_per_week=days_per_week,
         includes_deload=True,
-        autoregulate_volume=instance_data.autoregulate_volume,
+        autoregulate_volume=autoregulate,
         status="active",
         start_date=instance_data.start_date or date.today(),
     )
@@ -598,7 +606,7 @@ async def start_mesocycle_instance(
                     _generate_sets_for_session(
                         db, session, wt, week, total_weeks,
                         current_user.id, new_instance.id, day_number,
-                        unit=unit, autoregulate=instance_data.autoregulate_volume,
+                        unit=unit, autoregulate=autoregulate,
                     )
             elif is_deload_week(week, total_weeks):
                 _generate_deload_sets(
@@ -611,7 +619,7 @@ async def start_mesocycle_instance(
                 _generate_sets_for_session(
                     db, session, wt, week, total_weeks,
                     current_user.id, new_instance.id, day_number,
-                    unit=unit, autoregulate=instance_data.autoregulate_volume,
+                    unit=unit, autoregulate=autoregulate,
                 )
 
     db.commit()

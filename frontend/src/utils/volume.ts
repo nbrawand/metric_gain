@@ -134,3 +134,27 @@ export const findVolumeWarnings = (
     (a, b) => b.peakSets - b.ceiling - (a.peakSets - a.ceiling)
   );
 };
+
+export interface VolumeInputSource {
+  exercises: { exercise_id: number; target_sets: number; weekly_set_increment: number }[];
+}
+
+/**
+ * Turn a template's days into the per-exercise inputs the volume chart wants.
+ *
+ * autoregulate zeroes the weekly increment: an autoregulated block generates
+ * flat and grows from what gets logged, so charting the template's ramp would
+ * show a plan that will not happen.
+ */
+export const volumeInputsForTemplate = (
+  days: VolumeInputSource[],
+  muscleGroupFor: (exerciseId: number) => string | undefined,
+  autoregulate: boolean
+): { muscleGroup: string; targetSets: number; increment: number }[] =>
+  days.flatMap((day) =>
+    day.exercises.map((exercise) => ({
+      muscleGroup: muscleGroupFor(exercise.exercise_id) || 'Other',
+      targetSets: exercise.target_sets,
+      increment: autoregulate ? 0 : (exercise.weekly_set_increment ?? 0),
+    }))
+  );

@@ -138,3 +138,27 @@ hardened.
     Hero mentions it, a landing card replaces "Stays on Your Plan" (whose claim
     stopped being true once mid-workout edits started carrying forward), and
     How It Works gains an offline section.
+
+## Open
+
+[ ] Error monitoring. Eighteen commits of behaviour change — autoregulation,
+deload weeks, unit conversion that rewrites logged history — and a production
+500 still reaches us via a user rather than a page. Nothing is wired up: no
+Sentry, no alerting. Highest-value infrastructure item.
+
+[ ] CI. 264 backend tests, 78 frontend tests, and `npm run lint` now exits 0
+including warnings, so there is finally a gate worth wiring to GitHub Actions.
+Before this it could not have gated anything.
+
+[ ] Promote the CSP from report-only. It protects nothing today. Needs one real
+sign-in with the browser console open to catch what Google's GSI widget
+actually reaches for, then swap the header name — steps in `frontend/CSP.md`.
+Until then, tokens in localStorage mean an XSS is full account takeover.
+
+[ ] Tests for WorkoutExecution.tsx and Mesocycles.tsx (1,600 and 1,141 lines,
+no direct coverage). Both need refactoring to be testable; the components and
+stores they compose are covered, which is why this is lower than it looks.
+
+[ ] Watch autoregulation against real training. The logic is well covered but
+the *policy* is unproven: +1 on a clean week, -1 below 60% of target reps,
+capped per muscle group. The first block someone runs end to end is the test.

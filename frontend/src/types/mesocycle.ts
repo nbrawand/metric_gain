@@ -67,6 +67,8 @@ export interface WorkoutTemplateCreate {
  * Full mesocycle TEMPLATE with nested workouts and exercises
  */
 export interface Mesocycle {
+  /** Default volume mode for blocks started from this template. */
+  autoregulate_volume?: boolean;
   id: number;
   user_id: number | null; // Nullable for stock mesocycles
   is_stock: boolean;
@@ -83,6 +85,8 @@ export interface Mesocycle {
  * Simplified mesocycle template for list view (without nested templates)
  */
 export interface MesocycleListItem {
+  /** Default volume mode for blocks started from this template. */
+  autoregulate_volume?: boolean;
   id: number;
   user_id: number | null; // Nullable for stock mesocycles
   is_stock: boolean;
@@ -99,6 +103,8 @@ export interface MesocycleListItem {
  * Data for creating a new mesocycle template
  */
 export interface MesocycleCreate {
+  /** Default volume mode for blocks started from this template. */
+  autoregulate_volume?: boolean;
   name: string;
   description?: string;
   weeks: number;

@@ -78,6 +78,9 @@ class MesocycleBase(BaseModel):
     description: Optional[str] = None
     weeks: int = Field(..., ge=3, le=12)
     days_per_week: int = Field(..., ge=1, le=7)
+    # Default volume mode for blocks started from this template. Off means the
+    # per-exercise weekly increments below drive set counts instead.
+    autoregulate_volume: bool = True
 
 
 class MesocycleCreate(MesocycleBase):
@@ -93,6 +96,7 @@ class MesocycleUpdate(BaseModel):
     description: Optional[str] = None
     weeks: Optional[int] = Field(None, ge=3, le=12)
     days_per_week: Optional[int] = Field(None, ge=1, le=7)
+    autoregulate_volume: Optional[bool] = None
 
 
 class MesocycleResponse(MesocycleBase):
@@ -119,6 +123,7 @@ class MesocycleListResponse(BaseModel):
     description: Optional[str]
     weeks: int
     days_per_week: int
+    autoregulate_volume: bool = True
     created_at: datetime
     updated_at: datetime
     workout_count: int  # Number of workout templates
@@ -133,10 +138,10 @@ class MesocycleInstanceCreate(BaseModel):
 
     mesocycle_template_id: int
     start_date: Optional[date] = None  # Defaults to today if not provided
-    # Let logged performance drive set counts. Off means the weekly increment
-    # chosen on the template is replayed for the whole block, which is the
-    # override for lifters who want to drive volume themselves.
-    autoregulate_volume: bool = True
+    # Let logged performance drive set counts. None means "use the template's
+    # default", which is what the create form set; an explicit value is the
+    # per-run override offered when starting the block.
+    autoregulate_volume: Optional[bool] = None
     source_instance_id: Optional[int] = None  # Previous instance to seed week 1 weights from
     source_week_number: Optional[int] = None  # Which week in the source instance to copy from
 
