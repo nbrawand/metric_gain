@@ -139,6 +139,99 @@ hardened.
     stopped being true once mid-workout edits started carrying forward), and
     How It Works gains an offline section.
 
+## Landing page and pre-purchase surface
+
+From a review of how RP Hypertrophy and Alpha Progression sell. What they lead
+with: RP anchors on Dr. Mike Israetel plus named pro athletes, a transformation
+carousel, 100+ plans and 250+ technique videos, at $34.99/mo with **no free
+trial** (30-day money-back only). Alpha Progression leads with 4.9 stars /
+40k+ reviews / 25M+ workouts, founder credentials, and an explicit comparison
+table naming Strong, Hevy and Fitbod.
+
+Documented complaints about RP — the openings: price ("more than my gym
+membership"), steep setup, cluttered UI, not suitable for beginners, no offline
+mode, weak analytics.
+
+Everything below is visible to people who have not paid. Ordered by leverage.
+
+### Highest leverage
+
+[ ] Put the price in the hero. $4.99/mo appears once, in the footer. RP is
+$34.99 and price is the single most repeated complaint about them. Being 7x
+cheaper is the strongest card and it is currently buried.
+
+[ ] Sell the free trial above the fold. RP has no free trial at all — only a
+money-back guarantee, which requires paying first. "Free for 5 days, no card up
+front" is a structural advantage that appears nowhere near the top. Change the
+CTA from "Get Started" to something that says free.
+
+[ ] State the positioning: *it adapts from what you lifted, not from a survey.*
+RP asks 5 subjective questions per muscle per session (soreness, pump,
+workload, joint pain, disruption); we score the same thing objectively off
+logged sets with zero extra taps. Concrete, checkable, and currently unsaid on
+the landing page.
+
+[ ] Promote offline from one card among four to a headline-level claim. RP's
+most-cited App Store complaint is reportedly needing internet. Clearest
+head-to-head win we have.
+
+[ ] Claim beginners explicitly. Reviewers consistently say RP is too complex for
+newcomers. We ship three beginner templates and an educational How It Works
+page, and the landing page never says "good for your first structured block."
+
+### Accuracy — the page describes an older product
+
+[ ] Fix the exercise count. It says 115; there are 140. Template count is not
+mentioned at all; there are 16. This category competes on countable numbers
+(RP leads with "100+ plans, 250+ videos").
+
+[ ] Advertise what shipped but is not mentioned: deload weeks, kg support,
+plate calculator and warmup ramps, the Progress page, the optional rest timer,
+per-muscle volume warnings.
+
+### Structural gaps both competitors have and we do not
+
+[ ] Add an FAQ. Both use one heavily for objection handling. Candidates: is
+this for beginners, what if I miss a workout, do I need particular equipment,
+can I cancel, is there an app to download, what happens to my data if I stop.
+
+[ ] Add an honest comparison table. Alpha Progression does this by name. Four
+rows would carry it: price, free trial, works offline, adapts from logged sets
+vs self-reported surveys.
+
+[ ] Add product imagery. One calendar screenshot today; both competitors use
+mockup galleries. The Progress charts, the volume warning and the plate
+calculator all now look like a real product.
+
+[ ] Social proof — ratings, user counts, testimonials. **Do not manufacture
+any.** Honest routes: a founder note on why this was built, the App Store
+rating once there is one, or letting How It Works carry the credibility.
+
+[ ] Build a real pricing section. One sentence today: no annual option, no plan
+comparison, no money-back guarantee. RP anchors high with an annual price;
+inverting that and letting one cheap monthly price be the whole story may work
+better for us.
+
+### Smaller
+
+[ ] Add a Privacy Policy. The footer links only Terms. We use Google OAuth and
+Stripe — this is a trust signal and probably a compliance gap.
+
+[ ] Reframe the PWA angle. "No download needed" reads apologetic. It is a
+benefit: nothing to install, no app store, updates instantly, works on any
+device.
+
+[ ] Let people see the product without signing up. Alpha's free tier is
+"genuinely usable, forever". A read-only demo block or an annotated screenshot
+tour would let people evaluate before committing.
+
+[ ] Use How It Works as top-of-funnel content. It is public, genuinely
+educational, and now covers RIR, mesocycles, progressive overload, deloads and
+autoregulation — but it is positioned as documentation rather than a reason to
+visit. SEO and content-marketing value going unused.
+
+[ ] Add email capture for people who are not ready to pay yet.
+
 ## Open
 
 [ ] Error monitoring. Eighteen commits of behaviour change — autoregulation,
