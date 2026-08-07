@@ -10,6 +10,8 @@ A progressive web app for running structured strength training blocks that you p
 - **Deload Week**: Every block runs one extra week at about half the sets, lighter, at 4 RIR
 - **Pounds or Kilograms**: Per-user unit preference; switching converts your logged history
 - **Volume Planning**: Review weekly sets per muscle group before committing, with a warning when a plan exceeds what most lifters recover from
+- **Progress Analytics**: Estimated 1RM per exercise over time, weekly hard sets per muscle group, and best lifts
+- **Optional Rest Timer**: Off by default; a countdown between sets for those who want one
 - **Offline Support**: Log workouts without internet connection
 - **Exercise Library**: 140 pre-loaded exercises + custom exercises
 - **Templates**: 16 stock mesocycle templates

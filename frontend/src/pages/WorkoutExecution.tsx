@@ -10,7 +10,8 @@ import { WorkoutSession, WorkoutSet, WorkoutSessionListItem } from '../types/wor
 import { Exercise } from '../types/exercise';
 import { MesocycleInstance } from '../types/mesocycle';
 import { computeTargetRir } from '../utils/volume';
-import { weightUnitFromPreferences, weightUnitLabel } from '../utils/units';
+import { weightUnitFromPreferences, weightUnitLabel, restTimerFromPreferences } from '../utils/units';
+import RestTimer from '../components/RestTimer';
 
 // Local state for tracking input values before they're saved
 type SetInputValues = Record<number, { weight: string; reps: string }>;
@@ -22,6 +23,10 @@ export default function WorkoutExecution() {
   // Weights are stored in whatever unit the lifter logs in, so this is
   // only a label — there is nothing to convert on the way out.
   const unitLabel = weightUnitLabel(weightUnitFromPreferences(user?.preferences));
+  const restTimer = restTimerFromPreferences(user?.preferences);
+  // Bumped on each logged set to restart the countdown. Zero means the timer
+  // has never run this session, so nothing is shown.
+  const [restToken, setRestToken] = useState(0);
 
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<WorkoutSession | null>(null);
@@ -482,12 +487,16 @@ export default function WorkoutExecution() {
       removeForSet(session.id, setId);
       setLoggedSetIds((prev) => new Set(prev).add(setId));
       savedValuesRef.current[setId] = { weight, reps };
+      // A skipped set is not a set you need to rest after
+      if (restTimer.enabled && !setData.skipped) setRestToken((t) => t + 1);
     } catch (err: any) {
       if (err?.status === 0) {
-        // Network error — queue for later sync
+        // Network error — queue for later sync. The set was still performed,
+        // so the rest is still real.
         enqueue(session.id, setId, setData);
         setLoggedSetIds((prev) => new Set(prev).add(setId));
         savedValuesRef.current[setId] = { weight, reps };
+        if (restTimer.enabled && !setData.skipped) setRestToken((t) => t + 1);
       } else {
         console.error('Error logging set:', err);
         setError(err?.detail || 'Could not save that set. Please try again.');
@@ -1036,6 +1045,13 @@ export default function WorkoutExecution() {
             Dismiss
           </button>
         </div>
+      )}
+      {restTimer.enabled && (
+        <RestTimer
+          startToken={restToken}
+          seconds={restTimer.seconds}
+          onDismiss={() => setRestToken(0)}
+        />
       )}
       {notice && (
         <div className="bg-teal-900/80 border-b border-teal-500 px-4 py-3 flex items-start justify-between gap-3">
@@ -1628,7 +1644,7 @@ export default function WorkoutExecution() {
 
               <div>
                 <p className="font-medium text-white mb-1">Rest Between Sets</p>
-                <p>No timer here on purpose. Rest until you feel ready to give your next set full effort. That's usually 2-4 minutes for big lifts, 1-2 for smaller ones.</p>
+                <p>Rest until you feel ready to give your next set full effort — usually 2-4 minutes for big lifts, 1-2 for smaller ones. That judgement is the default here. If you would rather have a countdown, turn the rest timer on from the menu.</p>
               </div>
             </div>
 
@@ -1669,7 +1685,7 @@ export default function WorkoutExecution() {
 
               <div>
                 <p className="font-medium text-white mb-1">Rest Between Sets</p>
-                <p>No timer here on purpose. Rest until you feel ready to give your next set full effort. That's usually 2-4 minutes for big lifts, 1-2 for smaller ones.</p>
+                <p>Rest until you feel ready to give your next set full effort — usually 2-4 minutes for big lifts, 1-2 for smaller ones. That judgement is the default here. If you would rather have a countdown, turn the rest timer on from the menu.</p>
               </div>
             </div>
 

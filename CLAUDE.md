@@ -102,12 +102,17 @@ PR history. Reviewers ding RP for weak analytics, so this is cheap ground.
     reserve, so a set stopped at 2 RIR isn't read as weaker than the same
     weight taken to failure; Epley is clamped at 12 effective reps.
 
-[ ] Optional rest timer. **Product decision needed first — don't just build
+[x] Optional rest timer. **Product decision needed first — don't just build
 it.** The rest/log info modals in `frontend/src/pages/WorkoutExecution.tsx`
 currently say "No timer here on purpose," which is a defensible stance, but a
 missing timer is one of the most-requested features in RP's own App Store
 reviews. Suggest opt-in and off by default, so the philosophy stays the default
 without being a reason to churn.
+    Built as suggested: off by default, opt in from the menu with a duration
+    preset. Starts when a set is saved, counts up past zero rather than
+    freezing at 0:00, and survives a locked screen (wall-clock deadline, not a
+    decrementing counter). The "No timer here on purpose" copy is now the
+    softer "that judgement is the default here".
 
 [ ] Plate calculator and warmup-set guidance. Both are recurring complaints
 about RP; both are self-contained and need no backend work.

@@ -5,7 +5,8 @@ import { getActiveMesocycleInstance, updateMesocycleInstance } from '../api/meso
 import { listWorkoutSessions } from '../api/workoutSessions';
 import { MesocycleInstance } from '../types/mesocycle';
 import { WorkoutSessionListItem } from '../types/workout_session';
-import { weightUnitFromPreferences, weightUnitLabel, WeightUnit } from '../utils/units';
+import { weightUnitFromPreferences, weightUnitLabel, WeightUnit, restTimerFromPreferences } from '../utils/units';
+import { REST_TIMER_PRESETS } from './RestTimer';
 
 export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -17,6 +18,21 @@ export default function Layout() {
   const { logout, accessToken, isAuthenticated, user, updatePreferences } = useAuthStore();
   const [switchingUnit, setSwitchingUnit] = useState(false);
   const weightUnit = weightUnitFromPreferences(user?.preferences);
+  const restTimer = restTimerFromPreferences(user?.preferences);
+  const [savingRestTimer, setSavingRestTimer] = useState(false);
+
+  const handleRestTimerChange = async (next: { enabled?: boolean; seconds?: number }) => {
+    if (savingRestTimer) return;
+    setSavingRestTimer(true);
+    try {
+      await updatePreferences({
+        rest_timer_enabled: next.enabled ?? restTimer.enabled,
+        rest_timer_seconds: next.seconds ?? restTimer.seconds,
+      });
+    } finally {
+      setSavingRestTimer(false);
+    }
+  };
 
   const handleUnitChange = async (unit: WeightUnit) => {
     if (unit === weightUnit || switchingUnit) return;
@@ -224,6 +240,41 @@ export default function Layout() {
                   <p className="text-xs text-gray-500 mt-2">
                     Switching converts the weights you've already logged.
                   </p>
+
+                  <div className="mt-4 pt-4 border-t border-gray-700">
+                    <label className="flex items-center justify-between gap-3 cursor-pointer">
+                      <span className="text-sm text-gray-400">Rest timer</span>
+                      <input
+                        type="checkbox"
+                        checked={restTimer.enabled}
+                        disabled={savingRestTimer}
+                        onChange={(e) => handleRestTimerChange({ enabled: e.target.checked })}
+                        className="h-4 w-4 accent-teal-500"
+                      />
+                    </label>
+                    {restTimer.enabled && (
+                      <div className="flex gap-2 mt-2 flex-wrap">
+                        {REST_TIMER_PRESETS.map((seconds) => (
+                          <button
+                            key={seconds}
+                            onClick={() => handleRestTimerChange({ seconds })}
+                            disabled={savingRestTimer}
+                            className={`px-3 py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-50 ${
+                              restTimer.seconds === seconds
+                                ? 'bg-teal-600 text-white'
+                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                            }`}
+                          >
+                            {seconds < 60 ? `${seconds}s` : `${seconds / 60}m`}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-500 mt-2">
+                      Off by default. Resting until you feel ready beats resting until a
+                      clock says so — but the countdown is here if you want it.
+                    </p>
+                  </div>
                 </div>
               )}
               {isAuthenticated ? (

@@ -27,3 +27,32 @@ export const weightUnitFromPreferences = (
 /** "lbs" reads naturally in prose; "kg" is already both singular and plural. */
 export const weightUnitLabel = (unit: WeightUnit): string =>
   unit === 'kg' ? 'kg' : 'lbs';
+
+
+/**
+ * Rest timer preference. Off by default — the app's stance is that you rest
+ * until you are ready rather than until a clock says so, and that stays the
+ * default for anyone who never opts in.
+ */
+export interface RestTimerPreference {
+  enabled: boolean;
+  seconds: number;
+}
+
+export const DEFAULT_REST_TIMER: RestTimerPreference = { enabled: false, seconds: 120 };
+
+export const restTimerFromPreferences = (
+  preferences: string | null | undefined
+): RestTimerPreference => {
+  if (!preferences) return DEFAULT_REST_TIMER;
+  try {
+    const parsed = JSON.parse(preferences);
+    const seconds = Number(parsed?.rest_timer_seconds);
+    return {
+      enabled: parsed?.rest_timer_enabled === true,
+      seconds: Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : DEFAULT_REST_TIMER.seconds,
+    };
+  } catch {
+    return DEFAULT_REST_TIMER;
+  }
+};

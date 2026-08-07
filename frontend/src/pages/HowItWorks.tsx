@@ -105,6 +105,36 @@ export default function HowItWorks() {
         </p>
       </section>
 
+      {/* Progress */}
+      <section id="progress" className="bg-gray-800 rounded-lg p-6 scroll-mt-16">
+        <h2 className="text-xl font-semibold text-teal-400 mb-3">Seeing Your Progress</h2>
+        <p className="text-gray-300 leading-relaxed mb-3">
+          The <span className="text-white font-medium">Progress</span> page reads back
+          everything you have logged: estimated one-rep max per exercise over time, hard
+          sets per muscle group each week, and your best lifts.
+        </p>
+        <p className="text-gray-300 leading-relaxed">
+          Strength estimates count the reps you left in reserve, not just the reps you
+          performed. A set stopped at 2 RIR had two more in it, and treating it as a
+          maximum would make a deliberately submaximal session look like a step backwards.
+        </p>
+      </section>
+
+      {/* Rest */}
+      <section id="rest" className="bg-gray-800 rounded-lg p-6 scroll-mt-16">
+        <h2 className="text-xl font-semibold text-teal-400 mb-3">Resting Between Sets</h2>
+        <p className="text-gray-300 leading-relaxed mb-3">
+          Rest until you feel ready to give the next set full effort — usually two to four
+          minutes for big lifts and one to two for smaller ones. That judgement is better
+          than a fixed number, so it is what the app defaults to.
+        </p>
+        <p className="text-gray-300 leading-relaxed">
+          If you would rather have a countdown, turn the rest timer on from the menu and
+          pick a duration. It starts each time you save a set and can be restarted or
+          dismissed. Leave it off and nothing changes.
+        </p>
+      </section>
+
       {/* Deload */}
       <section id="deload" className="bg-gray-800 rounded-lg p-6 scroll-mt-16">
         <h2 className="text-xl font-semibold text-teal-400 mb-3">The Deload Week</h2>
