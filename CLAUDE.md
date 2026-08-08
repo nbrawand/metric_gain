@@ -265,6 +265,15 @@ visit. SEO and content-marketing value going unused.
 
 ## Open
 
+[ ] Move the Google OAuth client off the old account. It lives in Google Cloud
+project `319029498301`, owned by an email that is being abandoned. Deferred on
+purpose, it blocks nothing: the domain migration only needs two origins added
+to the existing client, and the owning account never touches app accounts,
+which match on email. When it is done it is one new project, a published
+consent screen (a new one starts in Testing and only lets hand-listed users in),
+a Web client with the same JavaScript origins, and `GOOGLE_CLIENT_ID` swapped on
+the Render backend. No code change, no user impact.
+
 [ ] There is no way to grant admin. `is_admin` is set in exactly one place, a
 migration that hardcodes `nicholasbrawand@gmail.com`, and every admin endpoint
 requires already being admin, so the flag cannot be given to a second account
