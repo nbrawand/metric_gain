@@ -99,12 +99,12 @@ npm run lint
 The backend and **the frontend** are both on Render, behind Cloudflare.
 Responses carry Render's `rndr-id` header, which is how to check.
 
-`frontend/vercel.json` is therefore **not read by anything**. It holds security
-headers, a report-only CSP and an SPA rewrite, and none of it is in effect.
-Confirmed against production: the only security header the site returns is
-`X-Content-Type-Options`. Anything that has to be true of the served response,
-headers, redirects, the SPA fallback, belongs in the Render static site's
-settings, not in that file.
+There is no `vercel.json` any more. One existed for a long time holding
+security headers, a report-only CSP and an SPA rewrite, and none of it was ever
+served, because nothing read the file. Anything that has to be true of the
+served response, headers, redirects, the SPA fallback, is configured on the
+Render static site. [DEPLOY.md](DEPLOY.md) is the record of what should be set
+there, and how to check it.
 
 ### CI
 
@@ -260,8 +260,9 @@ stock templates are updated in place rather than duplicated.
 Health check is `/health`, which deliberately does **not** touch the database,
 so a green deploy does not by itself prove the schema is current.
 
-**Frontend (Vercel).** Security headers live in `frontend/vercel.json`. The CSP
-there is report-only, see [frontend/CSP.md](frontend/CSP.md).
+**Frontend (Render static site).** Security headers and the SPA rewrite are
+dashboard settings, written down in [DEPLOY.md](DEPLOY.md). The CSP is
+report-only, see [frontend/CSP.md](frontend/CSP.md).
 
 ### Production notes
 
@@ -275,9 +276,10 @@ Setting `ENVIRONMENT=production` changes behaviour deliberately:
   and wildcard CORS with credentials enabled lets any site read a signed-in
   user's data.
 
-Security headers for the deployed frontend live in `frontend/vercel.json`. The
-CSP there is **report-only** and not yet protecting anything, see
-[frontend/CSP.md](frontend/CSP.md) for what has to happen before it is enforced.
+Security headers for the deployed frontend are set on the Render static site,
+listed in [DEPLOY.md](DEPLOY.md). The CSP is **report-only** and not yet
+protecting anything, see [frontend/CSP.md](frontend/CSP.md) for what has to
+happen before it is enforced.
 
 ## License
 

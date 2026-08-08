@@ -1,13 +1,14 @@
 # Content Security Policy
 
-> **None of this is live.** The site is served by Render, not Vercel, so
-> `vercel.json` is not read by anything. Verified against production: the only
-> security header that arrives is `X-Content-Type-Options`. The headers below
-> have to be configured on the Render static site before any of what follows
-> means anything.
+> **Check this is live before trusting any of it.** The policy used to sit in
+> `frontend/vercel.json`, on a site served by Render, so it was never sent at
+> all. That file is gone; the header is now set on the Render static site, and
+> the values are in [DEPLOY.md](../DEPLOY.md).
+> `curl -sI https://www.strength-guider.com/ | grep -i content-security` tells
+> you whether it is actually being served.
 
-`vercel.json` ships the CSP as **`Content-Security-Policy-Report-Only`**, not as an
-enforcing policy. The other headers there (HSTS, `X-Frame-Options`,
+The CSP is sent as **`Content-Security-Policy-Report-Only`**, not as an
+enforcing policy. The other headers (HSTS, `X-Frame-Options`,
 `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`) *are* enforcing -
 they carry no breakage risk.
 
@@ -36,7 +37,8 @@ white-screens the page.
    directive, or, better, remove the thing that triggered it.
 3. Replace `'unsafe-inline'` in `script-src`: take the sha256 of the JSON-LD
    block in `index.html` and list it as `'sha256-...'`.
-4. Rename the header key to `Content-Security-Policy` and redeploy.
+4. Rename the header key to `Content-Security-Policy` in the Render
+   dashboard.
 5. Re-run step 1 to confirm nothing broke.
 
 Until step 4 lands, the CSP provides **no** XSS protection. It is staged, not

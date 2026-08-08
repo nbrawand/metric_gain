@@ -275,25 +275,19 @@ shared link, a bookmark, and every crawler reading the sitemap.
     The frontend is served by Render behind Cloudflare, not by Vercel:
     responses carry Render's `rndr-id` header, and the service is
     `strength-guider` (its onrender.com subdomain serves the same build as the
-    live site). `render.yaml` at the repo root now carries the fix, a rewrite
-    of `/*` to `/index.html`, validated against Render's published schema.
-    It does nothing until the service is under Blueprint management: a
-    Blueprint does not adopt a service just because the file exists. Either
-    generate a Blueprint from the existing services in the dashboard and merge
-    the blocks in, or check every field in the file against the dashboard
-    first, because anything omitted can change on sync. The one-off
-    alternative is the same rule typed into the dashboard: Source `/*`,
-    Destination `/index.html`, Action **Rewrite** (not Redirect).
+    live site). Fixed by one dashboard rule, Source `/*`, Destination
+    `/index.html`, Action **Rewrite** (not Redirect). Blueprints were
+    considered and declined: adopting a manually created service means
+    restating every dashboard setting in the file or risking a sync changing
+    what it does not mention, which is a poor trade for two rules. `DEPLOY.md`
+    records what to set and how to verify it.
 
-[ ] **`frontend/vercel.json` is inert and always has been.** Same discovery.
-It was added for security headers and a CSP, and none of it is live: the site
-returns no HSTS, no `X-Frame-Options`, no `Referrer-Policy`, no
-`Permissions-Policy` and no CSP at all, report-only or otherwise. The only
-security header present is `X-Content-Type-Options`, which comes from
-elsewhere. The header list is ported into `render.yaml`, subject to the
-same Blueprint caveat above; the dashboard's Headers section is the one-off
-alternative. `frontend/vercel.json` is now redundant either way and should
-probably go, it only serves to imply protection that is not there.
+[ ] **The security headers have never been served.** Same discovery.
+`frontend/vercel.json` held them, on a site Render serves, so the site returns
+no HSTS, no `X-Frame-Options`, no `Referrer-Policy`, no `Permissions-Policy`
+and no CSP at all. The only security header present is
+`X-Content-Type-Options`, which comes from elsewhere. That file is deleted;
+the values to set on the Render static site are in `DEPLOY.md`.
 
 
 [x] Self-service account deletion and data export. Writing the privacy policy
@@ -354,7 +348,7 @@ checkout, billing_portal) because those call Stripe. One test-mode checkout and
 one portal visit would settle it.
 
 [ ] Promote the CSP from report-only. It protects nothing today, and it turns
-out it is not even being served: it lives in `frontend/vercel.json`, and the
+out it is not even being served: it lived in `frontend/vercel.json`, and the
 site is on Render. So this now starts with getting the headers deployed at all,
 then one real sign-in with the browser console open to catch what Google's GSI
 widget reaches for, then enforcing. Steps in `frontend/CSP.md`. Until then,
