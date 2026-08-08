@@ -349,7 +349,7 @@ log. One showed a floor, the other showed a plan that would not happen.
     week so the two modes cannot disagree about where a block starts, and pin
     the ceiling behaviour at the boundary rather than well past it.
 
-[ ] Creating a template should start it and send the lifter home. Today
+[x] Creating a template should start it and send the lifter home. Today
 `handleCreateMesocycle` in `Mesocycles.tsx` just closes the modal, resets the
 form and reloads the list, so a new template sits there with nothing telling
 the user the next step is a separate Start button. Wanted: on create, start an
@@ -364,27 +364,53 @@ previous instance to seed weights from, so auto-starting has to either apply
 sensible defaults (autoregulation on, no source instance) or keep the modal in
 the path, and the existing Start button routes to the first workout rather
 than Home, so decide whether these two entry points should agree.
+    Done, and both questions resolved rather than compromised on. The volume
+    mode comes from the template itself, which the create form already asks
+    about, so nothing is guessed and the start modal is not needed in the path.
+    A source instance cannot apply to a template created seconds ago, since it
+    has no previous runs. The two entry points deliberately still differ: an
+    explicit Start means "I am training now" and goes to the first session,
+    while finishing the builder means "this is my plan" and goes Home.
+    Three outcomes, all tested: started and redirected, already-running so
+    saved with a banner here, and the awkward one where the template saved but
+    starting it failed, which must not be reported as a failure to create.
+    Found and fixed while wiring it: `autoregulate_volume` was collected by the
+    create form and dropped from the payload, so unticking performance-based
+    sets changed the review chart and nothing else. The saved template kept the
+    default. That is the second time this field has been read in one place and
+    ignored in another.
 
-[ ] Collapse the template list and past mesocycles by default on the
+[x] Collapse the template list and past mesocycles by default on the
 Mesocycles page. Both render fully expanded, so the page opens long and the
 primary action is pushed down. The "Past Mesocycles" section (`Mesocycles.tsx`,
 the `status === 'completed'` block) is history and should start closed; the
 template cards should collapse to their names. Note the mesocycle *creation*
 screen already has collapsible days, so follow that interaction rather than
 inventing a second one.
+    Done. Both are headers with a count and a disclosure triangle, closed on
+    load, which puts the create button and the new directions above the fold
+    instead of behind sixteen cards.
 
-[ ] Add a search box to filter mesocycle templates. The library is 16 stock
+[x] Add a search box to filter mesocycle templates. The library is 16 stock
 templates plus whatever the user has made, all rendered as one flat list.
 Filter on name and description, and make it work with the collapsed sections
 above rather than against them, a search should reveal matches inside a
 collapsed section instead of hiding them.
+    Done, and it does reveal them: a non-empty query opens the section on its
+    own, and clearing the box hands control back to the toggle. Matches on name
+    and description, and says so when nothing matches rather than showing an
+    empty grid.
 
-[ ] Explain how to create a mesocycle on the Mesocycles page. The page assumes
+[x] Explain how to create a mesocycle on the Mesocycles page. The page assumes
 the user knows what a template is, that it has to be created before it can be
 started, and that starting is a separate step. New users land here straight
 from onboarding with no guidance in place. Short inline directions, shown most
 prominently when the user has no templates yet, and consistent with whatever
 the create-then-start flow above ends up doing.
+    Done as three numbered steps at the top of the page, shown always rather
+    than only when the library is empty, since the collapsed sections mean it
+    is not competing with anything. It states the new behaviour plainly,
+    including what happens if a block is already running.
 
 [x] Finish the domain move tidy-up. Done. `strengthguider.com` serves every
 route with all six security headers and an enforcing CSP, sign-in works, CORS

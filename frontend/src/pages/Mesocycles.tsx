@@ -31,6 +31,7 @@ import {
   weeklyVolumeProjection,
 } from '../utils/volume';
 import MuscleGroupVolumeChart from '../components/MuscleGroupVolumeChart';
+import FlashBanner from '../components/FlashBanner';
 import ClampedNumberInput from '../components/ClampedNumberInput';
 import { apiErrorDetail } from '../api/client';
 
@@ -160,6 +161,15 @@ export default function Mesocycles() {
   // create two templates, or fire two copies/instance-ends
   const [busyAction, setBusyAction] = useState<string | null>(null);
 
+  // Short confirmation shown in place, for the times we stay on this page
+  const [flash, setFlash] = useState<string | null>(null);
+
+  // Both lists start closed. The page is mostly a library you dip into, and
+  // opening on 16 template cards buried the create button and the directions.
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [pastOpen, setPastOpen] = useState(false);
+  const [templateSearch, setTemplateSearch] = useState('');
+
   const handleCreateFromInstance = async (instanceId: number) => {
     if (!accessToken || busyAction) return;
     setBusyAction("create-from-instance");
@@ -235,6 +245,34 @@ export default function Mesocycles() {
     }
   };
 
+  /**
+   * Create the running block for a template. Shared by the Start button and by
+   * creating a template, which starts it straight away.
+   */
+  const startInstance = async (
+    templateId: number,
+    autoregulate: boolean,
+    sourceInstanceId?: number | null,
+    sourceWeekNumber?: number | null,
+  ) => {
+    if (!accessToken) throw new Error('Not signed in');
+    // Built from local date parts, not toISOString: that converts to UTC, so
+    // starting a block on a weekday evening west of UTC dated it tomorrow.
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const instanceData: import('../types/mesocycle').MesocycleInstanceCreate = {
+      mesocycle_template_id: templateId,
+      start_date: today,
+      autoregulate_volume: autoregulate,
+    };
+    if (sourceInstanceId && sourceWeekNumber) {
+      instanceData.source_instance_id = sourceInstanceId;
+      instanceData.source_week_number = sourceWeekNumber;
+    }
+    // Backend creates every session upfront
+    return startMesocycleInstance(instanceData, accessToken);
+  };
+
   const handleStartMesocycle = async (
     mesocycle: MesocycleListItem,
     sourceInstanceId?: number | null,
@@ -250,23 +288,9 @@ export default function Mesocycles() {
     }
 
     try {
-      // Create instance, backend now creates all sessions upfront.
-      // Built from local date parts, not toISOString: that converts to UTC, so
-      // starting a block on a weekday evening west of UTC dated it tomorrow.
-      const now = new Date();
-      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      const instanceData: import('../types/mesocycle').MesocycleInstanceCreate = {
-        mesocycle_template_id: mesocycle.id,
-        start_date: today,
-        autoregulate_volume: autoregulateVolume,
-      };
-
-      if (sourceInstanceId && sourceWeekNumber) {
-        instanceData.source_instance_id = sourceInstanceId;
-        instanceData.source_week_number = sourceWeekNumber;
-      }
-
-      const instance = await startMesocycleInstance(instanceData, accessToken);
+      const instance = await startInstance(
+        mesocycle.id, autoregulateVolume, sourceInstanceId, sourceWeekNumber
+      );
 
       // All sessions are already created, find the first one (week 1, day 1)
       const sessions = await listWorkoutSessions(
@@ -310,13 +334,34 @@ export default function Mesocycles() {
         description: mesocycleData.description || undefined,
         weeks: mesocycleData.weeks,
         days_per_week: mesocycleData.days_per_week,
+        // Collected by the form and dropped here until now, so unticking
+        // performance-based sets did nothing to the template that got saved
+        autoregulate_volume: mesocycleData.autoregulate_volume,
         workout_templates: workoutTemplates,
       };
 
-      await createMesocycle(createData, accessToken);
+      const created = await createMesocycle(createData, accessToken);
       setShowCreateModal(false);
       resetForm();
-      loadData();
+
+      // A block already running is not replaced by a new one. Say what did
+      // happen and leave them here, rather than silently doing half of it.
+      if (instances.some(i => i.status === 'active')) {
+        await loadData();
+        setFlash('Mesocycle created. Start it when your current block finishes.');
+        return;
+      }
+
+      try {
+        await startInstance(created.id, createData.autoregulate_volume ?? true);
+        navigate('/', { state: { flash: 'Mesocycle created and started.' } });
+      } catch (startErr) {
+        // The template is saved either way, so do not report this as a failure
+        // to create. Leave them on the page that has the Start button.
+        await loadData();
+        setFlash('Mesocycle created, but starting it failed. Use Start Mesocycle to try again.');
+        console.error('Error starting the new mesocycle:', startErr);
+      }
     } catch (err) {
       const errorMessage = apiErrorDetail(err, 'Could not create the template. Please try again.');
       alert(errorMessage);
@@ -373,6 +418,16 @@ export default function Mesocycles() {
     }
     setCreateStep('review');
   };
+
+  const searchTerm = templateSearch.trim().toLowerCase();
+  const matchingMesocycles = searchTerm
+    ? mesocycles.filter((m) =>
+        `${m.name} ${m.description ?? ''}`.toLowerCase().includes(searchTerm)
+      )
+    : mesocycles;
+  // Searching a closed section would find nothing, so a query opens it. The
+  // toggle is still honoured once the box is cleared.
+  const showTemplates = templatesOpen || searchTerm !== '';
 
   // Weekly set totals per muscle group for the create-form review charts. Under
   // autoregulation this is the hit-every-target path rather than the template's
@@ -471,6 +526,8 @@ export default function Mesocycles() {
 
   return (
     <div className="min-h-screen bg-gray-900">
+      {flash && <FlashBanner message={flash} onDismiss={() => setFlash(null)} />}
+
       {/* Header */}
       <header className="bg-gray-800 border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
@@ -497,15 +554,65 @@ export default function Mesocycles() {
           </div>
         )}
 
-        {/* Mesocycles grid */}
-        {mesocycles.length === 0 ? (
+        {/* How this page works. New lifters arrive straight from onboarding,
+            where nothing has explained that a template is built first and that
+            starting it is what generates the sessions. */}
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 sm:p-6 mb-6">
+          <h2 className="text-base font-semibold text-white mb-3">How to build a mesocycle</h2>
+          <ol className="space-y-2 text-sm text-gray-300 list-decimal list-inside">
+            <li>
+              Create a template: choose how many weeks and how many training days,
+              then add exercises to each day with the sets you want to start on.
+            </li>
+            <li>
+              Review the weekly volume charts. They show what each week asks of
+              every muscle group, and flag anything past a recoverable amount.
+            </li>
+            <li>
+              Confirm. The block starts straight away and you land back on Home,
+              ready for the first session.
+            </li>
+          </ol>
+          <p className="text-xs text-gray-400 mt-3">
+            Already training a block? A new template is saved for later rather
+            than replacing what you are part way through. Start it from here
+            when the current one finishes.
+          </p>
+        </div>
+
+        {/* Templates */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <button
+            onClick={() => setTemplatesOpen((open) => !open)}
+            aria-expanded={showTemplates}
+            className="flex items-center gap-2 text-2xl font-bold text-white hover:text-teal-400 transition-colors"
+          >
+            <span aria-hidden="true" className="text-base">{showTemplates ? '\u25be' : '\u25b8'}</span>
+            Templates
+            <span className="text-base font-medium text-gray-400">({mesocycles.length})</span>
+          </button>
+          <input
+            type="search"
+            value={templateSearch}
+            onChange={(e) => setTemplateSearch(e.target.value)}
+            placeholder="Search templates"
+            aria-label="Search templates"
+            className="w-full sm:w-64 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+          />
+        </div>
+
+        {!showTemplates ? null : mesocycles.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-300 text-lg">No mesocycle templates yet</p>
             <p className="text-gray-400 mt-2">Create your first mesocycle template to get started</p>
           </div>
+        ) : matchingMesocycles.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-300">No templates match "{templateSearch.trim()}"</p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mesocycles.map((mesocycle) => (
+            {matchingMesocycles.map((mesocycle) => (
               <div
                 key={mesocycle.id}
                 className="bg-gray-800 rounded-lg shadow hover:shadow-lg transition cursor-pointer border border-gray-700 overflow-hidden"
@@ -618,11 +725,21 @@ export default function Mesocycles() {
           </div>
         )}
 
-        {/* Completed Mesocycles */}
+        {/* Completed Mesocycles. History, so it stays out of the way until asked for. */}
         {instances.filter(i => i.status === 'completed').length > 0 && (
           <div className="mt-10">
-            <h2 className="text-2xl font-bold text-white mb-4">Past Mesocycles</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <button
+              onClick={() => setPastOpen((open) => !open)}
+              aria-expanded={pastOpen}
+              className="flex items-center gap-2 text-2xl font-bold text-white hover:text-teal-400 transition-colors mb-4"
+            >
+              <span aria-hidden="true" className="text-base">{pastOpen ? '\u25be' : '\u25b8'}</span>
+              Past Mesocycles
+              <span className="text-base font-medium text-gray-400">
+                ({instances.filter(i => i.status === 'completed').length})
+              </span>
+            </button>
+            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ${pastOpen ? '' : 'hidden'}`}>
               {instances
                 .filter(i => i.status === 'completed')
                 .sort((a, b) => new Date(b.end_date || b.updated_at).getTime() - new Date(a.end_date || a.updated_at).getTime())
@@ -920,10 +1037,11 @@ export default function Mesocycles() {
                 {/* Mesocycle Basic Info */}
                 <div className="space-y-4 mb-6">
                   <div>
-                    <label className="block text-gray-300 text-sm font-medium mb-2">
+                    <label htmlFor="template-name" className="block text-gray-300 text-sm font-medium mb-2">
                       Template Name *
                     </label>
                     <input
+                      id="template-name"
                       type="text"
                       value={mesocycleData.name}
                       onChange={(e) =>

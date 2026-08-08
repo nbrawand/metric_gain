@@ -11,6 +11,7 @@ import { createPortalSession } from '../api/billing';
 import { MesocycleInstance } from '../types/mesocycle';
 import { WorkoutSessionListItem } from '../types/workout_session';
 import OnboardingWizard from '../components/OnboardingWizard';
+import FlashBanner from '../components/FlashBanner';
 import { apiErrorDetail, isApiError } from '../api/client';
 
 export function Home() {
@@ -19,6 +20,20 @@ export function Home() {
   const { user, accessToken, updatePreferences } = useAuthStore();
   const [activeInstance, setActiveInstance] = useState<MesocycleInstance | null>(null);
   const [workoutSessions, setWorkoutSessions] = useState<WorkoutSessionListItem[]>([]);
+  // Handed over by whatever navigated here, currently creating a template,
+  // which starts the block and lands the lifter back on this page.
+  const [flash, setFlash] = useState<string | null>(
+    () => (location.state as { flash?: string } | null)?.flash ?? null
+  );
+
+  // Drop it from history straight away, so a reload or a Back into this entry
+  // does not replay a confirmation for something that happened once.
+  useEffect(() => {
+    if ((location.state as { flash?: string } | null)?.flash) {
+      window.history.replaceState({}, '');
+    }
+  }, [location.state]);
+
   const [showOnboarding, setShowOnboarding] = useState(() => {
     if (!user?.preferences) return true;
     try {
@@ -102,6 +117,7 @@ export function Home() {
   return (
     <>
       {showOnboarding && <OnboardingWizard onComplete={handleOnboardingComplete} />}
+      {flash && <FlashBanner message={flash} onDismiss={() => setFlash(null)} />}
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {/* Active Mesocycle Card */}

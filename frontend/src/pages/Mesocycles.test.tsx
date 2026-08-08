@@ -96,6 +96,9 @@ beforeEach(() => {
 
 const loaded = async () => {
   render(<Mesocycles />);
+  // The template list starts collapsed, so open it before looking for cards
+  await waitFor(() => expect(screen.getByRole('button', { name: /^Templates/ })).toBeInTheDocument());
+  fireEvent.click(screen.getByRole('button', { name: /^Templates/ }));
   await waitFor(() => expect(screen.getByText('Upper Lower')).toBeInTheDocument());
 };
 
@@ -204,5 +207,170 @@ describe('Mesocycles starting a block', () => {
       expect(window.alert).toHaveBeenCalledWith(expect.stringMatching(/Subscription required/))
     );
     expect(navigate).not.toHaveBeenCalled();
+  });
+});
+
+const activeInstance = {
+  id: 5,
+  mesocycle_template_id: 1,
+  name: 'Upper Lower',
+  status: 'active',
+  start_date: '2026-08-01',
+  current_week: 1,
+  weeks: 4,
+  total_weeks: 5,
+};
+
+/** Fill in the create form far enough to submit it, then submit. */
+const createTemplate = async () => {
+  fireEvent.click(screen.getByRole('button', { name: 'Create Mesocycle Template' }));
+  fireEvent.change(screen.getByLabelText(/Template Name/), { target: { value: 'New Block' } });
+  // Every training day needs an exercise before the form will move on
+  screen
+    .getAllByRole('button', { name: '+ Add Exercise' })
+    .forEach((button) => fireEvent.click(button));
+  fireEvent.click(screen.getByRole('button', { name: 'Review Plan' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm & Create' }));
+};
+
+describe('creating a template', () => {
+  beforeEach(() => {
+    vi.mocked(mesocyclesApi.createMesocycle).mockResolvedValue({ id: 42 } as never);
+  });
+
+  it('starts the new block and sends the lifter home', async () => {
+    await loaded();
+    await createTemplate();
+
+    await waitFor(() =>
+      expect(mesocyclesApi.startMesocycleInstance).toHaveBeenCalledWith(
+        expect.objectContaining({ mesocycle_template_id: 42 }),
+        'token'
+      )
+    );
+    expect(navigate).toHaveBeenCalledWith('/', {
+      state: { flash: 'Mesocycle created and started.' },
+    });
+  });
+
+  it('saves the volume mode the form collected', async () => {
+    // The toggle was read by the review chart but dropped from the payload, so
+    // unticking it changed the preview and nothing else
+    await loaded();
+    await createTemplate();
+
+    await waitFor(() =>
+      expect(mesocyclesApi.createMesocycle).toHaveBeenCalledWith(
+        expect.objectContaining({ autoregulate_volume: true }),
+        'token'
+      )
+    );
+  });
+
+  it('does not start a second block over one already running', async () => {
+    vi.mocked(mesocyclesApi.listMesocycleInstances).mockResolvedValue([activeInstance] as never);
+    await loaded();
+    await createTemplate();
+
+    await waitFor(() => expect(mesocyclesApi.createMesocycle).toHaveBeenCalled());
+    expect(mesocyclesApi.startMesocycleInstance).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalledWith('/', expect.anything());
+    expect(await screen.findByText(/Mesocycle created\./)).toBeInTheDocument();
+  });
+
+  it('keeps the lifter here when the template saved but the block did not start', async () => {
+    vi.mocked(mesocyclesApi.startMesocycleInstance).mockRejectedValue(new Error('boom'));
+    await loaded();
+    await createTemplate();
+
+    expect(await screen.findByText(/starting it failed/i)).toBeInTheDocument();
+    // Creating did work, so it must not be reported as a failure to create
+    expect(window.alert).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalledWith('/', expect.anything());
+  });
+});
+
+const secondTemplate = {
+  ...template,
+  id: 2,
+  name: 'Glute Focus',
+  description: 'Lower body emphasis',
+};
+
+const searchBox = () => screen.getByLabelText('Search templates');
+
+describe('template list sections', () => {
+  it('starts collapsed so the page opens on the directions', async () => {
+    render(<Mesocycles />);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^Templates/ })).toBeInTheDocument()
+    );
+    expect(screen.queryByText('Upper Lower')).not.toBeInTheDocument();
+    expect(screen.getByText(/How to build a mesocycle/i)).toBeInTheDocument();
+  });
+
+  it('opens and closes on the header', async () => {
+    await loaded();
+    fireEvent.click(screen.getByRole('button', { name: /^Templates/ }));
+    expect(screen.queryByText('Upper Lower')).not.toBeInTheDocument();
+  });
+
+  it('keeps past mesocycles closed until asked for', async () => {
+    vi.mocked(mesocyclesApi.listMesocycleInstances).mockResolvedValue([finishedInstance] as never);
+    await loaded();
+
+    const past = screen.getByRole('button', { name: /^Past Mesocycles/ });
+    expect(past).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(past);
+    expect(past).toHaveAttribute('aria-expanded', 'true');
+  });
+});
+
+describe('template search', () => {
+  beforeEach(() => {
+    vi.mocked(mesocyclesApi.listMesocycles).mockResolvedValue([
+      template,
+      secondTemplate,
+    ] as never);
+  });
+
+  it('reveals matches inside the collapsed section', async () => {
+    render(<Mesocycles />);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^Templates/ })).toBeInTheDocument()
+    );
+    // Never opened by hand: searching a closed list has to find something
+    fireEvent.change(searchBox(), { target: { value: 'glute' } });
+
+    expect(screen.getByText('Glute Focus')).toBeInTheDocument();
+    expect(screen.queryByText('Upper Lower')).not.toBeInTheDocument();
+  });
+
+  it('matches on the description too', async () => {
+    render(<Mesocycles />);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^Templates/ })).toBeInTheDocument()
+    );
+    fireEvent.change(searchBox(), { target: { value: 'lower body' } });
+
+    expect(screen.getByText('Glute Focus')).toBeInTheDocument();
+  });
+
+  it('says so when nothing matches', async () => {
+    await loaded();
+    fireEvent.change(searchBox(), { target: { value: 'zzz' } });
+
+    expect(screen.getByText(/No templates match/i)).toBeInTheDocument();
+  });
+
+  it('goes back to the collapsed state when the box is cleared', async () => {
+    render(<Mesocycles />);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^Templates/ })).toBeInTheDocument()
+    );
+    fireEvent.change(searchBox(), { target: { value: 'glute' } });
+    fireEvent.change(searchBox(), { target: { value: '' } });
+
+    expect(screen.queryByText('Glute Focus')).not.toBeInTheDocument();
   });
 });
