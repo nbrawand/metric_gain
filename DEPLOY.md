@@ -13,7 +13,24 @@ hostname, so the same rule on the main site would fire for the new domain and
 loop. Keep the old domain registered and pointed there; links in the wild do
 not expire.
 
-See `redirect-site/README.md` for why that directory has no `index.html`.
+### Why `redirect-site/` looks the way it does
+
+It holds exactly one file, `moved.html`, and no `index.html`. That is
+deliberate. Render does not apply redirect rules to a path where a resource
+exists, it serves the resource instead. That is what stops the main site's
+`/*` rewrite from shadowing `/assets` and `robots.txt`. It also means an
+`index.html` here made `/` return 200 and serve that page rather than a 301,
+so the homepage, the most valuable URL to redirect, was the one URL that did
+not. Every other path worked, which made it easy to miss.
+
+The same rule is why nothing else belongs in that directory. Any file added is
+publicly served on the old domain instead of redirecting, and is indexable. A
+README lived there briefly and was reachable at
+`https://www.strength-guider.com/README.md`, which is why this explanation is
+here instead.
+
+`moved.html` is unreachable in normal operation and exists only because a
+Render static site needs something to publish.
 
 
 The frontend is a **Render static site** named `strength-guider`, served behind
