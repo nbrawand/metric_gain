@@ -316,7 +316,7 @@ on email and the client id is only checked during token verification, but it
 made the coupling easy to mistake for a real one.
 
 
-[ ] **Every route except `/` returns 404 on direct navigation in production.**
+[x] **Every route except `/` returned 404 on direct navigation in production.**
 `/how-it-works`, `/privacy`, `/terms` and `/login` all 404 against the live
 site; only `/` serves the app. Installed users never see it, because the
 service worker's `navigateFallback` answers navigations from its precache,
@@ -331,14 +331,18 @@ shared link, a bookmark, and every crawler reading the sitemap.
     considered and declined: adopting a manually created service means
     restating every dashboard setting in the file or risking a sync changing
     what it does not mention, which is a poor trade for two rules. `DEPLOY.md`
-    records what to set and how to verify it.
+    records what to set and how to verify it. Verified fixed: every route
+    returns 200 and a missing asset still returns a real 404 rather than
+    HTML.
 
-[ ] **The security headers have never been served.** Same discovery.
+[x] **The security headers had never been served.** Same discovery.
 `frontend/vercel.json` held them, on a site Render serves, so the site returns
 no HSTS, no `X-Frame-Options`, no `Referrer-Policy`, no `Permissions-Policy`
 and no CSP at all. The only security header present is
 `X-Content-Type-Options`, which comes from elsewhere. That file is deleted;
 the values to set on the Render static site are in `DEPLOY.md`.
+    All six are live now and confirmed on the new domain, including the CSP,
+    which is enforcing rather than report-only.
 
 
 [x] Self-service account deletion and data export. Writing the privacy policy
@@ -441,6 +445,12 @@ stores they compose are covered, which is why this is lower than it looks.
     the local and UTC dates differ and CI runs in UTC, where they never do.
     The suite now pins TZ to America/Los_Angeles and that test freezes the
     clock at 21:30 local, so it fails for the right reason.
+
+[ ] Train a full session on the new domain. Everything about the move is
+verified at the HTTP layer, and sign-in is confirmed, but nothing has run the
+authenticated flow end to end on `strengthguider.com`: start a block, log sets,
+complete a session, look at Progress. The offline queue is the part worth
+watching, since it is keyed per origin and has never run on this one.
 
 [ ] Watch autoregulation against real training. The logic is well covered but
 the *policy* is unproven: +1 on a clean week, -1 below 60% of target reps,
