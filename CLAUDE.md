@@ -282,10 +282,33 @@ it processes.
     visitor over plain HTTP is redirected immediately to an HTTPS URL on the new
     domain, which does send it.
 
-[ ] Move the Google OAuth client off the old account, if that is still wanted.
-It lives in Google Cloud project `319029498301`, administered by
-strengthguider@gmail.com (recorded in `DEPLOY.md`), which may well be the
-account worth keeping, in which case this item is already moot. Deferred on
+[ ] Hand the Google OAuth client to the Workspace account. A Google Business
+account on `strengthguider.com` is being set up to own it, replacing
+strengthguider@gmail.com on project `319029498301` (see `DEPLOY.md`). Tying it
+to a domain we own outlasts a personal Gmail, so this is worth doing.
+
+    Do it through IAM, not by making a new client. Grant the Workspace account
+    **Owner** on the existing project, accept, then remove the old one. The
+    project and client id are unchanged, so no environment variable moves and
+    there is no window where sign-in can break. Creating a fresh client means a
+    new client id, a backend redeploy, and a consent screen that starts in
+    Testing and silently refuses everyone not on a hand-written list.
+
+    Keep a second owner. A Workspace account stops existing if the subscription
+    lapses, and anything it solely owns goes with it. A personal address as
+    break-glass costs nothing.
+
+    Do not change which address signs in to *the app*. Admin is granted by a
+    migration hardcoding one address and cannot be given to a second account,
+    so signing in as someone new means no admin and no route back. See the item
+    below.
+
+    The support address is the other half of this, and it is user facing.
+    `strengthguider@gmail.com` appears in eight places across four pages: the
+    landing page and home page footers, the privacy policy twice, and the terms
+    four times, including the clause about how notice of changes is given. If
+    the address changes, those change with it, and two of them are legal
+    documents rather than copy. Deferred on
 purpose, it blocks nothing: the domain migration only needs two origins added
 to the existing client, and the owning account never touches app accounts,
 which match on email. When it is done it is one new project, a published
