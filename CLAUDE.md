@@ -265,24 +265,22 @@ visit. SEO and content-marketing value going unused.
 
 ## Open
 
-[ ] Finish the domain move tidy-up. The move itself is done and verified: the
-new domain serves every route with all six security headers and sign-in works,
-and the old domain 301s across with paths intact. What is left is housekeeping.
+[x] Finish the domain move tidy-up. Done. `strengthguider.com` serves every
+route with all six security headers and an enforcing CSP, sign-in works, CORS
+accepts the new origin and still rejects everything else, and the old domain
+301s across with paths intact. Search Console is verified on the new domain,
+the sitemap is submitted, and Change of Address is filed from the old property.
+Keep the old domain registered, pointed at the redirect service, and verified in
+Search Console; Change of Address needs the old property to stay verified while
+it processes.
 
-    - The redirect service sends no HSTS. The old domain committed to
-      `max-age=31536000` for a year, so every redirect currently breaks that
-      promise. One header on `strength-guider-redirect`, path `/*`.
-    - Search Console: `strengthguider.com` is not verified yet. Add the
-      property, add its TXT record, submit the sitemap, then run Change of
-      Address from the old property. Keep the old domain's existing
-      `google-site-verification` TXT, Change of Address needs the old property
-      to stay verified.
-    - Stripe: confirm `FRONTEND_URL` is the new domain, since it builds the
-      checkout success and cancel URLs and the billing portal return, and
-      update the website in Stripe's business details, which shows on Checkout
-      and on receipts. The webhook needs nothing, it points at the backend,
-      which did not move.
-
+    One thing deliberately left: the redirect service sends no HSTS. The header
+    was configured and does not appear, which is most likely because Render
+    generates a 301 in its routing layer before any file is served, so a
+    response-header rule never applies to it. Left alone rather than chased. The
+    old domain's HSTS is already cached in any browser that saw it, and a fresh
+    visitor over plain HTTP is redirected immediately to an HTTPS URL on the new
+    domain, which does send it.
 
 [ ] Move the Google OAuth client off the old account, if that is still wanted.
 It lives in Google Cloud project `319029498301`, administered by
