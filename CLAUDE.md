@@ -318,9 +318,9 @@ Before this it could not have gated anything.
     writes a new comment. Every step verified locally before committing,
     including that the em dash check actually fails when one is present.
 
-[ ] Reconcile subscription state against Stripe once. Not urgent, and no
-longer about replaying anything: nothing important happened in Stripe in the
-last three days, so the retry window holds nothing worth resending.
+[x] Reconcile subscription state against Stripe once. Done: checked, and
+Stripe and the app agree, so no event that mattered was ever dropped. Nothing
+to fix and nobody was affected.
 
     Background, because the reasoning matters more than the task. `stripe` was
     the only unpinned dependency and Render installs requirements.txt on every
