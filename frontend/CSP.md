@@ -36,26 +36,41 @@ means no violations rather than a listener that never fired.
   inline script. No hash is needed either, which is a better outcome than the
   hash this file used to recommend.
 
-## What is still unverified
+- **The sign-in click-through: one violation, now covered.** A full sign-in on
+  production, followed by logging a set, reported the
+  `accounts.google.com/gsi/style` stylesheet against `style-src` and nothing
+  else. The policy below allows it.
 
-1. **The sign-in click-through.** Everything up to rendering the button is
-   clean, but the credential exchange after clicking has not been exercised.
-   That is the one step that needs a real account.
-2. **`connect-src` hardcodes the Render backend origin.** If `VITE_API_URL`
+## Worth knowing
+
+1. **`connect-src` hardcodes the Render backend origin.** If `VITE_API_URL`
    ever points elsewhere, API calls are blocked. Worth remembering rather than
    fixing: it is doing its job.
+2. **Do not add `Cross-Origin-Opener-Policy`.** Not without testing sign-in
+   first. Google's popup posts back to its opener, and the console already
+   warns that a COOP would block that call. It is exactly the kind of header
+   that looks like a free win while hardening.
+3. **One Tap has not been exercised.** The button path has. One Tap loads that
+   same stylesheet into our own document rather than into Google's iframe,
+   which the policy below now allows, so it should be fine, but it is the one
+   path nothing has actually run.
 
 ## Promoting it to enforcing
 
-1. On the live site, with the browser console open, **complete a full Google
-   sign-in** and log one set in a workout.
-2. Note every `[Report Only] Refused to ...` line. Nothing means step 3 is
-   safe. Anything else, widen the matching directive, or better, remove
-   whatever triggered it.
+Steps 1 and 2 are done, which is where the policy below came from. What is
+left is step 3.
+
+1. ~~On the live site, console open, complete a full Google sign-in and log a
+   set.~~ Done.
+2. ~~Note every violation and widen the matching directive.~~ Done, one
+   violation, `style-src`.
 3. In the Render dashboard, replace the `Content-Security-Policy-Report-Only`
    header with the policy below, under the enforcing name
-   `Content-Security-Policy`.
-4. Re-run step 1 to confirm nothing broke.
+   `Content-Security-Policy`. Keep the dashboard open: if anything breaks,
+   renaming it back is a one-minute revert.
+4. Sign in again to confirm nothing broke, ideally letting One Tap fire rather
+   than only clicking the button, since that path is the reason `style-src`
+   needed widening in the first place.
 
 ### The policy to enforce
 
