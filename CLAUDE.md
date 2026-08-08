@@ -265,6 +265,17 @@ visit. SEO and content-marketing value going unused.
 
 ## Open
 
+[ ] There is no way to grant admin. `is_admin` is set in exactly one place, a
+migration that hardcodes `nicholasbrawand@gmail.com`, and every admin endpoint
+requires already being admin, so the flag cannot be given to a second account
+from inside the app. Sign in with a different Google address and there is no
+route back to the admin page short of an SQL update. Worth an env var read at
+startup, `ADMIN_EMAILS`, applied on login. Surfaced while moving the OAuth
+client to a different Google account: that move is safe, because accounts match
+on email and the client id is only checked during token verification, but it
+made the coupling easy to mistake for a real one.
+
+
 [ ] **Every route except `/` returns 404 on direct navigation in production.**
 `/how-it-works`, `/privacy`, `/terms` and `/login` all 404 against the live
 site; only `/` serves the app. Installed users never see it, because the
