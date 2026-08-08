@@ -17,5 +17,16 @@ does not serve HTTPS for the redirecting domain, and the old domain sends HSTS
 with a one year max-age. Browsers that have seen that header refuse plain HTTP,
 so those visitors would get a connection failure rather than a redirect.
 
-`index.html` is never served while the rule is in place. If someone sees it,
-the rule is missing.
+The fallback page is `moved.html`, deliberately **not** `index.html`.
+
+That is the whole trick, and it was learned the hard way. Render does not apply
+redirect or rewrite rules to a path where a resource exists; it serves the
+resource instead. That is what stops the main site's `/*` rewrite from
+shadowing `/assets` and `robots.txt`, and it is correct. But it also meant `/`
+resolved to `index.html`, so the homepage, the single most valuable URL to
+redirect, returned 200 and served this page rather than a 301. Every other path
+redirected properly, which made it easy to miss.
+
+With no file at `/`, nothing matches, the rule fires, and the root 301s like
+everything else. `moved.html` is now unreachable in normal operation and exists
+only as something to publish and a place to explain this.
