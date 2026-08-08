@@ -45,8 +45,8 @@ export default function Terms() {
             </p>
             <p className="mb-4">
               We operate the website{' '}
-              <a href="https://strength-guider.com" className="text-teal-400 hover:text-teal-300 transition-colors">
-                strength-guider.com
+              <a href="https://strengthguider.com" className="text-teal-400 hover:text-teal-300 transition-colors">
+                strengthguider.com
               </a>{' '}
               (the "<strong className="text-white">Site</strong>"), as well as any other related products and services that refer or link to these legal terms (the "<strong className="text-white">Legal Terms</strong>") (collectively, the "<strong className="text-white">Services</strong>").
             </p>

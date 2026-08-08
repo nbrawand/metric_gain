@@ -4,7 +4,7 @@
 > in `frontend/vercel.json`, on a site served by Render, so it was never sent
 > at all. That file is gone; the header is set on the Render static site and
 > the values are in [DEPLOY.md](../DEPLOY.md).
-> `curl -sI https://www.strength-guider.com/ | grep -i content-security` says
+> `curl -sI https://strengthguider.com/ | grep -i content-security` says
 > whether it is live.
 
 The CSP is **enforcing**. It was report-only for as long as it took to measure

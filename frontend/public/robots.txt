@@ -9,4 +9,4 @@ Disallow: /billing/
 Disallow: /progress
 Disallow: /account
 
-Sitemap: https://www.strength-guider.com/sitemap.xml
+Sitemap: https://strengthguider.com/sitemap.xml

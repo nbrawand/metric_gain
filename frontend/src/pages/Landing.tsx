@@ -289,7 +289,7 @@ export default function Landing() {
               </div>
               <h3 className="text-white font-semibold mb-2">Start in Seconds</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Go to <span className="text-teal-400">strength-guider.com</span>, sign in, and
+                Go to <span className="text-teal-400">strengthguider.com</span>, sign in, and
                 you are training. Nothing to download, nothing taking up space on your phone.
               </p>
             </div>

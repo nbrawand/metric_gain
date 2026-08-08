@@ -307,7 +307,7 @@ def _prod_settings(**overrides):
         DATABASE_URL="postgresql://u:p@localhost/db",
         SECRET_KEY="a" * 64,
         ENVIRONMENT="production",
-        CORS_ORIGINS="https://www.strength-guider.com",
+        CORS_ORIGINS="https://strengthguider.com",
         _env_file=None,
     )
     base.update(overrides)
@@ -332,7 +332,7 @@ def test_production_rejects_wildcard_cors():
 def test_production_accepts_a_real_configuration():
     settings = _prod_settings()
     assert settings.is_production
-    assert settings.cors_origins_list == ["https://www.strength-guider.com"]
+    assert settings.cors_origins_list == ["https://strengthguider.com"]
 
 
 def test_development_tolerates_the_example_values():

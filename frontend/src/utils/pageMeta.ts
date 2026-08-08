@@ -13,7 +13,7 @@ import { useEffect } from 'react';
  * index.html defaults, which describe the product rather than nothing.
  */
 
-const SITE = 'https://www.strength-guider.com';
+const SITE = 'https://strengthguider.com';
 
 interface PageMeta {
   title: string;

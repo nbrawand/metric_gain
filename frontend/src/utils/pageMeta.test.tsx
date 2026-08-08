@@ -17,7 +17,7 @@ const givenIndexHtmlTags = () => {
     <meta name="description" content="site default" />
     <meta property="og:title" content="site title" />
     <meta property="og:description" content="site default" />
-    <meta property="og:url" content="https://www.strength-guider.com" />
+    <meta property="og:url" content="https://strengthguider.com" />
     <meta name="twitter:title" content="site title" />
     <meta name="twitter:description" content="site default" />
   `;
@@ -50,9 +50,9 @@ describe('usePageMeta', () => {
     givenIndexHtmlTags();
     render(<Page title="Guide" description="A guide" path="/how-it-works" />);
 
-    expect(canonical()).toBe('https://www.strength-guider.com/how-it-works');
+    expect(canonical()).toBe('https://strengthguider.com/how-it-works');
     expect(content('meta[property="og:url"]')).toBe(
-      'https://www.strength-guider.com/how-it-works'
+      'https://strengthguider.com/how-it-works'
     );
   });
 
@@ -65,7 +65,7 @@ describe('usePageMeta', () => {
 
     expect(document.title).toBe('site title');
     expect(content('meta[name="description"]')).toBe('site default');
-    expect(content('meta[property="og:url"]')).toBe('https://www.strength-guider.com');
+    expect(content('meta[property="og:url"]')).toBe('https://strengthguider.com');
     expect(canonical()).toBeUndefined();
   });
 
@@ -73,14 +73,14 @@ describe('usePageMeta', () => {
     givenIndexHtmlTags();
     const existing = document.createElement('link');
     existing.rel = 'canonical';
-    existing.href = 'https://www.strength-guider.com/original';
+    existing.href = 'https://strengthguider.com/original';
     head().appendChild(existing);
 
     const view = render(<Page title="Guide" description="A guide" path="/how-it-works" />);
-    expect(canonical()).toBe('https://www.strength-guider.com/how-it-works');
+    expect(canonical()).toBe('https://strengthguider.com/how-it-works');
 
     view.unmount();
-    expect(canonical()).toBe('https://www.strength-guider.com/original');
+    expect(canonical()).toBe('https://strengthguider.com/original');
   });
 
   it('survives a head with none of the expected tags', () => {
