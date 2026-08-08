@@ -357,12 +357,19 @@ the pin, but nothing tests the live API surface (Customer, Subscription,
 checkout, billing_portal) because those call Stripe. One test-mode checkout and
 one portal visit would settle it.
 
-[ ] Promote the CSP from report-only. It protects nothing today, and it turns
-out it is not even being served: it lived in `frontend/vercel.json`, and the
-site is on Render. So this now starts with getting the headers deployed at all,
-then one real sign-in with the browser console open to catch what Google's GSI
-widget reaches for, then enforcing. Steps in `frontend/CSP.md`. Until then,
-tokens in localStorage mean an XSS is full account takeover.
+[ ] Promote the CSP from report-only. One step left, and it is yours: sign in
+on the live site with the console open and log a set. Everything else is
+measured and written down in `frontend/CSP.md`, including the exact policy to
+paste into Render.
+    Two findings from checking rather than assuming. Loading `/login` on
+    production reports no violations at all: the GSI script loads, the button
+    renders, and the only external origins touched are `accounts.google.com`
+    and the backend, both already allowed. And `'unsafe-inline'` in
+    `script-src` turns out to be unnecessary, because the JSON-LD block it was
+    there for is data and is not policed as an inline script. Serving the real
+    build with it removed produces no `script-src` violation. That drops the
+    policy's biggest weakness and needs no hash, which is what this was
+    previously going to require.
 
 [x] Tests for WorkoutExecution.tsx and Mesocycles.tsx (1,600 and 1,141 lines,
 no direct coverage). Both need refactoring to be testable; the components and
