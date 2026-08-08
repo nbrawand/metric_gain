@@ -316,6 +316,30 @@ warnings (`findVolumeWarnings`) should run against the same projection the
 chart draws, a flat line never warns, but the autoregulated path can still hit
 a ceiling.
 
+[ ] Assess the difficulty of accounts that do not require a Google sign-in,
+compatible with everything downstream including Stripe. The starting position
+is better than it looks: `users` has no `google_id` column at all, accounts
+are keyed purely by email and Google is only the verifier at login
+(`routers/auth.py` checks the ID token, then matches or creates the row by
+email). The JWTs are our own, refresh and revocation included
+(`token_version`), and Stripe hangs off `stripe_customer_id` on the user row,
+so billing, admin, account export and deletion should not care how the user
+signed in. Email-keyed matching also means the same address arriving via a
+second provider lands in the same account automatically, which is the account
+linking problem solved by accident, but it makes verified email ownership
+load-bearing: Google asserts it today, and any new method has to assert it as
+strongly or someone can claim an account by typing its address. The real
+costs to assess: (a) proving email ownership without Google, which means
+sending email, and there is no transactional email provider wired up, support
+is a Gmail address, so magic-link or verification flows need a new service
+(Resend, Postmark, SES) plus sender domain setup on strengthguider.com; (b)
+password auth specifically adds storage, hashing, reset flows and their
+support burden, so passwordless magic links or a second OAuth provider
+(Apple) are likely cheaper; (c) frontend Login page is GSI-only, including
+the CSP entries specific to accounts.google.com; (d) the walkthrough, FAQ,
+privacy policy and terms all describe Google sign-in. Deliverable is an
+assessment with a recommended method and estimate, not an implementation.
+
 [x] Finish the domain move tidy-up. Done. `strengthguider.com` serves every
 route with all six security headers and an enforcing CSP, sign-in works, CORS
 accepts the new origin and still rejects everything else, and the old domain
