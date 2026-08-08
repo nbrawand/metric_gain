@@ -53,7 +53,7 @@ Render dashboard, same service, **Headers**. Path `/*` for all of them.
 | `X-Frame-Options` | `DENY` |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` |
 | `Permissions-Policy` | `camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()` |
-| `Content-Security-Policy-Report-Only` | `default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://lh3.googleusercontent.com; font-src 'self' data:; connect-src 'self' https://metric-gain-backend.onrender.com https://accounts.google.com; frame-src https://accounts.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'` |
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self' https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; img-src 'self' data: blob: https://lh3.googleusercontent.com; font-src 'self' data:; connect-src 'self' https://metric-gain-backend.onrender.com https://accounts.google.com; frame-src https://accounts.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'` |
 
 Two of these deserve a second's thought before you paste them in.
 
@@ -64,10 +64,12 @@ them for that year, and you cannot take it back quickly. Fine if everything on
 the domain is HTTPS, which it is today; worth remembering before putting
 anything HTTP-only on a subdomain.
 
-**`Content-Security-Policy-Report-Only`** blocks nothing by design. It reports
-violations to the browser console so the policy can be checked against real
-traffic before it is enforced. See [CSP.md](frontend/CSP.md) for what has to
-happen before the header is renamed to the enforcing `Content-Security-Policy`.
+**`Content-Security-Policy`** is enforcing, so a mistake in it breaks the site
+rather than logging. It was report-only first and promoted only after a real
+sign-in produced exactly one violation, which the policy now allows. If it ever
+needs backing out in a hurry, renaming it to
+`Content-Security-Policy-Report-Only` disables enforcement without losing the
+policy. See [CSP.md](frontend/CSP.md) for how it was verified.
 
 `X-Content-Type-Options` is already present on responses today, from Render or
 Cloudflare. Setting it explicitly is harmless and makes the intent visible.

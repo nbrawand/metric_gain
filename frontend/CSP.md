@@ -7,14 +7,19 @@
 > `curl -sI https://www.strength-guider.com/ | grep -i content-security` says
 > whether it is live.
 
-The CSP is sent as **`Content-Security-Policy-Report-Only`**, not as an
-enforcing policy. The other headers (HSTS, `X-Frame-Options`,
-`X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`) *are*
-enforcing and carry no breakage risk.
+The CSP is **enforcing**. It was report-only for as long as it took to measure
+the real app against it, which is the only responsible way to get here: a wrong
+CSP breaks sign-in or white-screens the page, and report-only never breaks
+anything, so an app that works tells you nothing.
 
-Report-Only means violations are reported and nothing is blocked. A wrong CSP
-breaks sign-in or white-screens the page, so it stays report-only until the
-real app has been exercised against it.
+Confirmed enforcing rather than merely renamed. A deliberately disallowed image
+now reports `disposition: "enforce"` and is actually blocked, where the same
+probe returned `report` beforehand. Sign-in still works, the GSI script loads
+and the button renders.
+
+**To back it out in a hurry**, rename the header to
+`Content-Security-Policy-Report-Only` in the Render dashboard. That disables
+enforcement in about a minute without losing the policy.
 
 ## What has been checked
 
@@ -57,25 +62,24 @@ means no violations rather than a listener that never fired.
 
 ## Promoting it to enforcing
 
-Steps 1 and 2 are done, which is where the policy below came from. What is
-left is step 3.
+All done. Kept as the recipe for changing the policy again later, since the
+order is what makes it safe.
 
-1. ~~On the live site, console open, complete a full Google sign-in and log a
-   set.~~ Done.
-2. ~~Note every violation and widen the matching directive.~~ Done, one
-   violation, `style-src`.
-3. In the Render dashboard, replace the `Content-Security-Policy-Report-Only`
-   header with the policy below, under the enforcing name
-   `Content-Security-Policy`. Keep the dashboard open: if anything breaks,
-   renaming it back is a one-minute revert.
-4. Sign in again to confirm nothing broke, ideally letting One Tap fire rather
-   than only clicking the button, since that path is the reason `style-src`
-   needed widening in the first place.
+1. Put the new policy up as `Content-Security-Policy-Report-Only`.
+2. On the live site, console open, complete a full Google sign-in and log a
+   set. Note every violation and widen the matching directive, or better,
+   remove whatever triggered it. Watch the console, not the app: report-only
+   blocks nothing, so the app working proves nothing.
+3. Rename the header to `Content-Security-Policy`, keeping the corrected value.
+   Both parts matter. Renaming without the corrected value enforces the policy
+   that was reporting violations.
+4. Sign in again to confirm nothing broke.
 
-### The policy to enforce
+### The policy
 
-Two changes from the one being reported on today: `'unsafe-inline'` comes out
-of `script-src`, and `https://accounts.google.com` goes into `style-src`.
+Live and enforcing. Two changes from the report-only version it replaced:
+`'unsafe-inline'` came out of `script-src`, and `https://accounts.google.com`
+went into `style-src`.
 
 ```
 default-src 'self'; script-src 'self' https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; img-src 'self' data: blob: https://lh3.googleusercontent.com; font-src 'self' data:; connect-src 'self' https://metric-gain-backend.onrender.com https://accounts.google.com; frame-src https://accounts.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
@@ -110,5 +114,6 @@ own document, where it would have been blocked. That is the argument for
 reading the third party's requirements rather than only observing one code
 path.
 
-Until step 3 lands, the CSP provides **no** XSS protection, and tokens in
-localStorage mean an XSS is a full account takeover.
+Tokens live in localStorage, so before this was enforcing, any XSS was a full
+account takeover. That is what the policy is for, and why `'unsafe-inline'`
+staying out of `script-src` matters more than it looks.

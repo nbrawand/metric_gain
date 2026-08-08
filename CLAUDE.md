@@ -357,19 +357,19 @@ the pin, but nothing tests the live API surface (Customer, Subscription,
 checkout, billing_portal) because those call Stripe. One test-mode checkout and
 one portal visit would settle it.
 
-[ ] Promote the CSP from report-only. One step left, and it is yours: sign in
-on the live site with the console open and log a set. Everything else is
-measured and written down in `frontend/CSP.md`, including the exact policy to
-paste into Render.
-    Two findings from checking rather than assuming. Loading `/login` on
-    production reports no violations at all: the GSI script loads, the button
-    renders, and the only external origins touched are `accounts.google.com`
-    and the backend, both already allowed. And `'unsafe-inline'` in
-    `script-src` turns out to be unnecessary, because the JSON-LD block it was
-    there for is data and is not policed as an inline script. Serving the real
-    build with it removed produces no `script-src` violation. That drops the
-    policy's biggest weakness and needs no hash, which is what this was
-    previously going to require.
+[x] Promote the CSP from report-only. Done, and it is enforcing on production.
+    Confirmed as enforcing rather than merely renamed: a deliberately
+    disallowed image now reports `disposition: "enforce"` and is actually
+    blocked, where the same probe said `report` before. Sign-in still works,
+    the GSI script loads and the button renders.
+    Two findings from measuring rather than assuming. `'unsafe-inline'` in
+    `script-src` was unnecessary, because the JSON-LD block it existed for is
+    data and was never policed as an inline script, so it came out with no hash
+    needed. And `style-src` was missing `https://accounts.google.com`, which
+    Google's own docs require and which no amount of watching the button render
+    would have revealed, because that stylesheet loads inside Google's iframe
+    where our policy does not reach. A real sign-in reported it, once.
+    Tokens in localStorage are no longer a free account takeover on any XSS.
 
 [x] Tests for WorkoutExecution.tsx and Mesocycles.tsx (1,600 and 1,141 lines,
 no direct coverage). Both need refactoring to be testable; the components and
