@@ -297,6 +297,25 @@ manual weekly increase as the override chosen at block start for lifters who
 want to drive it themselves. The "plan sticks" phrasing should only describe
 the manual mode.
 
+[ ] The volume charts should project what autoregulation will actually do.
+When performance-based sets are on, the chart in the start-block modal
+(`Mesocycles.tsx`, `startVolumeByMuscleGroup`) is flat: `volumeInputsForTemplate`
+zeroes the increment because sessions generate flat, and a caption says the
+rest follows what you log. But the point of the chart is to preview the block,
+and the expected shape under autoregulation is knowable: assume targets are
+hit, so +1 set per exercise per week, capped at the muscle-group ceiling,
+mirroring `backend/app/services/autoregulation.py` the way `volume.ts` already
+mirrors its ceilings. Show that projection when autoregulation is on, labelled
+as the if-you-hit-your-targets path, and keep the fixed-increment projection
+when it is off. The creation review step (`reviewVolumeByMuscleGroup`) has a
+wrinkle: autoregulation is chosen at block start, not at creation, so the
+review chart cannot know which mode applies. Since autoregulation is the
+default, show the autoregulated projection there too, alongside or instead of
+the manual ramp, and say which assumption the chart is making. The volume
+warnings (`findVolumeWarnings`) should run against the same projection the
+chart draws, a flat line never warns, but the autoregulated path can still hit
+a ceiling.
+
 [x] Finish the domain move tidy-up. Done. `strengthguider.com` serves every
 route with all six security headers and an enforcing CSP, sign-in works, CORS
 accepts the new origin and still rejects everything else, and the old domain
