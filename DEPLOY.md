@@ -1,5 +1,21 @@
 # Deploying the frontend
 
+## Domains
+
+`strengthguider.com` is the site. `www.strengthguider.com` 301s to it, which
+Render does automatically for the paired subdomain.
+
+`strength-guider.com` is the old domain and 301s to the new one, paths intact.
+That redirect is a **separate** Render static site, `strength-guider-redirect`,
+publishing `redirect-site/` with one rule, `/*` to `https://strengthguider.com/*`,
+action Redirect. It has to be separate: Render matches rules on path, not
+hostname, so the same rule on the main site would fire for the new domain and
+loop. Keep the old domain registered and pointed there; links in the wild do
+not expire.
+
+See `redirect-site/README.md` for why that directory has no `index.html`.
+
+
 The frontend is a **Render static site** named `strength-guider`, served behind
 Cloudflare. Responses carry Render's `rndr-id` header, which is how to tell.
 

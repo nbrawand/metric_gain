@@ -265,6 +265,12 @@ visit. SEO and content-marketing value going unused.
 
 ## Open
 
+[ ] Google Search Console after the domain move. Verify `strengthguider.com`
+as a property, then run Change of Address from the old one and submit the new
+sitemap. The 301s do the real work, this makes it explicit. Low urgency, there
+is almost nothing indexed yet.
+
+
 [ ] Move the Google OAuth client off the old account. It lives in Google Cloud
 project `319029498301`, owned by an email that is being abandoned. Deferred on
 purpose, it blocks nothing: the domain migration only needs two origins added
