@@ -171,9 +171,12 @@ export default function Layout() {
           />
 
           {/* Slide-in Panel */}
-          <div className="relative w-72 max-w-[80vw] bg-gray-800 h-full shadow-xl flex flex-col animate-slide-in-right">
+          {/* max-h-dvh so mobile browser chrome cannot sit over the bottom of
+              the panel: inset-0 sizes to the initial containing block, which on
+              a phone can be taller than what is actually on screen. */}
+          <div className="relative w-72 max-w-[80vw] bg-gray-800 h-full max-h-dvh shadow-xl flex flex-col animate-slide-in-right">
             {/* Close button */}
-            <div className="flex justify-end p-4">
+            <div className="flex justify-end p-4 flex-shrink-0">
               <button
                 onClick={() => setMenuOpen(false)}
                 className="text-gray-400 hover:text-white text-xl p-1"
@@ -185,116 +188,122 @@ export default function Layout() {
               </button>
             </div>
 
-            {/* Nav Items */}
-            <nav className="flex-1 px-4">
-              {isAuthenticated ? (
-                <>
-                  {activeInstance && (
-                    <button onClick={handleCurrentMesocycle} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
-                      Current Mesocycle
-                    </button>
-                  )}
-                  <button onClick={() => handleNav('/mesocycles')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
-                    Mesocycles
-                  </button>
-                  <button onClick={() => handleNav('/exercises')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
-                    Exercises
-                  </button>
-                  <button onClick={() => handleNav('/progress')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
-                    Progress
-                  </button>
-                  <button onClick={() => handleNav('/account')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
-                    Account
-                  </button>
-                  <button onClick={() => handleNav('/how-it-works')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
-                    How It Works
-                  </button>
-                  <button onClick={() => handleNav('/')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
-                    Home
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button onClick={() => handleNav('/')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
-                    Home
-                  </button>
-                  <button onClick={() => handleNav('/how-it-works')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
-                    How It Works
-                  </button>
-                </>
-              )}
-            </nav>
-
-            {/* Footer */}
-            <div className="px-4 pb-8 pt-4 border-t border-gray-700">
-              {isAuthenticated && (
-                <div className="pb-4 mb-2 border-b border-gray-700">
-                  <div className="text-sm text-gray-400 mb-2">Weight units</div>
-                  <div className="flex gap-2">
-                    {(['lb', 'kg'] as WeightUnit[]).map((unit) => (
-                      <button
-                        key={unit}
-                        onClick={() => handleUnitChange(unit)}
-                        disabled={switchingUnit}
-                        className={`flex-1 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50 ${
-                          weightUnit === unit
-                            ? 'bg-teal-600 text-white'
-                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                        }`}
-                      >
-                        {weightUnitLabel(unit)}
+            {/* Nav and footer scroll as one region. The footer alone (unit
+                toggle, rest timer, its presets, sign out) can outgrow a short
+                viewport, so scrolling only the nav would still bury Sign Out
+                below the bottom edge with no way to reach it. */}
+            <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
+              {/* Nav Items */}
+              <nav className="grow shrink-0 px-4">
+                {isAuthenticated ? (
+                  <>
+                    {activeInstance && (
+                      <button onClick={handleCurrentMesocycle} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
+                        Current Mesocycle
                       </button>
-                    ))}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Switching converts the weights you've already logged.
-                  </p>
-
-                  <div className="mt-4 pt-4 border-t border-gray-700">
-                    <label className="flex items-center justify-between gap-3 cursor-pointer">
-                      <span className="text-sm text-gray-400">Rest timer</span>
-                      <input
-                        type="checkbox"
-                        checked={restTimer.enabled}
-                        disabled={savingRestTimer}
-                        onChange={(e) => handleRestTimerChange({ enabled: e.target.checked })}
-                        className="h-4 w-4 accent-teal-500"
-                      />
-                    </label>
-                    {restTimer.enabled && (
-                      <div className="flex gap-2 mt-2 flex-wrap">
-                        {REST_TIMER_PRESETS.map((seconds) => (
-                          <button
-                            key={seconds}
-                            onClick={() => handleRestTimerChange({ seconds })}
-                            disabled={savingRestTimer}
-                            className={`px-3 py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-50 ${
-                              restTimer.seconds === seconds
-                                ? 'bg-teal-600 text-white'
-                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                            }`}
-                          >
-                            {seconds < 60 ? `${seconds}s` : `${seconds / 60}m`}
-                          </button>
-                        ))}
-                      </div>
                     )}
+                    <button onClick={() => handleNav('/mesocycles')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
+                      Mesocycles
+                    </button>
+                    <button onClick={() => handleNav('/exercises')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
+                      Exercises
+                    </button>
+                    <button onClick={() => handleNav('/progress')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
+                      Progress
+                    </button>
+                    <button onClick={() => handleNav('/account')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
+                      Account
+                    </button>
+                    <button onClick={() => handleNav('/how-it-works')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
+                      How It Works
+                    </button>
+                    <button onClick={() => handleNav('/')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
+                      Home
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => handleNav('/')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
+                      Home
+                    </button>
+                    <button onClick={() => handleNav('/how-it-works')} className="w-full text-left text-lg text-gray-200 hover:text-white py-4 border-b border-gray-700 transition-colors">
+                      How It Works
+                    </button>
+                  </>
+                )}
+              </nav>
+
+              {/* Footer */}
+              <div className="px-4 pt-4 pb-[calc(2rem+env(safe-area-inset-bottom))] border-t border-gray-700 shrink-0">
+                {isAuthenticated && (
+                  <div className="pb-4 mb-2 border-b border-gray-700">
+                    <div className="text-sm text-gray-400 mb-2">Weight units</div>
+                    <div className="flex gap-2">
+                      {(['lb', 'kg'] as WeightUnit[]).map((unit) => (
+                        <button
+                          key={unit}
+                          onClick={() => handleUnitChange(unit)}
+                          disabled={switchingUnit}
+                          className={`flex-1 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50 ${
+                            weightUnit === unit
+                              ? 'bg-teal-600 text-white'
+                              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          }`}
+                        >
+                          {weightUnitLabel(unit)}
+                        </button>
+                      ))}
+                    </div>
                     <p className="text-xs text-gray-500 mt-2">
-                      Off by default. Resting until you feel ready beats resting until a
-                      clock says so, but the countdown is here if you want it.
+                      Switching converts the weights you've already logged.
                     </p>
+
+                    <div className="mt-4 pt-4 border-t border-gray-700">
+                      <label className="flex items-center justify-between gap-3 cursor-pointer">
+                        <span className="text-sm text-gray-400">Rest timer</span>
+                        <input
+                          type="checkbox"
+                          checked={restTimer.enabled}
+                          disabled={savingRestTimer}
+                          onChange={(e) => handleRestTimerChange({ enabled: e.target.checked })}
+                          className="h-4 w-4 accent-teal-500"
+                        />
+                      </label>
+                      {restTimer.enabled && (
+                        <div className="flex gap-2 mt-2 flex-wrap">
+                          {REST_TIMER_PRESETS.map((seconds) => (
+                            <button
+                              key={seconds}
+                              onClick={() => handleRestTimerChange({ seconds })}
+                              disabled={savingRestTimer}
+                              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-50 ${
+                                restTimer.seconds === seconds
+                                  ? 'bg-teal-600 text-white'
+                                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                              }`}
+                            >
+                              {seconds < 60 ? `${seconds}s` : `${seconds / 60}m`}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      <p className="text-xs text-gray-500 mt-2">
+                        Off by default. Resting until you feel ready beats resting until a
+                        clock says so, but the countdown is here if you want it.
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
-              {isAuthenticated ? (
-                <button onClick={handleLogout} className="w-full text-left text-lg text-red-400 hover:text-red-300 py-4 transition-colors">
-                  Sign Out
-                </button>
-              ) : (
-                <button onClick={() => handleNav('/login')} className="w-full text-left text-lg text-teal-400 hover:text-teal-300 py-4 transition-colors">
+                )}
+                {isAuthenticated ? (
+                  <button onClick={handleLogout} className="w-full text-left text-lg text-red-400 hover:text-red-300 py-4 transition-colors">
+                    Sign Out
+                  </button>
+                ) : (
+                  <button onClick={() => handleNav('/login')} className="w-full text-left text-lg text-teal-400 hover:text-teal-300 py-4 transition-colors">
                     Sign In
                   </button>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>

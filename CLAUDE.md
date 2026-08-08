@@ -265,7 +265,7 @@ visit. SEO and content-marketing value going unused.
 
 ## Open
 
-[ ] The sidebar menu clips its bottom and cannot scroll. The Sign In / Sign
+[x] The sidebar menu clips its bottom and cannot scroll. The Sign In / Sign
 Out button at the bottom of the slide-in menu is cut off on mobile and at
 larger text sizes on desktop, and nothing in the panel scrolls. Cause, in
 `frontend/src/components/Layout.tsx`: the panel is `h-full flex flex-col`, the
@@ -282,6 +282,19 @@ and scrolls with everything when it is not; size the panel with `h-dvh`
 bottom, and add `pb-[env(safe-area-inset-bottom)]` to the footer for the iOS
 home indicator. Verify at a short viewport with the rest timer presets
 expanded, and at 200% browser zoom.
+    Done, with two refinements to the plan. The panel keeps `h-full` and gains
+    `max-h-dvh` rather than swapping to `h-dvh`: the parent is `fixed inset-0`,
+    so `h-dvh` could exceed the parent and clip the other way, while a cap can
+    only ever shorten the panel, which is safe now that it scrolls. And the nav
+    uses `grow shrink-0`, not `flex-1`: `flex-1` is `flex: 1 1 0%`, so inside an
+    overflowing container it collapses toward a zero basis and spills its
+    buttons over the footer instead of scrolling.
+    Verified in a real browser at 380x420 with the rest timer presets open, the
+    tallest case: 749px of content in a 356px region, Sign Out sitting at 781px
+    against a 420px viewport before scrolling, then fully visible and hit
+    testable at the bottom. Four tests in `Layout.test.tsx`, mutation tested,
+    removing the scroll container fails 2, scrolling only the nav fails 3, and
+    dropping `max-h-dvh` fails 1.
 
 [ ] The first-time walkthrough teaches only the manual volume model and never
 mentions autoregulation. `frontend/src/components/OnboardingWizard.tsx` says
