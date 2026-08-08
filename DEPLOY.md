@@ -44,6 +44,28 @@ is the record of what should be set there.
 
 Check it with `curl -sI https://strengthguider.com/`.
 
+## Google sign-in
+
+The OAuth client lives in Google Cloud project **`319029498301`**, administered
+by **strengthguider@gmail.com**. That is the account to sign in as to reach it,
+which is worth writing down because nothing in the app or the Render dashboard
+points at it.
+
+The client id itself is not a secret and is served publicly from
+`/v1/auth/google-client-id`; its leading number is the project number, which is
+how the project was identified in the first place.
+
+What matters when a domain changes: **Authorized JavaScript origins** on that
+client must list every origin the app is actually served from. Sign-in fails
+with an origin mismatch otherwise, and it fails at credential exchange rather
+than at render, so the button still appears and nothing looks wrong until
+someone tries. Redirect URIs are not used, the button returns an ID token
+straight to the page.
+
+The owning Google account has no bearing on app accounts. Users are matched on
+the verified email in the token, so the client id is only ever checked during
+verification.
+
 ## Routing: the SPA rewrite
 
 Without this, every path except `/` returns 404 to anyone arriving from

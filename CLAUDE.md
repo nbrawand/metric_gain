@@ -284,8 +284,10 @@ and the old domain 301s across with paths intact. What is left is housekeeping.
       which did not move.
 
 
-[ ] Move the Google OAuth client off the old account. It lives in Google Cloud
-project `319029498301`, owned by an email that is being abandoned. Deferred on
+[ ] Move the Google OAuth client off the old account, if that is still wanted.
+It lives in Google Cloud project `319029498301`, administered by
+strengthguider@gmail.com (recorded in `DEPLOY.md`), which may well be the
+account worth keeping, in which case this item is already moot. Deferred on
 purpose, it blocks nothing: the domain migration only needs two origins added
 to the existing client, and the owning account never touches app accounts,
 which match on email. When it is done it is one new project, a published
