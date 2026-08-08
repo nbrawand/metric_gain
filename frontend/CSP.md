@@ -74,7 +74,20 @@ The `style-src` addition comes from Google's own documentation, which lists
 for `script-src` and `/gsi/` for `frame-src` and `connect-src`. The other three
 were already covered, because allowing an origin covers every path under it.
 
-Testing did not surface the `style-src` gap and could not have. The button
+Confirmed since, from a real sign-in on production with the console open. The
+only violation reported across the whole flow, signing in and logging a set,
+was `Loading the stylesheet 'https://accounts.google.com/gsi/style' violates
+the following Content Security Policy directive: "style-src 'self'
+'unsafe-inline'"`. Nothing else. So the policy below is the whole change.
+
+Two other console messages appear and neither is CSP. `[GSI_LOGGER]: Provided
+button width is invalid: 100%` was ours and is fixed. `Cross-Origin-Opener-
+Policy policy would block the window.postMessage call` refers to a header we do
+not set, and is a standing warning against adding one: Google's sign-in popup
+posts back to its opener, so a restrictive COOP would break sign-in. Do not add
+`Cross-Origin-Opener-Policy` without testing that flow.
+
+Testing did not surface the `style-src` gap on its own, and could not have. The button
 renders inside an `accounts.google.com` iframe, and a page's CSP does not
 govern what loads inside a cross-origin frame, so that stylesheet never touched
 our policy. Other GSI rendering paths, One Tap in particular, load it into our

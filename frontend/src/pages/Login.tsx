@@ -48,7 +48,10 @@ export function Login() {
                 }}
                 theme="filled_black"
                 size="large"
-                width="100%"
+                // No width: GSI takes pixels, not percentages, and logged
+                // "Provided button width is invalid: 100%" while ignoring it
+                // and rendering at its default. Passing a number here would
+                // change how the button looks, which the percentage never did.
                 text="signin_with"
               />
             </div>
