@@ -59,15 +59,28 @@ means no violations rather than a listener that never fired.
 
 ### The policy to enforce
 
-Identical to the one being reported on today, minus `'unsafe-inline'` in
-`script-src`:
+Two changes from the one being reported on today: `'unsafe-inline'` comes out
+of `script-src`, and `https://accounts.google.com` goes into `style-src`.
 
 ```
-default-src 'self'; script-src 'self' https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://lh3.googleusercontent.com; font-src 'self' data:; connect-src 'self' https://metric-gain-backend.onrender.com https://accounts.google.com; frame-src https://accounts.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
+default-src 'self'; script-src 'self' https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; img-src 'self' data: blob: https://lh3.googleusercontent.com; font-src 'self' data:; connect-src 'self' https://metric-gain-backend.onrender.com https://accounts.google.com; frame-src https://accounts.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
 ```
 
 `'unsafe-inline'` stays in `style-src`. Tailwind and React inline styles need
 it, and it is a far smaller weakness there than in `script-src`.
+
+The `style-src` addition comes from Google's own documentation, which lists
+`https://accounts.google.com/gsi/style` as required, alongside `/gsi/client`
+for `script-src` and `/gsi/` for `frame-src` and `connect-src`. The other three
+were already covered, because allowing an origin covers every path under it.
+
+Testing did not surface the `style-src` gap and could not have. The button
+renders inside an `accounts.google.com` iframe, and a page's CSP does not
+govern what loads inside a cross-origin frame, so that stylesheet never touched
+our policy. Other GSI rendering paths, One Tap in particular, load it into our
+own document, where it would have been blocked. That is the argument for
+reading the third party's requirements rather than only observing one code
+path.
 
 Until step 3 lands, the CSP provides **no** XSS protection, and tokens in
 localStorage mean an XSS is a full account takeover.
