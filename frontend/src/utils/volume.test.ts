@@ -5,8 +5,10 @@ import {
   computeWeeklyVolumeByMuscleGroup,
   DELOAD_TARGET_RIR,
   findVolumeWarnings,
+  projectAutoregulatedVolume,
   volumeInputsForTemplate,
   WEEKLY_SET_CEILINGS,
+  weeklyVolumeProjection,
 } from './volume';
 
 describe('computeWeeklyVolumeByMuscleGroup', () => {
@@ -140,37 +142,101 @@ describe('volumeInputsForTemplate', () => {
   const lookup = (id: number) => groups[id];
 
   it('flattens every day into per-exercise inputs', () => {
-    const inputs = volumeInputsForTemplate(days, lookup, false);
+    const inputs = volumeInputsForTemplate(days, lookup);
     expect(inputs).toHaveLength(3);
     expect(inputs[0]).toEqual({ muscleGroup: 'Chest', targetSets: 3, increment: 2 });
   });
 
-  it('zeroes the increment when the block autoregulates', () => {
-    /**
-     * An autoregulated block generates flat and grows from what gets logged.
-     * Charting the template's ramp would show a plan that will not happen,
-     * which is what made the weekly-increase control feel load-bearing when it
-     * was being ignored.
-     */
-    const inputs = volumeInputsForTemplate(days, lookup, true);
-    expect(inputs.every((i) => i.increment === 0)).toBe(true);
-    // Starting sets still matter; only the ramp is dropped
+  it('carries the weekly increment through as written', () => {
+    // Whether the increment means anything is the projection's decision: an
+    // autoregulated block ignores it, but this function does not know that.
+    const inputs = volumeInputsForTemplate(days, lookup);
+    expect(inputs.map((i) => i.increment)).toEqual([2, 1, 0.5]);
     expect(inputs.map((i) => i.targetSets)).toEqual([3, 4, 2]);
   });
 
-  it('produces a flat chart when autoregulating and a ramp when not', () => {
+  it('falls back to Other for an exercise it cannot resolve', () => {
+    const inputs = volumeInputsForTemplate(days, () => undefined);
+    expect(inputs.every((i) => i.muscleGroup === 'Other')).toBe(true);
+  });
+});
+
+describe('projectAutoregulatedVolume', () => {
+  const chest = (targetSets: number) => ({ muscleGroup: 'Chest', targetSets });
+
+  it('starts on the flat generated week', () => {
+    // Autoregulated blocks generate flat, so week 1 has to agree exactly with
+    // what the manual path draws for the same starting sets
+    const exercises = [chest(3), chest(4)];
+    const projected = projectAutoregulatedVolume(exercises, 4);
     const flat = computeWeeklyVolumeByMuscleGroup(
-      volumeInputsForTemplate(days, lookup, true), 4
+      exercises.map((e) => ({ ...e, increment: 0 })), 4
     );
-    const ramped = computeWeeklyVolumeByMuscleGroup(
-      volumeInputsForTemplate(days, lookup, false), 4
-    );
-    expect(flat.Chest).toEqual([5, 5, 5, 5]);
-    expect(ramped.Chest).toEqual([5, 8, 10, 13]);
+    expect(projected.Chest[0]).toBe(flat.Chest[0]);
   });
 
-  it('falls back to Other for an exercise it cannot resolve', () => {
-    const inputs = volumeInputsForTemplate(days, () => undefined, false);
-    expect(inputs.every((i) => i.muscleGroup === 'Other')).toBe(true);
+  it('earns one set per exercise per week', () => {
+    // Two chest exercises means two earned chest sets a week, which is the
+    // per-muscle-group view the backend caps against
+    expect(projectAutoregulatedVolume([chest(3), chest(4)], 4).Chest).toEqual([7, 9, 11, 13]);
+  });
+
+  it('stops at the muscle group ceiling', () => {
+    // Chest tops out at 22. Three exercises from 6 each is 18, then 21, then
+    // the fourth increase would pass the ceiling so it lands on it and holds.
+    const weekly = projectAutoregulatedVolume([chest(6), chest(6), chest(6)], 6).Chest;
+    expect(weekly).toEqual([18, 21, 22, 22, 22, 22]);
+    expect(Math.max(...weekly)).toBeLessThanOrEqual(WEEKLY_SET_CEILINGS.Chest);
+  });
+
+  it('adds nothing to a group that already starts over its ceiling', () => {
+    // Mirrors the backend check, which asks whether the total after adding
+    // would exceed the limit, so an already-over group never grows
+    const weekly = projectAutoregulatedVolume([chest(15), chest(15)], 3).Chest;
+    expect(weekly).toEqual([30, 30, 30]);
+  });
+
+  it('caps each muscle group independently', () => {
+    const weekly = projectAutoregulatedVolume(
+      [chest(10), chest(10), { muscleGroup: 'Biceps', targetSets: 4 }], 5
+    );
+    // Chest ceiling 22, Biceps 20, and biceps has one exercise so it climbs
+    // half as fast even though it starts well clear of its own limit
+    expect(weekly.Chest).toEqual([20, 22, 22, 22, 22]);
+    expect(weekly.Biceps).toEqual([4, 5, 6, 7, 8]);
+  });
+
+  it('never projects above what the warnings police', () => {
+    // A capped projection is the honest one: autoregulation genuinely cannot
+    // run a muscle group past its ceiling, so nothing should warn
+    const weekly = projectAutoregulatedVolume([chest(5), chest(5), chest(5), chest(5)], 8);
+    expect(findVolumeWarnings(weekly)).toEqual([]);
+  });
+
+  it('survives a half-typed week count', () => {
+    expect(projectAutoregulatedVolume([chest(3)], NaN).Chest).toEqual([]);
+  });
+});
+
+describe('weeklyVolumeProjection', () => {
+  const days = [
+    {
+      exercises: [
+        { exercise_id: 1, target_sets: 3, weekly_set_increment: 2 },
+        { exercise_id: 2, target_sets: 4, weekly_set_increment: 1 },
+      ],
+    },
+  ];
+  const lookup = (id: number) => (id === 1 ? 'Chest' : 'Back');
+  const inputs = volumeInputsForTemplate(days, lookup);
+
+  it('follows the fixed increases when not autoregulating', () => {
+    expect(weeklyVolumeProjection(inputs, 4, false).Chest).toEqual([3, 5, 7, 9]);
+  });
+
+  it('ignores the fixed increases when autoregulating', () => {
+    // The template's +2/week is not what an autoregulated block does; it earns
+    // one set per exercise per clean week instead
+    expect(weeklyVolumeProjection(inputs, 4, true).Chest).toEqual([3, 4, 5, 6]);
   });
 });

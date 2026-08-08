@@ -135,6 +135,69 @@ export const findVolumeWarnings = (
   );
 };
 
+/**
+ * Weekly totals per muscle group if the lifter hits every target.
+ *
+ * Mirrors autoregulate_next_week in backend/app/services/autoregulation.py: a
+ * clean week earns each exercise one more set, and each of those is checked
+ * against the muscle group's running weekly total, so a group with k exercises
+ * climbs k sets a week until it lands on its ceiling and stops. A group already
+ * over its ceiling gets no increase at all, matching the backend's check that
+ * the total *after* adding would exceed the limit.
+ *
+ * This is the optimistic path by construction. Missing targets holds or drops
+ * sets, so a real block tracks at or below this line, never above it.
+ */
+export const projectAutoregulatedVolume = (
+  exercises: { muscleGroup: string; targetSets: number }[],
+  weeks: number
+): Record<string, number[]> => {
+  const weekCount = Number.isFinite(weeks) ? Math.max(0, Math.floor(weeks)) : 0;
+
+  const startingSets: Record<string, number> = {};
+  const exerciseCount: Record<string, number> = {};
+  for (const ex of exercises) {
+    // Week 1 is the flat generated week, so it has to agree exactly with what
+    // the manual path draws for the same starting sets
+    startingSets[ex.muscleGroup] =
+      (startingSets[ex.muscleGroup] ?? 0) + computeSetsForWeek(ex.targetSets, 0, 1);
+    exerciseCount[ex.muscleGroup] = (exerciseCount[ex.muscleGroup] ?? 0) + 1;
+  }
+
+  const result: Record<string, number[]> = {};
+  for (const [muscleGroup, starting] of Object.entries(startingSets)) {
+    const ceiling = ceilingForMuscleGroup(muscleGroup);
+    const earnedPerWeek = exerciseCount[muscleGroup];
+    const weekly: number[] = [];
+    let total = starting;
+    for (let week = 1; week <= weekCount; week++) {
+      if (week > 1) {
+        total = total >= ceiling ? total : Math.min(total + earnedPerWeek, ceiling);
+      }
+      weekly.push(total);
+    }
+    result[muscleGroup] = weekly;
+  }
+  return result;
+};
+
+/**
+ * The weekly totals to chart for a block, in whichever mode it will run.
+ *
+ * Autoregulated blocks generate flat and grow from logged performance, so
+ * charting the template's fixed ramp shows a plan that will not happen, and
+ * charting the flat week-1 number shows a floor that says nothing about where
+ * the block ends up. Project the earned path instead.
+ */
+export const weeklyVolumeProjection = (
+  exercises: { muscleGroup: string; targetSets: number; increment: number }[],
+  weeks: number,
+  autoregulate: boolean
+): Record<string, number[]> =>
+  autoregulate
+    ? projectAutoregulatedVolume(exercises, weeks)
+    : computeWeeklyVolumeByMuscleGroup(exercises, weeks);
+
 export interface VolumeInputSource {
   exercises: { exercise_id: number; target_sets: number; weekly_set_increment: number }[];
 }
@@ -142,19 +205,18 @@ export interface VolumeInputSource {
 /**
  * Turn a template's days into the per-exercise inputs the volume chart wants.
  *
- * autoregulate zeroes the weekly increment: an autoregulated block generates
- * flat and grows from what gets logged, so charting the template's ramp would
- * show a plan that will not happen.
+ * The weekly increment is carried through as written. Whether it means anything
+ * is weeklyVolumeProjection's decision, not this function's: an autoregulated
+ * block ignores it entirely.
  */
 export const volumeInputsForTemplate = (
   days: VolumeInputSource[],
-  muscleGroupFor: (exerciseId: number) => string | undefined,
-  autoregulate: boolean
+  muscleGroupFor: (exerciseId: number) => string | undefined
 ): { muscleGroup: string; targetSets: number; increment: number }[] =>
   days.flatMap((day) =>
     day.exercises.map((exercise) => ({
       muscleGroup: muscleGroupFor(exercise.exercise_id) || 'Other',
       targetSets: exercise.target_sets,
-      increment: autoregulate ? 0 : (exercise.weekly_set_increment ?? 0),
+      increment: exercise.weekly_set_increment ?? 0,
     }))
   );

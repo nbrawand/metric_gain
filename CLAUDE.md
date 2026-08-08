@@ -322,48 +322,32 @@ the manual mode.
     outgrows a short phone screen, which would have pushed Next off the bottom
     edge. Same defect as the sidebar, found by adding to it.
 
-[ ] The volume charts should project what autoregulation will actually do.
-When performance-based sets are on, the chart in the start-block modal
-(`Mesocycles.tsx`, `startVolumeByMuscleGroup`) is flat: `volumeInputsForTemplate`
-zeroes the increment because sessions generate flat, and a caption says the
-rest follows what you log. But the point of the chart is to preview the block,
-and the expected shape under autoregulation is knowable: assume targets are
-hit, so +1 set per exercise per week, capped at the muscle-group ceiling,
-mirroring `backend/app/services/autoregulation.py` the way `volume.ts` already
-mirrors its ceilings. Show that projection when autoregulation is on, labelled
-as the if-you-hit-your-targets path, and keep the fixed-increment projection
-when it is off. The creation review step (`reviewVolumeByMuscleGroup`) has a
-wrinkle: autoregulation is chosen at block start, not at creation, so the
-review chart cannot know which mode applies. Since autoregulation is the
-default, show the autoregulated projection there too, alongside or instead of
-the manual ramp, and say which assumption the chart is making. The volume
-warnings (`findVolumeWarnings`) should run against the same projection the
-chart draws, a flat line never warns, but the autoregulated path can still hit
-a ceiling.
-
-[ ] Assess the difficulty of accounts that do not require a Google sign-in,
-compatible with everything downstream including Stripe. The starting position
-is better than it looks: `users` has no `google_id` column at all, accounts
-are keyed purely by email and Google is only the verifier at login
-(`routers/auth.py` checks the ID token, then matches or creates the row by
-email). The JWTs are our own, refresh and revocation included
-(`token_version`), and Stripe hangs off `stripe_customer_id` on the user row,
-so billing, admin, account export and deletion should not care how the user
-signed in. Email-keyed matching also means the same address arriving via a
-second provider lands in the same account automatically, which is the account
-linking problem solved by accident, but it makes verified email ownership
-load-bearing: Google asserts it today, and any new method has to assert it as
-strongly or someone can claim an account by typing its address. The real
-costs to assess: (a) proving email ownership without Google, which means
-sending email, and there is no transactional email provider wired up, support
-is a Gmail address, so magic-link or verification flows need a new service
-(Resend, Postmark, SES) plus sender domain setup on strengthguider.com; (b)
-password auth specifically adds storage, hashing, reset flows and their
-support burden, so passwordless magic links or a second OAuth provider
-(Apple) are likely cheaper; (c) frontend Login page is GSI-only, including
-the CSP entries specific to accounts.google.com; (d) the walkthrough, FAQ,
-privacy policy and terms all describe Google sign-in. Deliverable is an
-assessment with a recommended method and estimate, not an implementation.
+[x] The volume charts should project what autoregulation will actually do.
+When performance-based sets are on, neither chart showed the block a lifter
+would actually get. Correcting my own note above, the two were wrong in
+different directions: the create-form review chart went flat, because
+`volumeInputsForTemplate` zeroed the increment, while the start-block chart
+built its inputs inline and never consulted the flag at all, so it drew the
+template's fixed ramp under a caption saying the real thing follows what you
+log. One showed a floor, the other showed a plan that would not happen.
+    Done. `projectAutoregulatedVolume` in `volume.ts` draws the earned path:
+    each exercise takes one more set per clean week, checked against the muscle
+    group's running weekly total, so a group with k exercises climbs k sets a
+    week until it lands on its ceiling and holds. That mirrors the per-exercise
+    loop in `autoregulation.py`, including its quirk that the check is against
+    the total *after* adding, so a group already over its ceiling never grows.
+    `weeklyVolumeProjection` picks the mode, and both charts now go through it,
+    which also means the start-block chart finally responds to its own toggle.
+    Two consequences worth knowing. `volumeInputsForTemplate` no longer takes
+    `autoregulate`, since zeroing an increment that the projection ignores was
+    a second place to encode the same decision. And under autoregulation the
+    warnings effectively cannot fire, because the projection is capped at the
+    same ceilings `findVolumeWarnings` polices; the only way to warn now is a
+    template whose starting sets already exceed a ceiling, which is exactly
+    right and is asserted as a test rather than left as a surprise.
+    Thirteen new tests. The interesting ones pin week 1 to the flat generated
+    week so the two modes cannot disagree about where a block starts, and pin
+    the ceiling behaviour at the boundary rather than well past it.
 
 [ ] Creating a template should start it and send the lifter home. Today
 `handleCreateMesocycle` in `Mesocycles.tsx` just closes the modal, resets the

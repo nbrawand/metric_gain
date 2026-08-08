@@ -26,9 +26,9 @@ import {
 } from '../types/mesocycle';
 import { Exercise } from '../types/exercise';
 import {
-  computeWeeklyVolumeByMuscleGroup,
   findVolumeWarnings,
   volumeInputsForTemplate,
+  weeklyVolumeProjection,
 } from '../utils/volume';
 import MuscleGroupVolumeChart from '../components/MuscleGroupVolumeChart';
 import ClampedNumberInput from '../components/ClampedNumberInput';
@@ -374,14 +374,16 @@ export default function Mesocycles() {
     setCreateStep('review');
   };
 
-  // Weekly set totals per muscle group for the create-form review charts
-  const reviewVolumeByMuscleGroup = computeWeeklyVolumeByMuscleGroup(
+  // Weekly set totals per muscle group for the create-form review charts. Under
+  // autoregulation this is the hit-every-target path rather than the template's
+  // fixed ramp, which that mode ignores.
+  const reviewVolumeByMuscleGroup = weeklyVolumeProjection(
     volumeInputsForTemplate(
       workoutTemplates,
-      (id) => exercises.find((e) => e.id === id)?.muscle_group,
-      mesocycleData.autoregulate_volume
+      (id) => exercises.find((e) => e.id === id)?.muscle_group
     ),
-    mesocycleData.weeks
+    mesocycleData.weeks,
+    mesocycleData.autoregulate_volume
   );
 
   // Muscle groups the plan drives past a recoverable weekly ceiling. Shown at
@@ -671,7 +673,7 @@ export default function Mesocycles() {
             i => i.status === 'completed' && i.mesocycle_template_id === startingMesocycle.id
           );
           const startVolumeByMuscleGroup = startingMesocycleDetail
-            ? computeWeeklyVolumeByMuscleGroup(
+            ? weeklyVolumeProjection(
                 startingMesocycleDetail.workout_templates.flatMap(wt =>
                   wt.exercises.map(ex => ({
                     muscleGroup: ex.exercise?.muscle_group || 'Other',
@@ -679,7 +681,8 @@ export default function Mesocycles() {
                     increment: ex.weekly_set_increment ?? 0,
                   }))
                 ),
-                startingMesocycleDetail.weeks
+                startingMesocycleDetail.weeks,
+                autoregulateVolume
               )
             : null;
           return (
@@ -696,7 +699,7 @@ export default function Mesocycles() {
                       <h3 className="text-sm font-medium text-gray-300 mb-1">Planned Weekly Sets per Muscle Group</h3>
                       <p className="text-xs text-gray-400 mb-3">
                         {autoregulateVolume
-                          ? "With performance-based sets on, this is the template's plan. What you actually get each week follows what you log."
+                          ? 'Where this block goes if you hit every target, one more set per exercise each week until a muscle group reaches a recoverable weekly total. Miss targets and it grows more slowly, so this is the ceiling on your own progress rather than a promise.'
                           : 'The fixed plan this block will follow.'}
                       </p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -874,7 +877,7 @@ export default function Mesocycles() {
                   <div className="mb-6">
                     <p className="text-sm text-gray-300 mb-4">
                       {mesocycleData.autoregulate_volume
-                        ? 'Where every muscle group starts. Sets grow or shrink from here each week based on what you log, so this is the floor rather than the whole picture.'
+                        ? 'Total sets per muscle group each week if you hit every target, since sets only grow on the weeks you earn them. Miss some and the real block sits below this line.'
                         : 'Total sets per muscle group each week, from your starting sets and weekly increases.'}
                       {' '}Go back to adjust, or confirm to create the template.
                     </p>
