@@ -283,6 +283,20 @@ bottom, and add `pb-[env(safe-area-inset-bottom)]` to the footer for the iOS
 home indicator. Verify at a short viewport with the rest timer presets
 expanded, and at 200% browser zoom.
 
+[ ] The first-time walkthrough teaches only the manual volume model and never
+mentions autoregulation. `frontend/src/components/OnboardingWizard.tsx` says
+"pick a starting set count and a weekly increase for every exercise" and "then
+the plan sticks for the whole mesocycle", which is actively wrong for the
+default path: autoregulation is on by default for new blocks and exists
+precisely so the plan does not stick, sets go up, hold or drop from logged
+performance. A new user is told to hand-pick a weekly increase that the
+default setting then ignores. Update the Mesocycles and Volume & RIR steps to
+present both modes: autoregulated volume as the default (hit your targets and
+sets go up, miss and they hold or drop, capped per muscle group), with the
+manual weekly increase as the override chosen at block start for lifters who
+want to drive it themselves. The "plan sticks" phrasing should only describe
+the manual mode.
+
 [x] Finish the domain move tidy-up. Done. `strengthguider.com` serves every
 route with all six security headers and an enforcing CSP, sign-in works, CORS
 accepts the new origin and still rejects everything else, and the old domain
