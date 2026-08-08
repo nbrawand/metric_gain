@@ -265,6 +265,24 @@ visit. SEO and content-marketing value going unused.
 
 ## Open
 
+[ ] The sidebar menu clips its bottom and cannot scroll. The Sign In / Sign
+Out button at the bottom of the slide-in menu is cut off on mobile and at
+larger text sizes on desktop, and nothing in the panel scrolls. Cause, in
+`frontend/src/components/Layout.tsx`: the panel is `h-full flex flex-col`, the
+nav is `flex-1` with no `overflow-y-auto` and no `min-h-0`, and the footer
+(unit toggle, rest timer with its preset row, sign out) is a fixed block, so
+once the total content is taller than the viewport the footer is pushed past
+the bottom edge with no way to reach it. The footer alone can exceed a short
+viewport when the rest-timer presets are open, so scrolling only the nav would
+not fix it. Plan: wrap nav + footer together in one `flex-1 min-h-0
+overflow-y-auto flex flex-col` region below the close button, keeping `flex-1`
+on the nav inside it so the footer stays bottom-pinned when content is short
+and scrolls with everything when it is not; size the panel with `h-dvh`
+(Tailwind is 3.4, which has it) so mobile browser chrome cannot cover the
+bottom, and add `pb-[env(safe-area-inset-bottom)]` to the footer for the iOS
+home indicator. Verify at a short viewport with the rest timer presets
+expanded, and at 200% browser zoom.
+
 [x] Finish the domain move tidy-up. Done. `strengthguider.com` serves every
 route with all six security headers and an enforcing CSP, sign-in works, CORS
 accepts the new origin and still rejects everything else, and the old domain
