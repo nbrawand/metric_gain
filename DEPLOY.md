@@ -9,7 +9,7 @@ read the file. It has been deleted. Nothing in the repo configures the deployed
 response: **everything below is typed into the Render dashboard**, so this file
 is the record of what should be set there.
 
-Check it with `curl -sI https://www.strength-guider.com/`.
+Check it with `curl -sI https://strengthguider.com/`.
 
 ## Routing: the SPA rewrite
 
@@ -36,10 +36,10 @@ Verify:
 
 ```bash
 for p in / /how-it-works /privacy /terms /login; do
-  echo "$(curl -s -o /dev/null -w '%{http_code}' https://www.strength-guider.com$p)  $p"
+  echo "$(curl -s -o /dev/null -w '%{http_code}' https://strengthguider.com$p)  $p"
 done
 # all 200, and a missing asset should still be a real 404:
-curl -s -o /dev/null -w '%{http_code}\n' https://www.strength-guider.com/assets/nope.js
+curl -s -o /dev/null -w '%{http_code}\n' https://strengthguider.com/assets/nope.js
 ```
 
 ## Response headers
@@ -59,7 +59,7 @@ Two of these deserve a second's thought before you paste them in.
 
 **`Strict-Transport-Security`** is a commitment, not a toggle. `max-age` is a
 year and `includeSubDomains` extends it to every subdomain of
-`strength-guider.com`. Browsers that see it will refuse plain HTTP to any of
+`strengthguider.com`. Browsers that see it will refuse plain HTTP to any of
 them for that year, and you cannot take it back quickly. Fine if everything on
 the domain is HTTPS, which it is today; worth remembering before putting
 anything HTTP-only on a subdomain.
