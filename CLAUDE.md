@@ -367,8 +367,9 @@ one portal visit would settle it.
     data and was never policed as an inline script, so it came out with no hash
     needed. And `style-src` was missing `https://accounts.google.com`, which
     Google's own docs require and which no amount of watching the button render
-    would have revealed, because that stylesheet loads inside Google's iframe
-    where our policy does not reach. A real sign-in reported it, once.
+    would have revealed, because GSI fetches that stylesheet when the sign-in
+    flow is engaged rather than when the button is drawn. A real sign-in
+    reported it, once.
     Tokens in localStorage are no longer a free account takeover on any XSS.
 
 [x] Tests for WorkoutExecution.tsx and Mesocycles.tsx (1,600 and 1,141 lines,

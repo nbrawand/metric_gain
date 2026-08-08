@@ -55,10 +55,10 @@ means no violations rather than a listener that never fired.
    first. Google's popup posts back to its opener, and the console already
    warns that a COOP would block that call. It is exactly the kind of header
    that looks like a free win while hardening.
-3. **One Tap has not been exercised.** The button path has. One Tap loads that
-   same stylesheet into our own document rather than into Google's iframe,
-   which the policy below now allows, so it should be fine, but it is the one
-   path nothing has actually run.
+3. **One Tap is not used.** `<GoogleLogin>` renders the button only and
+   `useOneTap` is never set, so the button flow is the whole surface. If One
+   Tap is ever enabled, re-check the console: different rendering path,
+   different requests.
 
 ## Promoting it to enforcing
 
@@ -106,13 +106,16 @@ not set, and is a standing warning against adding one: Google's sign-in popup
 posts back to its opener, so a restrictive COOP would break sign-in. Do not add
 `Cross-Origin-Opener-Policy` without testing that flow.
 
-Testing did not surface the `style-src` gap on its own, and could not have. The button
-renders inside an `accounts.google.com` iframe, and a page's CSP does not
-govern what loads inside a cross-origin frame, so that stylesheet never touched
-our policy. Other GSI rendering paths, One Tap in particular, load it into our
-own document, where it would have been blocked. That is the argument for
-reading the third party's requirements rather than only observing one code
-path.
+Testing did not surface the `style-src` gap on its own. Loading `/login` and
+waiting reported nothing, because GSI fetches that stylesheet when the sign-in
+flow is actually engaged, not when the button is drawn. A probe that renders
+the page and stops never reaches it. Reading Google's requirements caught what
+watching one page load could not, and a real sign-in then confirmed it.
+
+An earlier version of this file blamed the iframe boundary and named One Tap as
+the path that would expose it. That was a guess, and wrong twice over: the
+button flow does load the stylesheet into our own document, which is exactly
+what the real sign-in reported, and the app does not use One Tap at all.
 
 Tokens live in localStorage, so before this was enforcing, any XSS was a full
 account takeover. That is what the policy is for, and why `'unsafe-inline'`
