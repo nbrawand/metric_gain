@@ -296,7 +296,7 @@ expanded, and at 200% browser zoom.
     removing the scroll container fails 2, scrolling only the nav fails 3, and
     dropping `max-h-dvh` fails 1.
 
-[ ] The first-time walkthrough teaches only the manual volume model and never
+[x] The first-time walkthrough teaches only the manual volume model and never
 mentions autoregulation. `frontend/src/components/OnboardingWizard.tsx` says
 "pick a starting set count and a weekly increase for every exercise" and "then
 the plan sticks for the whole mesocycle", which is actively wrong for the
@@ -309,6 +309,18 @@ sets go up, miss and they hold or drop, capped per muscle group), with the
 manual weekly increase as the override chosen at block start for lifters who
 want to drive it themselves. The "plan sticks" phrasing should only describe
 the manual mode.
+    Done. Rather than cramming it into the Volume & RIR step, autoregulation
+    got its own step, "How Your Volume Grows", so the walkthrough is five steps
+    now. The Get Started steps were wrong in the same way and were corrected
+    too: the weekly increase is no longer presented as something you pick at
+    template creation, since the mode is chosen when the block starts.
+    Five tests in `OnboardingWizard.test.tsx`, three of which fail if the step
+    is removed. One of them is the interesting one: it asserts that any claim
+    the plan is fixed appears in the same step as the fixed weekly increase,
+    which is what the old blanket claim got wrong.
+    Also fixed in passing: the wizard modal had no scroll and the longest step
+    outgrows a short phone screen, which would have pushed Next off the bottom
+    edge. Same defect as the sidebar, found by adding to it.
 
 [ ] The volume charts should project what autoregulation will actually do.
 When performance-based sets are on, the chart in the start-block modal

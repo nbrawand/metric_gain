@@ -40,8 +40,9 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
             recover from.
           </p>
           <p className="text-gray-300 leading-relaxed">
-            You decide the shape of each block: pick a starting set count and a
-            weekly increase for every exercise when you create your mesocycle.
+            You decide the shape of each block: pick a starting set count for
+            every exercise when you create your mesocycle, then choose how the
+            volume grows from there when you start it.
           </p>
         </>
       ),
@@ -52,10 +53,10 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
         <>
           <p className="text-gray-300 leading-relaxed mb-3">
             For each exercise you choose a{' '}
-            <span className="text-teal-400 font-medium">starting set count</span> and a{' '}
-            <span className="text-teal-400 font-medium">weekly increase</span>. Before
-            confirming, you review per-muscle-group charts of your planned weekly
-            volume, then the plan sticks for the whole mesocycle.
+            <span className="text-teal-400 font-medium">starting set count</span>.
+            Before confirming, you review per-muscle-group charts of your planned
+            weekly volume, so you can see what a week actually asks of each muscle
+            before you train it.
           </p>
           <p className="text-gray-300 leading-relaxed mb-3">
             Intensity is managed through{' '}
@@ -72,6 +73,31 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
       ),
     },
     {
+      title: 'How Your Volume Grows',
+      content: (
+        <>
+          <p className="text-gray-300 leading-relaxed mb-3">
+            When you start a block you pick how your set counts change week to
+            week. There are two ways, and you choose per block.
+          </p>
+          <p className="text-gray-300 leading-relaxed mb-3">
+            <span className="text-teal-400 font-medium">Performance-based sets</span>{' '}
+            are the default. Hit every target in a session and that exercise gets
+            one more set next week; miss one and it holds; miss most and it drops
+            a set. Volume is capped per muscle group so it cannot climb past what
+            you can recover from. This reads the sets you already logged, so it
+            costs you no extra taps and no questionnaires.
+          </p>
+          <p className="text-gray-300 leading-relaxed">
+            Prefer to drive it yourself? Turn that off and set a{' '}
+            <span className="text-teal-400 font-medium">fixed weekly increase</span>{' '}
+            for each exercise instead. That plan is decided up front and sticks
+            for the whole mesocycle, whatever you log.
+          </p>
+        </>
+      ),
+    },
+    {
       title: 'Get Started',
       content: (
         <>
@@ -82,8 +108,8 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
               </div>
               <p className="text-gray-300 text-sm leading-relaxed">
                 Go to <span className="text-teal-400 font-medium">Mesocycles</span> and
-                create a template, choose your training days, weeks, exercises,
-                and the weekly increase.
+                create a template, choose your training days, weeks, exercises
+                and starting sets.
               </p>
             </div>
             <div className="flex gap-3">
@@ -92,8 +118,9 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
               </div>
               <p className="text-gray-300 text-sm leading-relaxed">
                 Click <span className="text-teal-400 font-medium">Start Mesocycle</span> to
-                begin your training block. The app will generate your full schedule
-                from your plan.
+                begin your training block. This is where you pick performance-based
+                sets or a fixed weekly increase, and the app generates your full
+                schedule.
               </p>
             </div>
             <div className="flex gap-3">
@@ -117,7 +144,9 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
-      <div className="bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full p-6 sm:p-8">
+      {/* Scrolls rather than clipping: the longest step outgrows a short phone
+          screen, and without this the Next button goes off the bottom edge. */}
+      <div className="bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full p-6 sm:p-8 max-h-[90dvh] overflow-y-auto">
         {/* Title */}
         <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">
           {steps[step].title}
