@@ -265,10 +265,23 @@ visit. SEO and content-marketing value going unused.
 
 ## Open
 
-[ ] Google Search Console after the domain move. Verify `strengthguider.com`
-as a property, then run Change of Address from the old one and submit the new
-sitemap. The 301s do the real work, this makes it explicit. Low urgency, there
-is almost nothing indexed yet.
+[ ] Finish the domain move tidy-up. The move itself is done and verified: the
+new domain serves every route with all six security headers and sign-in works,
+and the old domain 301s across with paths intact. What is left is housekeeping.
+
+    - The redirect service sends no HSTS. The old domain committed to
+      `max-age=31536000` for a year, so every redirect currently breaks that
+      promise. One header on `strength-guider-redirect`, path `/*`.
+    - Search Console: `strengthguider.com` is not verified yet. Add the
+      property, add its TXT record, submit the sitemap, then run Change of
+      Address from the old property. Keep the old domain's existing
+      `google-site-verification` TXT, Change of Address needs the old property
+      to stay verified.
+    - Stripe: confirm `FRONTEND_URL` is the new domain, since it builds the
+      checkout success and cancel URLs and the billing portal return, and
+      update the website in Stripe's business details, which shows on Checkout
+      and on receipts. The webhook needs nothing, it points at the backend,
+      which did not move.
 
 
 [ ] Move the Google OAuth client off the old account. It lives in Google Cloud
