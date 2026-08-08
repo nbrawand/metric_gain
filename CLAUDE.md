@@ -353,6 +353,43 @@ the CSP entries specific to accounts.google.com; (d) the walkthrough, FAQ,
 privacy policy and terms all describe Google sign-in. Deliverable is an
 assessment with a recommended method and estimate, not an implementation.
 
+[ ] Creating a template should start it and send the lifter home. Today
+`handleCreateMesocycle` in `Mesocycles.tsx` just closes the modal, resets the
+form and reloads the list, so a new template sits there with nothing telling
+the user the next step is a separate Start button. Wanted: on create, start an
+instance of the new template and redirect to Home, with a brief banner saying
+the block was created and started. If a block is already running
+(`hasActiveInstance` is already computed on the page) do not start the new one,
+stay on the Mesocycles page, and show a brief banner saying it was created.
+The banner belongs at the destination, so Home in the started case and the
+Mesocycles page otherwise. Two things to settle while building it: the start
+modal collects real choices, the autoregulation toggle and optionally a
+previous instance to seed weights from, so auto-starting has to either apply
+sensible defaults (autoregulation on, no source instance) or keep the modal in
+the path, and the existing Start button routes to the first workout rather
+than Home, so decide whether these two entry points should agree.
+
+[ ] Collapse the template list and past mesocycles by default on the
+Mesocycles page. Both render fully expanded, so the page opens long and the
+primary action is pushed down. The "Past Mesocycles" section (`Mesocycles.tsx`,
+the `status === 'completed'` block) is history and should start closed; the
+template cards should collapse to their names. Note the mesocycle *creation*
+screen already has collapsible days, so follow that interaction rather than
+inventing a second one.
+
+[ ] Add a search box to filter mesocycle templates. The library is 16 stock
+templates plus whatever the user has made, all rendered as one flat list.
+Filter on name and description, and make it work with the collapsed sections
+above rather than against them, a search should reveal matches inside a
+collapsed section instead of hiding them.
+
+[ ] Explain how to create a mesocycle on the Mesocycles page. The page assumes
+the user knows what a template is, that it has to be created before it can be
+started, and that starting is a separate step. New users land here straight
+from onboarding with no guidance in place. Short inline directions, shown most
+prominently when the user has no templates yet, and consistent with whatever
+the create-then-start flow above ends up doing.
+
 [x] Finish the domain move tidy-up. Done. `strengthguider.com` serves every
 route with all six security headers and an enforcing CSP, sign-in works, CORS
 accepts the new origin and still rejects everything else, and the old domain
