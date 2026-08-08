@@ -282,39 +282,28 @@ it processes.
     visitor over plain HTTP is redirected immediately to an HTTPS URL on the new
     domain, which does send it.
 
-[ ] Hand the Google OAuth client to the Workspace account. A Google Business
-account on `strengthguider.com` is being set up to own it, replacing
-strengthguider@gmail.com on project `319029498301` (see `DEPLOY.md`). Tying it
-to a domain we own outlasts a personal Gmail, so this is worth doing.
+[ ] Google Workspace and an `@strengthguider.com` support address. **Decided:
+not until there is revenue.** `strengthguider@gmail.com` stays as the public
+support address, in the footers, the privacy policy and the terms.
 
-    Do it through IAM, not by making a new client. Grant the Workspace account
-    **Owner** on the existing project, accept, then remove the old one. The
-    project and client id are unchanged, so no environment variable moves and
-    there is no window where sign-in can break. Creating a fresh client means a
-    new client id, a backend redeploy, and a consent screen that starts in
-    Testing and silently refuses everyone not on a hand-written list.
+    The reasoning, so it does not get re-litigated. Workspace was being
+    considered to own the OAuth client, but a plain Gmail owns a Google Cloud
+    project perfectly well, so it solves nothing there. Its only real benefit
+    is `@strengthguider.com` email, which is branding rather than
+    infrastructure and can wait. Namecheap's free forwarding would cover
+    receiving, `MX` already points at `eforward*.registrar-servers.com`, but
+    not sending, so replies would still leave from a Gmail and not match the
+    address in the terms. Half a solution is not worth the change.
 
-    Keep a second owner. A Workspace account stops existing if the subscription
-    lapses, and anything it solely owns goes with it. A personal address as
-    break-glass costs nothing.
-
-    Do not change which address signs in to *the app*. Admin is granted by a
-    migration hardcoding one address and cannot be given to a second account,
-    so signing in as someone new means no admin and no route back. See the item
-    below.
-
-    The support address is the other half of this, and it is user facing.
-    `strengthguider@gmail.com` appears in eight places across four pages: the
-    landing page and home page footers, the privacy policy twice, and the terms
-    four times, including the clause about how notice of changes is given. If
-    the address changes, those change with it, and two of them are legal
-    documents rather than copy. Deferred on
-purpose, it blocks nothing: the domain migration only needs two origins added
-to the existing client, and the owning account never touches app accounts,
-which match on email. When it is done it is one new project, a published
-consent screen (a new one starts in Testing and only lets hand-listed users in),
-a Web client with the same JavaScript origins, and `GOOGLE_CLIENT_ID` swapped on
-the Render backend. No code change, no user impact.
+    When it does happen, two things travel together. The Workspace account
+    should be granted **Owner** on project `319029498301` through IAM rather
+    than getting a fresh OAuth client, since that keeps the client id and needs
+    no redeploy, and a second owner should stay in place because a Workspace
+    account disappears with its subscription and takes anything it solely owns
+    with it. And the support address appears in eight places across four pages,
+    twice in the privacy policy and four times in the terms, including the
+    clause on how notice of changes is given. Two of those are legal documents,
+    not copy.
 
 [ ] There is no way to grant admin. `is_admin` is set in exactly one place, a
 migration that hardcodes `nicholasbrawand@gmail.com`, and every admin endpoint
